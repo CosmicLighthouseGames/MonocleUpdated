@@ -1,0 +1,19 @@
+D:\WillT\Documents\source\Isa Monocle\Test Compiler\bin\Debug\net6.0\Test Compiler.exe
+D:\WillT\Documents\source\Isa Monocle\Test Compiler\bin\Debug\net6.0\Test Compiler.deps.json
+D:\WillT\Documents\source\Isa Monocle\Test Compiler\bin\Debug\net6.0\Test Compiler.runtimeconfig.json
+D:\WillT\Documents\source\Isa Monocle\Test Compiler\bin\Debug\net6.0\Test Compiler.dll
+D:\WillT\Documents\source\Isa Monocle\Test Compiler\bin\Debug\net6.0\Test Compiler.pdb
+D:\WillT\Documents\source\Isa Monocle\Test Compiler\obj\Debug\net6.0\Test Compiler.GeneratedMSBuildEditorConfig.editorconfig
+D:\WillT\Documents\source\Isa Monocle\Test Compiler\obj\Debug\net6.0\Test Compiler.AssemblyInfoInputs.cache
+D:\WillT\Documents\source\Isa Monocle\Test Compiler\obj\Debug\net6.0\Test Compiler.AssemblyInfo.cs
+D:\WillT\Documents\source\Isa Monocle\Test Compiler\obj\Debug\net6.0\Test Compiler.csproj.CoreCompileInputs.cache
+D:\WillT\Documents\source\Isa Monocle\Test Compiler\obj\Debug\net6.0\Test Compiler.dll
+D:\WillT\Documents\source\Isa Monocle\Test Compiler\obj\Debug\net6.0\refint\Test Compiler.dll
+D:\WillT\Documents\source\Isa Monocle\Test Compiler\obj\Debug\net6.0\Test Compiler.pdb
+D:\WillT\Documents\source\Isa Monocle\Test Compiler\obj\Debug\net6.0\Test Compiler.genruntimeconfig.cache
+D:\WillT\Documents\source\Isa Monocle\Test Compiler\obj\Debug\net6.0\ref\Test Compiler.dll
+D:\WillT\Documents\source\Isa Monocle\Test Compiler\bin\Debug\net6.0\Microsoft.Win32.SystemEvents.dll
+D:\WillT\Documents\source\Isa Monocle\Test Compiler\bin\Debug\net6.0\System.Drawing.Common.dll
+D:\WillT\Documents\source\Isa Monocle\Test Compiler\bin\Debug\net6.0\runtimes\win\lib\net6.0\Microsoft.Win32.SystemEvents.dll
+D:\WillT\Documents\source\Isa Monocle\Test Compiler\obj\Debug\net6.0\Test Compiler.csproj.AssemblyReference.cache
+D:\WillT\Documents\source\Isa Monocle\Test Compiler\obj\Debug\net6.0\Test Compiler.csproj.CopyComplete

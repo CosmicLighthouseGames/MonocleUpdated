@@ -1,0 +1,44 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.8.34408.163
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonocleTest", "MonocleTest\MonocleTest.csproj", "{51489FE8-C301-4073-A4E1-0FFB9DCB6467}"
+	ProjectSection(ProjectDependencies) = postProject
+		{5F84F5D8-A882-434C-A479-250A0E87ED94} = {5F84F5D8-A882-434C-A479-250A0E87ED94}
+	EndProjectSection
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Monocle", "MonocleEngine\Monocle.shproj", "{39AC3B1C-C8DD-4FB5-96FC-15DEA8FF87D4}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "MonocleCompiler", "MonocleCompiler\MonocleCompiler.shproj", "{5BE4012F-99A1-46C7-A568-52DA434D967B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestCompiler", "TestCompiler\TestCompiler.csproj", "{5F84F5D8-A882-434C-A479-250A0E87ED94}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{51489FE8-C301-4073-A4E1-0FFB9DCB6467}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{51489FE8-C301-4073-A4E1-0FFB9DCB6467}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{51489FE8-C301-4073-A4E1-0FFB9DCB6467}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{51489FE8-C301-4073-A4E1-0FFB9DCB6467}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5F84F5D8-A882-434C-A479-250A0E87ED94}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5F84F5D8-A882-434C-A479-250A0E87ED94}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5F84F5D8-A882-434C-A479-250A0E87ED94}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5F84F5D8-A882-434C-A479-250A0E87ED94}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D2C19458-B252-449B-BCBC-5B71493B03C9}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		MonocleEngine\MonocleEngine.projitems*{39ac3b1c-c8dd-4fb5-96fc-15dea8ff87d4}*SharedItemsImports = 13
+		MonocleEngine\MonocleEngine.projitems*{51489fe8-c301-4073-a4e1-0ffb9dcb6467}*SharedItemsImports = 5
+		MonocleCompiler\MonocleCompiler.projitems*{5be4012f-99a1-46c7-a568-52da434d967b}*SharedItemsImports = 13
+		MonocleCompiler\MonocleCompiler.projitems*{5f84f5d8-a882-434c-a479-250a0e87ed94}*SharedItemsImports = 5
+	EndGlobalSection
+EndGlobal

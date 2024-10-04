@@ -1,0 +1,111 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>39ac3b1c-c8dd-4fb5-96fc-15dea8ff87d4</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>MonocleBase</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Component.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Graphics\BasicModelRenderer.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)components\graphics\DynamicModelRenderer.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Graphics\GraphicsComponent.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Graphics\Image.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Graphics\ParticleEmitter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Graphics\PixelText.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Graphics\ScreenFilterRenderer.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Graphics\SplitWall.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Graphics\Sprite.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Graphics\Spritesheet.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Graphics\Text\NumberText.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Graphics\Text\OutlineText.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Graphics\Text\Text.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Graphics\Text\TimerText.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Graphics\TileGrid.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Logic\Alarm.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Logic\Coroutine.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Logic\CoroutineHolder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Logic\CounterSet.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Logic\SecondOrderDynamics.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Logic\Shaker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Logic\ShakerList.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Logic\SineWave.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Logic\StateMachine.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Logic\Tween.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Logic\Wiggler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Engine.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Entity.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Graphics\Atlas.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Graphics\Draw.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Graphics\EffectAtlas.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Graphics\Material.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Graphics\MeshData.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Graphics\ModelAtlas.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Graphics\MTexture.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)graphics\ScreenFilter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Graphics\SplitTexture.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Graphics\SpriteBank.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Graphics\SpriteData.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Graphics\Tileset.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Input\MInput.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Input\VirtualAxis.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Input\VirtualButton.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Input\VirtualInput.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Input\VirtualIntegerAxis.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Input\VirtualJoystick.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)InternalUtilities\ComponentList.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)InternalUtilities\EntityList.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)InternalUtilities\RendererList.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)InternalUtilities\TagLists.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Particles\Particle.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Particles\ParticleSystem.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Particles\ParticleType.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Renderers\BasicRenderer.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Renderers\Renderer.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Renderers\SingleTagRenderer.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Renderers\TagExcludeRenderer.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Scene.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\AssetLoader.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\BinaryReadWrite.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\BitTag.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\Cache.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\Calc.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\Camera.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\CheatListener.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\ChoiceSet.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\Chooser.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)util\LDtkLevel.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\RectangleF.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\Commands.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\Ease.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\EntityData.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\ErrorLog.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\Events.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\MethodHandle.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\PixelFont.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\Pnt.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\Pooler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\RuntimeSaveData.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\SaveLoad.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\Settings.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\SimpleCurve.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\SpecEntity.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\Tiler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\Tracker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\VirtualMap.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\IsaMonocle\MonocleEngine\components\graphics\ScreenFilterRenderer.cs" />
+    <None Include="$(MSBuildThisFileDirectory)Content\Effects\Monocle\model_basic.fx" />
+    <None Include="$(MSBuildThisFileDirectory)Content\Effects\Monocle\sprite_basic.fx" />
+    <None Include="$(MSBuildThisFileDirectory)Content\Effects\Monocle\sprite_test.fx" />
+    <None Include="$(MSBuildThisFileDirectory)Content\Effects\Monocle\sprite_transform.fx" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="$(MSBuildThisFileDirectory)Content\Graphics\Monocle\small_font.png" />
+    <Content Include="$(MSBuildThisFileDirectory)Content\Graphics\Monocle\small_font.xml" />
+  </ItemGroup>
+</Project>

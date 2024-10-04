@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "dgSpecHash": "NyS3aTRvmOUAaOCWRtGaAtTYTWE7OPWgmzvnX57aM0hWdfVWUiIysmserglDQcZTN6hFGvPLT/N8adMgc7ZOSg==",
+  "success": true,
+  "projectFilePath": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleTest\\MonocleTest.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\WillT\\.nuget\\packages\\monogame.content.builder.task\\3.8.0.1641\\monogame.content.builder.task.3.8.0.1641.nupkg.sha512",
+    "C:\\Users\\WillT\\.nuget\\packages\\monogame.framework.desktopgl\\3.8.0.1641\\monogame.framework.desktopgl.3.8.0.1641.nupkg.sha512",
+    "C:\\Users\\WillT\\.nuget\\packages\\newtonsoft.json\\13.0.3\\newtonsoft.json.13.0.3.nupkg.sha512",
+    "C:\\Users\\WillT\\.nuget\\packages\\yamldotnet\\15.1.2\\yamldotnet.15.1.2.nupkg.sha512"
+  ],
+  "logs": []
+}

@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "T659g0YWDTa07Wy3PDSPPLXzm6hU+swRu7gWJukhWGmhSdP1MxUu7Uk/7T55JyLbH8FLIVVXcugDPcq1U+Gl1A==",
+  "success": true,
+  "projectFilePath": "D:\\WillT\\Documents\\source\\IsaMonocle\\TestCompiler\\TestCompiler.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\WillT\\.nuget\\packages\\microsoft.win32.systemevents\\8.0.0\\microsoft.win32.systemevents.8.0.0.nupkg.sha512",
+    "C:\\Users\\WillT\\.nuget\\packages\\system.drawing.common\\8.0.2\\system.drawing.common.8.0.2.nupkg.sha512"
+  ],
+  "logs": []
+}
