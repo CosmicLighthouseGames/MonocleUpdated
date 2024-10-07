@@ -98,7 +98,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Util\VirtualMap.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\IsaMonocle\MonocleEngine\components\graphics\ScreenFilterRenderer.cs" />
     <None Include="$(MSBuildThisFileDirectory)Content\Effects\Monocle\model_basic.fx" />
     <None Include="$(MSBuildThisFileDirectory)Content\Effects\Monocle\sprite_basic.fx" />
     <None Include="$(MSBuildThisFileDirectory)Content\Effects\Monocle\sprite_test.fx" />
