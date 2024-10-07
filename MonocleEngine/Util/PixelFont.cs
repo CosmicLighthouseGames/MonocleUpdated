@@ -146,6 +146,43 @@ namespace Monocle
 
 			return size /= Engine.PixelsPerUnit;
 		}
+		public Vector2 MeasurePartial(string text, int length) {
+			if (string.IsNullOrEmpty(text))
+				return Vector2.Zero;
+
+			var size = new Vector2(0, LineHeight);
+			var currentLineWidth = 0f;
+
+			for (var i = 0; i < Math.Min(length + 1, text.Length); i++) {
+				if (text[i] == '\n') {
+					size.Y += LineHeight;
+					if (currentLineWidth > size.X)
+						size.X = currentLineWidth;
+					currentLineWidth = 0f;
+				}
+				else {
+					PixelFontCharacter c = null;
+					if (Characters.TryGetValue(text[i], out c)) {
+
+						int kerning;
+						if (i < text.Length - 1 && c.Kerning.TryGetValue(text[i + 1], out kerning)) {
+							currentLineWidth += kerning;
+						}
+						if (i == text.Length - 1) {
+							currentLineWidth += c.Texture.Width;
+						}
+						else {
+							currentLineWidth += c.XAdvance;
+						}
+					}
+				}
+			}
+
+			if (currentLineWidth > size.X)
+				size.X = currentLineWidth;
+
+			return size /= Engine.PixelsPerUnit;
+		}
 
 		public float WidthToNextLine(string text, int start)
 		{
@@ -396,6 +433,11 @@ namespace Monocle
 			var font = Sizes[0];
 
 			return font.Measure(text);
+		}
+		public Vector2 MeasurePartialString(string text, int length) {
+			var font = Sizes[0];
+
+			return font.MeasurePartial(text, length);
 		}
 		public int GetAdvance(char text) {
 			var font = Sizes[0];

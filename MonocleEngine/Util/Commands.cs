@@ -3,12 +3,13 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 
-namespace Monocle
-{
-    public class Commands
+namespace Monocle {
+	public class Commands
     {
         private const float UNDERSCORE_TIME = .5f;
         private const float REPEAT_DELAY = .5f;
@@ -40,6 +41,8 @@ namespace Monocle
 
         SpriteBatch batch;
 		Texture2D pixel;
+
+        int highlightStart, highlightEnd;
 
 		public Commands() {
 			pixel = new Texture2D(Engine.Instance.GraphicsDevice, 1, 1);
@@ -171,9 +174,97 @@ namespace Monocle
                     break;
                 }
             }
-        }
+		}
+		[DllImport("user32.dll")]
+		internal static extern bool OpenClipboard(IntPtr hWndNewOwner);
 
-        private void HandleKey(Keys key)
+		[DllImport("user32.dll")]
+		internal static extern bool CloseClipboard();
+
+		[DllImport("user32.dll")]
+		internal static extern bool SetClipboardData(uint uFormat, IntPtr data);
+
+		[DllImport("user32.dll")]
+		internal static extern IntPtr GetClipboardData(uint uFormat);
+
+		[DllImport("Kernel32.dll", SetLastError = true)]
+		private static extern IntPtr GlobalLock(IntPtr hMem);
+
+		[DllImport("Kernel32.dll", SetLastError = true)]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		private static extern bool GlobalUnlock(IntPtr hMem);
+
+		[DllImport("Kernel32.dll", SetLastError = true)]
+		private static extern int GlobalSize(IntPtr hMem);
+
+
+		private const uint CF_UNICODETEXT = 13U;
+
+		private string GetClipboard() {
+
+			try {
+				if (!OpenClipboard(IntPtr.Zero))
+					return null;
+
+				IntPtr handle = GetClipboardData(CF_UNICODETEXT);
+				if (handle == IntPtr.Zero)
+					return null;
+
+				IntPtr pointer = IntPtr.Zero;
+
+				try {
+					pointer = GlobalLock(handle);
+					if (pointer == IntPtr.Zero)
+						return null;
+
+					int size = GlobalSize(handle);
+					byte[] buff = new byte[size];
+
+					Marshal.Copy(pointer, buff, 0, size);
+
+					return Encoding.Unicode.GetString(buff).TrimEnd('\0');
+				}
+				finally {
+					if (pointer != IntPtr.Zero)
+						GlobalUnlock(handle);
+				}
+			}
+			finally {
+				CloseClipboard();
+			}
+
+			//OpenClipboard(IntPtr.Zero);
+			//         var ptr = GetClipboardData(13);
+
+			//CloseClipboard();
+
+			//return "";
+		}
+
+		public static void SetClipboard(string value) {
+			if (value == null)
+				throw new ArgumentNullException("Attempt to set clipboard with null");
+
+			Process clipboardExecutable = new Process();
+			clipboardExecutable.StartInfo = new ProcessStartInfo // Creates the process
+			{
+				RedirectStandardInput = true,
+                CreateNoWindow = true,
+				FileName = @"clip",
+			};
+			clipboardExecutable.Start();
+
+			clipboardExecutable.StandardInput.Write(value); // CLIP uses STDIN as input.
+															// When we are done writing all the string, close it so clip doesn't wait and get stuck
+			clipboardExecutable.StandardInput.Close();
+
+            clipboardExecutable.WaitForExit();
+
+			return;
+		}
+
+
+		private void HandleKey(Keys key)
         {
             if (key != Keys.Tab && key != Keys.LeftShift && key != Keys.RightShift && key != Keys.RightAlt && key != Keys.LeftAlt && key != Keys.RightControl && key != Keys.LeftControl)
                 tabIndex = -1;
@@ -184,149 +275,274 @@ namespace Monocle
                 repeatCounter = 0;
             }
 
-            switch (key)
-            {
+            bool pressControl = currentState[Keys.LeftControl] == KeyState.Down || currentState[Keys.RightControl] == KeyState.Down;
+			bool pressShift = currentState[Keys.LeftShift] == KeyState.Down || currentState[Keys.RightShift] == KeyState.Down;
+
+
+            void AddText(string text) {
+                try {
+					text = text.Replace("\n", "").Replace("\t", "");
+
+					if (highlightStart == highlightEnd) {
+						if (highlightStart == currentText.Length) {
+							currentText += text;
+						}
+						else {
+							string start = currentText.Substring(0, highlightStart);
+							string end = currentText.Substring(highlightStart, currentText.Length - highlightStart);
+							currentText = start + text + end;
+						}
+						highlightStart += text.Length;
+					}
+					else {
+						int left = Math.Min(highlightEnd, highlightStart);
+						int right = Math.Max(highlightEnd, highlightStart);
+
+						string start = currentText.Substring(0, left);
+						string end = currentText.Substring(right, currentText.Length - right);
+
+						currentText = start + text + end;
+
+						highlightStart = left + text.Length;
+					}
+					highlightEnd = highlightStart;
+				}
+                catch {
+
+                }
+			}
+
+			void AddChar(char text) {
+                AddText(text.ToString());
+			}
+
+			void DeleteHighlight() {
+				int left = Math.Min(highlightEnd, highlightStart);
+				int right = Math.Max(highlightEnd, highlightStart);
+
+				string start = currentText.Substring(0, left);
+				string end = currentText.Substring(right, currentText.Length - right);
+
+				currentText = start + end;
+
+				highlightStart = left;
+				highlightEnd = highlightStart;
+
+			}
+
+			switch (key) {
+				case Keys.A:
+					if (pressControl) {
+                        highlightStart = 0;
+                        highlightEnd = currentText.Length;
+					}
+					else {
+						goto default;
+					}
+					break;
+				case Keys.X:
+					if (pressControl) {
+						if (highlightStart != highlightEnd) {
+							int left = Math.Min(highlightEnd, highlightStart);
+							int right = Math.Max(highlightEnd, highlightStart);
+
+							string sub = currentText.Substring(left, right - left);
+							SetClipboard(sub);
+						}
+                        goto case Keys.Back;
+					}
+					else {
+						goto default;
+					}
+					break;
+				case Keys.C:
+					if (pressControl) {
+                        if (highlightStart != highlightEnd) {
+                            int left = Math.Min(highlightEnd, highlightStart);
+                            int right = Math.Max(highlightEnd, highlightStart);
+
+                            string sub = currentText.Substring(left, right - left);
+							SetClipboard(sub);
+						}
+					}
+					else {
+						goto default;
+					}
+					break;
+				case Keys.V:
+                    if (pressControl) {
+						AddText(GetClipboard());
+                    }
+                    else {
+                        goto default;
+                    }
+                    break;
                 default:
                     if (key.ToString().Length == 1)
                     {
-                        if (currentState[Keys.LeftShift] == KeyState.Down || currentState[Keys.RightShift] == KeyState.Down)
-                            currentText += key.ToString();
+                        if (pressShift)
+                            AddText(key.ToString());
                         else
-                            currentText += key.ToString().ToLower();
+                            AddText(key.ToString().ToLower());
                     }
                     break;
 
                 case (Keys.D1):
-                    if (currentState[Keys.LeftShift] == KeyState.Down || currentState[Keys.RightShift] == KeyState.Down)
-                        currentText += '!';
+                    if (pressShift)
+                        AddChar('!');
                     else
-                        currentText += '1';
+                        AddChar('1');
                     break;
                 case (Keys.D2):
-                    if (currentState[Keys.LeftShift] == KeyState.Down || currentState[Keys.RightShift] == KeyState.Down)
-                        currentText += '@';
+                    if (pressShift)
+                        AddChar('@');
                     else
-                        currentText += '2';
+                        AddChar('2');
                     break;
                 case (Keys.D3):
-                    if (currentState[Keys.LeftShift] == KeyState.Down || currentState[Keys.RightShift] == KeyState.Down)
-                        currentText += '#';
+                    if (pressShift)
+                        AddChar('#');
                     else
-                        currentText += '3';
+                        AddChar('3');
                     break;
                 case (Keys.D4):
-                    if (currentState[Keys.LeftShift] == KeyState.Down || currentState[Keys.RightShift] == KeyState.Down)
-                        currentText += '$';
+                    if (pressShift)
+                        AddChar('$');
                     else
-                        currentText += '4';
+                        AddChar('4');
                     break;
                 case (Keys.D5):
-                    if (currentState[Keys.LeftShift] == KeyState.Down || currentState[Keys.RightShift] == KeyState.Down)
-                        currentText += '%';
+                    if (pressShift)
+                        AddChar('%');
                     else
-                        currentText += '5';
+                        AddChar('5');
                     break;
                 case (Keys.D6):
-                    if (currentState[Keys.LeftShift] == KeyState.Down || currentState[Keys.RightShift] == KeyState.Down)
-                        currentText += '^';
+                    if (pressShift)
+                        AddChar('^');
                     else
-                        currentText += '6';
+                        AddChar('6');
                     break;
                 case (Keys.D7):
-                    if (currentState[Keys.LeftShift] == KeyState.Down || currentState[Keys.RightShift] == KeyState.Down)
-                        currentText += '&';
+                    if (pressShift)
+                        AddChar('&');
                     else
-                        currentText += '7';
+                        AddChar('7');
                     break;
                 case (Keys.D8):
-                    if (currentState[Keys.LeftShift] == KeyState.Down || currentState[Keys.RightShift] == KeyState.Down)
-                        currentText += '*';
+                    if (pressShift)
+                        AddChar('*');
                     else
-                        currentText += '8';
+                        AddChar('8');
                     break;
                 case (Keys.D9):
-                    if (currentState[Keys.LeftShift] == KeyState.Down || currentState[Keys.RightShift] == KeyState.Down)
-                        currentText += '(';
+                    if (pressShift)
+                        AddChar('(');
                     else
-                        currentText += '9';
+                        AddChar('9');
                     break;
                 case (Keys.D0):
-                    if (currentState[Keys.LeftShift] == KeyState.Down || currentState[Keys.RightShift] == KeyState.Down)
-                        currentText += ')';
+                    if (pressShift)
+                        AddChar(')');
                     else
-                        currentText += '0';
+                        AddChar('0');
                     break;
                 case (Keys.OemComma):
-                    if (currentState[Keys.LeftShift] == KeyState.Down || currentState[Keys.RightShift] == KeyState.Down)
-                        currentText += '<';
+                    if (pressShift)
+                        AddChar('<');
                     else
-                        currentText += ',';
+                        AddChar(',');
                     break;
                 case Keys.OemPeriod:
-                    if (currentState[Keys.LeftShift] == KeyState.Down || currentState[Keys.RightShift] == KeyState.Down)
-                        currentText += '>';
+                    if (pressShift)
+                        AddChar('>');
                     else
-                        currentText += '.';
+                        AddChar('.');
                     break;
                 case Keys.OemQuestion:
-                    if (currentState[Keys.LeftShift] == KeyState.Down || currentState[Keys.RightShift] == KeyState.Down)
-                        currentText += '?';
+                    if (pressShift)
+                        AddChar('?');
                     else
-                        currentText += '/';
+                        AddChar('/');
                     break;
                 case Keys.OemSemicolon:
-                    if (currentState[Keys.LeftShift] == KeyState.Down || currentState[Keys.RightShift] == KeyState.Down)
-                        currentText += ':';
+                    if (pressShift)
+                        AddChar(':');
                     else
-                        currentText += ';';
+                        AddChar(';');
                     break;
                 case Keys.OemQuotes:
-                    if (currentState[Keys.LeftShift] == KeyState.Down || currentState[Keys.RightShift] == KeyState.Down)
-                        currentText += '"';
+                    if (pressShift)
+                        AddChar('"');
                     else
-                        currentText += '\'';
+						AddChar('\'');
                     break;
                 case Keys.OemBackslash:
-                    if (currentState[Keys.LeftShift] == KeyState.Down || currentState[Keys.RightShift] == KeyState.Down)
-                        currentText += '|';
+                    if (pressShift)
+                        AddChar('|');
                     else
-                        currentText += '\\';
+						AddChar('\\');
                     break;
                 case Keys.OemOpenBrackets:
-                    if (currentState[Keys.LeftShift] == KeyState.Down || currentState[Keys.RightShift] == KeyState.Down)
-                        currentText += '{';
+                    if (pressShift)
+                        AddChar('{');
                     else
-                        currentText += '[';
+                        AddChar('[');
                     break;
                 case Keys.OemCloseBrackets:
-                    if (currentState[Keys.LeftShift] == KeyState.Down || currentState[Keys.RightShift] == KeyState.Down)
-                        currentText += '}';
+                    if (pressShift)
+                        AddChar('}');
                     else
-                        currentText += ']';
+                        AddChar(']');
                     break;
                 case Keys.OemMinus:
-                    if (currentState[Keys.LeftShift] == KeyState.Down || currentState[Keys.RightShift] == KeyState.Down)
-                        currentText += '_';
+                    if (pressShift)
+                        AddChar('_');
                     else
-                        currentText += '-';
+                        AddChar('-');
                     break;
                 case Keys.OemPlus:
-                    if (currentState[Keys.LeftShift] == KeyState.Down || currentState[Keys.RightShift] == KeyState.Down)
-                        currentText += '+';
+                    if (pressShift)
+                        AddChar('+');
                     else
-                        currentText += '=';
+                        AddChar('=');
                     break;
 
                 case Keys.Space:
-                    currentText += " ";
+                    AddText(" ");
                     break;
                 case Keys.Back:
-                    if (currentText.Length > 0)
-                        currentText = currentText.Substring(0, currentText.Length - 1);
+                    if (highlightStart != highlightEnd) {
+                        DeleteHighlight();
+					}
+                    else {
+						if (currentText.Length > 0 && highlightStart > 0) {
+
+
+							highlightStart--;
+							highlightEnd = highlightStart;
+
+							string start = currentText.Substring(0, highlightStart);
+							string end = currentText.Substring(highlightStart + 1, currentText.Length - (highlightStart + 1));
+
+							currentText = start + end;
+						}
+					}
                     break;
                 case Keys.Delete:
-                    currentText = "";
-                    break;
+					if (highlightStart != highlightEnd) {
+						DeleteHighlight();
+					}
+					else {
+						if (currentText.Length > 0 && highlightStart < currentText.Length) {
+
+							string start = currentText.Substring(0, highlightStart);
+							string end = currentText.Substring(highlightStart + 1, currentText.Length - (highlightStart + 1));
+
+							currentText = start + end;
+						}
+					}
+					break;
 
                 case Keys.Up:
                     if (seekIndex < commandHistory.Count - 1)
@@ -345,9 +561,31 @@ namespace Monocle
                             currentText = string.Join(" ", commandHistory[seekIndex]);
                     }
                     break;
+                case Keys.Left:
+                    if (pressControl) {
 
-                case Keys.Tab:
-                    if (currentState[Keys.LeftShift] == KeyState.Down || currentState[Keys.RightShift] == KeyState.Down)
+                    }
+                    else {
+                        highlightStart = Math.Max(0, highlightStart - 1);
+					}
+					if (!pressShift) {
+						highlightEnd = highlightStart;
+					}
+					break;
+                case Keys.Right:
+					if (pressControl) {
+
+					}
+					else {
+						highlightStart = Math.Min(currentText.Length, highlightStart + 1);
+					}
+					if (!pressShift) {
+						highlightEnd = highlightStart;
+					}
+					break;
+
+				case Keys.Tab:
+                    if (pressShift)
                     {
                         if (tabIndex == -1)
                         {
@@ -488,10 +726,32 @@ namespace Monocle
 
             Draw.Rect(0.5f, 0.5f, screenWidth - 1f, fontHeight, Color.Black * OPACITY);
 
-            if (underscore)
-                Draw.DefaultFont.Draw(">" + currentText + "_", new Vector2(1, .75f), Vector2.Zero, Vector2.One, Color.White);
-            else
-                Draw.DefaultFont.Draw(">" + currentText, new Vector2(1, .75f), Vector2.Zero, Vector2.One, Color.White);
+			if (highlightStart != highlightEnd) {
+
+				int left = Math.Min(highlightEnd, highlightStart);
+				int right = Math.Max(highlightEnd, highlightStart);
+
+				string start = currentText.Substring(0, left);
+				string middle = currentText.Substring(left, right - left);
+				string end = currentText.Substring(right, currentText.Length - right);
+
+                float startLen = Draw.DefaultFont.MeasurePartialString(">" + currentText, left).X;
+				float middleLen = Draw.DefaultFont.MeasurePartialString(">" + currentText, right).X;
+
+				Draw.Rect(1f + startLen, 0.5f, middleLen - startLen, fontHeight, Color.White);
+
+				Draw.DefaultFont.Draw(">" + start, new Vector2(1, .75f), Vector2.Zero, Vector2.One, Color.White);
+				Draw.DefaultFont.Draw(middle, new Vector2(1 + startLen, .75f), Vector2.Zero, Vector2.One, Color.Black);
+				Draw.DefaultFont.Draw(end, new Vector2(1 + middleLen, .75f), Vector2.Zero, Vector2.One, Color.White);
+
+			}
+            else {
+				Draw.DefaultFont.Draw(">" + currentText, new Vector2(1, .75f), Vector2.Zero, Vector2.One, Color.White);
+				if (underscore) {
+                    float offset = Draw.DefaultFont.MeasureString(">" + currentText.Substring(0, highlightStart)).X;
+					Draw.DefaultFont.Draw("|", new Vector2(1 + offset, .75f), Vector2.Zero, Vector2.One, Color.White);
+				}
+			}
 
             if (drawCommands.Count > 0) {
                 float height = 1 + (fontHeight * drawCommands.Count);
