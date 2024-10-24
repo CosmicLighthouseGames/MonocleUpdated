@@ -517,10 +517,27 @@ namespace Monocle {
 			}
 		}
 		public static void RecalculateNormals(MonocleVertex[] vertices, short[][] indices) {
+			List<short> newInds = new List<short>();
+
+			foreach (var item in indices) {
+				foreach (var i in item) {
+					newInds.Add(i);
+				}
+			}
+
+			RecalculateNormals(vertices, newInds.ToArray());
 
 		}
 		public static void CalculateTangent(MonocleVertex[] vertices, short[][] indices) {
+			List<short> newInds = new List<short>();
 
+			foreach (var item in indices) {
+				foreach (var i in item) {
+					newInds.Add(i);
+				}
+			}
+
+			CalculateTangent(vertices, newInds.ToArray());
 		}
 
 
@@ -715,8 +732,9 @@ namespace Monocle {
 							faceNormals.Add(dist[i].Normal);
 							faceUVs.Add(dist[i].TextureCoordinate);
 						}
-
-						retval.Add(current, new MonocleModel(faceVerts.ToArray(), faceNormals.ToArray(), faceUVs.ToArray(), faces.ToArray()));
+						var model = new MonocleModel(faceVerts.ToArray(), faceNormals.ToArray(), faceUVs.ToArray(), faces.ToArray());
+						model.CalculateTangent();
+						retval.Add(current, model);
 
 					}
 
@@ -980,6 +998,7 @@ namespace Monocle {
 								if (child.properties[2].ToString() == "Mesh") {
 
 									retval[child.properties[1].ToString().Split("\0\u0001")[0]] = new MonocleModel(meshes[meshIndex].verts, meshes[meshIndex].indices);
+									retval[child.properties[1].ToString().Split("\0\u0001")[0]].CalculateTangent();
 
 									meshIndex++;
 								}

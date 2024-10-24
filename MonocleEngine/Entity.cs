@@ -141,7 +141,8 @@ namespace Monocle
         /// <summary>
         /// Draw the Entity here. Not called if the Entity is not Visible
         /// </summary>
-        public virtual void Render() { }
+        public virtual void BeforeRender() { }
+		public virtual void Render() { }
 
 
 		/// <summary>

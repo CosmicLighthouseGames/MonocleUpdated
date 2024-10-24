@@ -18,6 +18,7 @@ namespace Monocle
 		private Dictionary<string, MTexture> textures = new Dictionary<string, MTexture>(StringComparer.OrdinalIgnoreCase);
 		private Dictionary<string, List<MTexture>> orderedTexturesCache = new Dictionary<string, List<MTexture>>();
 
+		[DebuggerHidden]
 		public static Texture2D TextureFromStream(BinaryReader reader) {
 
 			var graphics = Engine.Instance.GraphicsDevice;

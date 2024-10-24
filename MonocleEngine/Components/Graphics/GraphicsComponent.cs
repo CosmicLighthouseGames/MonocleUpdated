@@ -9,7 +9,7 @@ namespace Monocle
         public Vector3 Position;
         public Vector2 Origin;
         public Vector3 Scale = Vector3.One;
-        public Quaternion Rotation;
+        public Quaternion Rotation = Quaternion.Identity;
         public Color Color = Color.White;
         public Matrix? OverrideMatrix;
         public int Stencil;

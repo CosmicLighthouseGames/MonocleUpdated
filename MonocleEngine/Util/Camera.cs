@@ -85,6 +85,8 @@ namespace Monocle {
 		public BlendState B_State = BlendState.NonPremultiplied;
 		public DepthStencilState DS_State= DepthStencilState.Default;
 
+		public ClearOptions ClearOptions = ClearOptions.Target | ClearOptions.DepthBuffer | ClearOptions.Stencil;
+
 		public Color? backgroundColor;
 
 		private Quaternion rotation = Quaternion.Identity;
@@ -370,11 +372,14 @@ namespace Monocle {
 
 			foreach (var ent in Scene.Entities) {
 				if (renderEntity(ent)) {
-					if (!ent.TagCheck(mask))
+					if (!ent.TagCheck(mask)) {
 						list.Add(ent);
+						ent.BeforeRender();
+					}
 					foreach (var comp in ent.Components) {
 						if (renderComponent(comp)) {
 							list.Add(comp);
+							comp.BeforeRender();
 						}
 					}
 				}
@@ -394,22 +399,23 @@ namespace Monocle {
 
 			Main = this;
 
+			Color bgColor = backgroundColor??Color.Transparent;
+			ClearOptions opt = ClearOptions;
+			if (backgroundColor == null)
+				opt &= ~ClearOptions.Target;
+
 			if (bindings == null || bindings.Length == 1) {
 				graphics.SetRenderTargets(bindings);
-
-				if (backgroundColor != null)
-					graphics.Clear(backgroundColor.Value);
+				graphics.Clear(opt, bgColor, 1, 0);
 			}
 			else {
 				graphics.SetRenderTargets(bindings);
+				graphics.Clear(opt, Color.Transparent, 1, 0);
+				graphics.SetRenderTargets(bindings[0]);
+				graphics.Clear(opt, bgColor, 1, 0);
+				graphics.SetRenderTargets(bindings);
 
-				if (backgroundColor != null) {
-					graphics.Clear(Color.Transparent);
-					graphics.SetRenderTargets(bindings[0]);
-					graphics.Clear(backgroundColor.Value);
-					graphics.SetRenderTargets(bindings);
 
-				}
 			}
 
 			if (Position != oldPosition || matricesDirty) {

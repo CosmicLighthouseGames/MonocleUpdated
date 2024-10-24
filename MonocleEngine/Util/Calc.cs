@@ -1041,12 +1041,14 @@ namespace Monocle
                 return 0;
         }
 
-        public static int Clamp(int value, int min, int max)
+		[DebuggerHidden]
+		public static int Clamp(int value, int min, int max)
         {
             return Math.Min(Math.Max(value, min), max);
         }
 
-        public static float Clamp(float value, float min, float max)
+		[DebuggerHidden]
+		public static float Clamp(float value, float min, float max)
         {
             return Math.Min(Math.Max(value, min), max);
         }
@@ -1059,27 +1061,31 @@ namespace Monocle
                 return 1 - ((value - .5f) * 2);
         }
 
-        public static float Map(float val, float min, float max, float newMin = 0, float newMax = 1)
+		[DebuggerHidden]
+		public static float Map(float val, float min, float max, float newMin = 0, float newMax = 1)
         {
             return ((val - min) / (max - min)) * (newMax - newMin) + newMin;
         }
 
-        public static float SineMap(float counter, float newMin, float newMax)
+		[DebuggerHidden]
+		public static float SineMap(float counter, float newMin, float newMax)
         {
             return Calc.Map((float)Math.Sin(counter), -1, 1, newMin, newMax);
         }
-
+        [DebuggerHidden]
         public static float SineMap(float counter, float min, float max, float newMin, float newMax)
         {
             return Calc.Map((float)Math.Sin(counter), min, max, newMin, newMax);
         }
 
-        public static float ClampedMap(float val, float min, float max, float newMin = 0, float newMax = 1)
+		[DebuggerHidden]
+		public static float ClampedMap(float val, float min, float max, float newMin = 0, float newMax = 1)
         {
             return MathHelper.Clamp((val - min) / (max - min), 0, 1) * (newMax - newMin) + newMin;
         }
 
-        public static float LerpSnap(float value1, float value2, float amount, float snapThreshold = .1f)
+		[DebuggerHidden]
+		public static float LerpSnap(float value1, float value2, float amount, float snapThreshold = .1f)
         {
             float ret = MathHelper.Lerp(value1, value2, amount);
             if (Math.Abs(ret - value2) < snapThreshold)
@@ -1088,12 +1094,14 @@ namespace Monocle
                 return ret;
         }
 
-        public static float LerpClamp(float value1, float value2, float lerp)
+		[DebuggerHidden]
+		public static float LerpClamp(float value1, float value2, float lerp)
         {
             return MathHelper.Lerp(value1, value2, MathHelper.Clamp(lerp, 0, 1));
         }
 
-        public static float InvLerp(float _value, float _low, float _high)
+		[DebuggerHidden]
+		public static float InvLerp(float _value, float _low, float _high)
         {
             if (_low == _high)
                 return 0.5f;
@@ -1101,7 +1109,8 @@ namespace Monocle
             return (_value - _low) / (_high - _low);
         }
 
-        public static Vector2 LerpSnap(Vector2 value1, Vector2 value2, float amount, float snapThresholdSq = .1f)
+		[DebuggerHidden]
+		public static Vector2 LerpSnap(Vector2 value1, Vector2 value2, float amount, float snapThresholdSq = .1f)
         {
             Vector2 ret = Vector2.Lerp(value1, value2, amount);
             if ((ret - value2).LengthSquared() < snapThresholdSq)
@@ -1111,22 +1120,26 @@ namespace Monocle
         }
 
 
-        public static Vector2 Sign(this Vector2 vec)
+		[DebuggerHidden]
+		public static Vector2 Sign(this Vector2 vec)
         {
             return new Vector2(Math.Sign(vec.X), Math.Sign(vec.Y));
         }
 
-        public static Vector2 SafeNormalize(this Vector2 vec)
+		[DebuggerHidden]
+		public static Vector2 SafeNormalize(this Vector2 vec)
         {
             return SafeNormalize(vec, Vector2.Zero);
         }
 
-        public static Vector2 SafeNormalize(this Vector2 vec, float length)
+		[DebuggerHidden]
+		public static Vector2 SafeNormalize(this Vector2 vec, float length)
         {
             return SafeNormalize(vec, Vector2.Zero, length);
         }
 
-        public static Vector2 SafeNormalize(this Vector2 vec, Vector2 ifZero) {
+		[DebuggerHidden]
+		public static Vector2 SafeNormalize(this Vector2 vec, Vector2 ifZero) {
 			vec.Normalize();
             if (float.IsNaN(vec.X) || float.IsNaN(vec.Y))
                 return ifZero;
@@ -1135,18 +1148,21 @@ namespace Monocle
 
         }
 
-        public static Vector2 SafeNormalize(this Vector2 vec, Vector2 ifZero, float length)
+		[DebuggerHidden]
+		public static Vector2 SafeNormalize(this Vector2 vec, Vector2 ifZero, float length)
         {
             return vec.SafeNormalize(ifZero) * length;
         }
 
-        public static float ReflectAngle(float angle, float axis = 0)
+		[DebuggerHidden]
+		public static float ReflectAngle(float angle, float axis = 0)
         {
             angle = ClampLoop(-MathHelper.Pi, MathHelper.Pi, angle);
             return ClampLoop(-MathHelper.Pi, MathHelper.Pi, -(angle - axis) + axis);
         }
 
-        public static float ReflectAngle(float angleRadians, Vector2 axis)
+		[DebuggerHidden]
+		public static float ReflectAngle(float angleRadians, Vector2 axis)
         {
             return ReflectAngle(angleRadians, axis.Angle() + MathHelper.PiOver2);
         }
@@ -2893,6 +2909,24 @@ namespace Monocle
             else
                 return new Color(a.ToVector3() * b.ToVector3());
 		}
+
+        public static DepthStencilState CreateFilterStencil(int mask, int value, bool ifEqual) {
+            var st = new DepthStencilState();
+            st.ReadFrom(DepthStencilState.None);
+
+            st.StencilEnable = true;
+            st.ReferenceStencil = value;
+            st.StencilMask = mask;
+            if (ifEqual) {
+                st.StencilFunction = CompareFunction.Equal;
+            }
+            else {
+                st.StencilFunction = CompareFunction.NotEqual;
+			}
+			st.StencilFunction = CompareFunction.Never;
+
+			return st;
+        }
 
 		#endregion
 

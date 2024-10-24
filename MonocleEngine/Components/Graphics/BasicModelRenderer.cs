@@ -61,8 +61,16 @@ namespace Monocle {
 									param.SetValue(data.Texture);
 								else if (data is Color)
 									param.SetValue(data.ToVector4());
-								else
-									param.SetValue(pData[param.Name]);
+								else if (data is int || data is float) {
+									if (param.ParameterType is EffectParameterType.Single) {
+										param.SetValue((float)pData[param.Name]);
+									}
+									else {
+										param.SetValue((int)pData[param.Name]);
+									}
+								}
+								else {
+								}
 								return true;
 							}
 							return false;
@@ -73,6 +81,9 @@ namespace Monocle {
 			}
 
 			for (int i = 0; i < indices.Length; i++) {
+				if (indices[i].Length <= 0)
+					continue;
+
 				Material newMat;
 				if (Draw.OverridingMaterial != null) {
 					newMat = Draw.OverridingMaterial;

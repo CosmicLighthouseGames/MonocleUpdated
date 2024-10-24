@@ -545,22 +545,27 @@ namespace Monocle {
 					break;
 
                 case Keys.Up:
-                    if (seekIndex < commandHistory.Count - 1)
+					if (seekIndex < commandHistory.Count - 1)
                     {
                         seekIndex++;
                         currentText = string.Join(" ", commandHistory[seekIndex]);
-                    }
-                    break;
+					}
+					highlightStart = currentText.Length;
+					highlightEnd = highlightStart;
+					break;
                 case Keys.Down:
-                    if (seekIndex > -1)
+					if (seekIndex > -1)
                     {
                         seekIndex--;
-                        if (seekIndex == -1)
+                        if (seekIndex == -1) {
                             currentText = "";
+                        }
                         else
                             currentText = string.Join(" ", commandHistory[seekIndex]);
-                    }
-                    break;
+					}
+					highlightStart = currentText.Length;
+					highlightEnd = highlightStart;
+					break;
                 case Keys.Left:
                     if (pressControl) {
 
@@ -646,6 +651,9 @@ namespace Monocle {
                     }
                     if (tabIndex != -1)
                         currentText = sorted[tabIndex];
+
+                    highlightEnd = currentText.Length;
+                    highlightStart = highlightEnd;
                     break;
 
                 case Keys.F1:
@@ -682,7 +690,9 @@ namespace Monocle {
                 commandHistory.Insert(0, currentText);
             drawCommands.Insert(0, new Line(currentText, Color.Aqua));
             currentText = "";
-            seekIndex = -1;
+			highlightStart = 0;
+			highlightEnd = 0;
+			seekIndex = -1;
 
             string[] args = new string[data.Length - 1];
             for (int i = 1; i < data.Length; i++)
@@ -748,7 +758,7 @@ namespace Monocle {
             else {
 				Draw.DefaultFont.Draw(">" + currentText, new Vector2(1, .75f), Vector2.Zero, Vector2.One, Color.White);
 				if (underscore) {
-                    float offset = Draw.DefaultFont.MeasureString(">" + currentText.Substring(0, highlightStart)).X;
+                    float offset = Draw.DefaultFont.MeasurePartialString($">{currentText} ", highlightStart).X;
 					Draw.DefaultFont.Draw("|", new Vector2(1 + offset, .75f), Vector2.Zero, Vector2.One, Color.White);
 				}
 			}

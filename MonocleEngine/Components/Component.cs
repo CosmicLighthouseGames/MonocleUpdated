@@ -77,7 +77,11 @@ namespace Monocle
 
         }
 
-        public virtual void Render()
+		public virtual void BeforeRender() {
+
+		}
+
+		public virtual void Render()
         {
 
         }

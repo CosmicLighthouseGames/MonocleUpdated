@@ -35,7 +35,6 @@ namespace Monocle {
 			var worldProj = Draw.WorldProjection;
 			Draw.WorldProjection = Matrix.Identity;
 
-			device.DepthStencilState = DepthStencilState.None;
 			device.RasterizerState = RasterizerState.CullNone;
 
 			Vertex.CurrentTechnique.Passes[0].Apply();
@@ -43,23 +42,18 @@ namespace Monocle {
 
 
 
-			foreach (var mat in Filters) {
+			foreach (var filter in Filters) {
 
-				if (mat.renderTargets != null)
-					device.SetRenderTargets(mat.renderTargets);
+				if (filter.renderTargets != null)
+					device.SetRenderTargets(filter.renderTargets);
 
-				device.BlendState = mat.blendState??BlendState.AlphaBlend;
+				device.BlendState = filter.blendState??BlendState.AlphaBlend;
 
-				var material = mat.material;
+				var material = filter.material;
 				var tech = material.Technique;
 				var techPass = tech.Passes[0];
 
-				if (material.Stencil != device.DepthStencilState.ReferenceStencil) {
-					var dsMask = new DepthStencilState();
-					dsMask.ReadFrom(device.DepthStencilState);
-					dsMask.ReferenceStencil = material.Stencil;
-					device.DepthStencilState = dsMask;
-				}
+				device.DepthStencilState = filter.depthStencilState;
 
 				var tex = material.Texture??Draw.Pixel;
 				var drawcall = this;
@@ -101,6 +95,7 @@ namespace Monocle {
 		public string Name => material.Name;
 		public Material material;
 		public BlendState blendState;
+		public DepthStencilState depthStencilState = DepthStencilState.None;
 		internal RenderTargetBinding[] renderTargets;
 
 		public ScreenFilter SetMaterial(string name) {
@@ -113,6 +108,10 @@ namespace Monocle {
 		}
 		public ScreenFilter SetBlendState(BlendState blendState) {
 			this.blendState = blendState;
+			return this;
+		}
+		public ScreenFilter SetDepthStencilState(DepthStencilState depthStencilState) {
+			this.depthStencilState = depthStencilState;
 			return this;
 		}
 		public ScreenFilter SetRenderTargets(RenderTarget2D[] renderTargets) {
