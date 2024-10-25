@@ -565,6 +565,13 @@ namespace Monocle {
 				;
 			Texture(Pixel, mat, color);
 		}
+		public static void Rect(float x, float y, float z, float width, float height, Color color) {
+			Matrix mat = Matrix.Identity
+				* Matrix.CreateScale(width, height, 1)
+				* Matrix.CreateTranslation(x, y, z)
+				;
+			Texture(Pixel, mat, color);
+		}
 		public static void Rect(Vector2 pos, Vector2 size, Color color) {
 			Rect(pos.X, pos.Y, size.X, size.Y, color);
 		}
