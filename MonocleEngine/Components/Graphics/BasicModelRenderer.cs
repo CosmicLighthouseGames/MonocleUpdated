@@ -70,6 +70,7 @@ namespace Monocle {
 									}
 								}
 								else {
+									param.SetValue(pData[param.Name]);
 								}
 								return true;
 							}

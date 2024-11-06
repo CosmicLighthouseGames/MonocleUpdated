@@ -320,6 +320,11 @@ namespace Monocle {
 			foreach (var param in effect.Parameters) {
 				if (!changeParameter(param)) {
 					switch (param.Name) {
+						case "Viewport": {
+							var viewport = GraphicsDevice.Viewport;
+							param.SetValue(new Vector4(viewport.X, viewport.Y, viewport.Width, viewport.Height));
+						}
+							break;
 						case "WorldViewProj":
 							param.SetValue(worldProj);
 							break;
