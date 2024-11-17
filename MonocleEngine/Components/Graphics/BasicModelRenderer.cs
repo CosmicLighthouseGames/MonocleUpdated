@@ -57,6 +57,9 @@ namespace Monocle {
 						default:
 							if (pData.ContainsKey(param.Name)) {
 								var data = pData[param.Name];
+								if (data == null)
+									return false;
+								;
 								if (data is MTexture)
 									param.SetValue(data.Texture);
 								else if (data is Color)

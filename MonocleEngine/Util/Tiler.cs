@@ -59,21 +59,21 @@ namespace Monocle
 						}
 
 						TileID = 0;
-						if (Up)
-							TileID |= 0b0000_0000_0000_0001;
 						if (Down)
+							TileID |= 0b0000_0000_0000_0001;
+						if (Up)
 							TileID |= 0b0000_0000_0000_0010;
 						if (Left)
 							TileID |= 0b0000_0000_0000_0100;
 						if (Right)
 							TileID |= 0b0000_0000_0000_1000;
-						if (UpLeft)
-							TileID |= 0b0000_0000_0001_0000;
-						if (UpRight)
-							TileID |= 0b0000_0000_0010_0000;
 						if (DownLeft)
-							TileID |= 0b0000_0000_0100_0000;
+							TileID |= 0b0000_0000_0001_0000;
 						if (DownRight)
+							TileID |= 0b0000_0000_0010_0000;
+						if (UpLeft)
+							TileID |= 0b0000_0000_0100_0000;
+						if (UpRight)
 							TileID |= 0b0000_0000_1000_0000;
 
 
