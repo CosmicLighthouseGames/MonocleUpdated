@@ -9,18 +9,19 @@ using Newtonsoft.Json.Linq;
 
 namespace Monocle {
 	public class ModelRenderCall : IDrawCall {
-		public Material material {
-			set {
-				materials = new Material[] { value };
-			}
-		}
+		public Material material;
 		public MonocleVertex[] vertices;
-		public short[][] indices;
-		public Material[] materials;
+		public short[] indices;
 		public Matrix transform;
+
+
+		public int RenderOrder { get; set; }
 
 		public void Render(GraphicsDevice device) {
 
+			if (indices.Length < 3)
+				return;
+			
 			Material mat = null;
 			var drawcall = this;
 
@@ -84,23 +85,16 @@ namespace Monocle {
 				techPass.Apply();
 			}
 
-			for (int i = 0; i < indices.Length; i++) {
-				if (indices[i].Length <= 0)
-					continue;
-
-				Material newMat;
-				if (Draw.OverridingMaterial != null) {
-					newMat = Draw.OverridingMaterial;
-				}
-				else if (i >= materials.Length) {
-					newMat = materials[0];
-				}
-				else {
-					newMat = materials[i];
-				}
-				SetMaterial(newMat);
-				device.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, vertices, 0, vertices.Length, indices[i], 0, indices[i].Length / 3);
+			Material newMat;
+			if (Draw.OverridingMaterial != null) {
+				newMat = Draw.OverridingMaterial;
 			}
+			else {
+				newMat = material;
+			}
+			SetMaterial(newMat);
+			device.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, vertices, 0, vertices.Length, indices, 0, indices.Length / 3);
+			
 		}
 	}
 	public class BasicModelRenderer : GraphicsComponent {
@@ -139,7 +133,7 @@ namespace Monocle {
 				}
 			}
 		}
-		private Material[] materials;
+		protected Material[] materials;
 
 		public Material this[int i] {
 			get {
@@ -213,15 +207,16 @@ namespace Monocle {
 			if (Mesh == null || materials == null)
 				return;
 
-			Vector3 position = Position;
-
-
-			Draw.CustomDrawCall(new ModelRenderCall() {
-				vertices = Mesh.vertices,
-				indices = Mesh.indices,
-				materials = materials,
-				transform = TransMatrix()
-			});
+			for (int i = 0; i < Mesh.indices.Length; i++) {
+				var mat = materials.Length > 0 ? ((i < materials.Length) ? materials[i] : materials[0]) : Draw.DefaultMaterial;
+				Draw.CustomDrawCall(new ModelRenderCall() {
+					vertices = Mesh.vertices,
+					indices = Mesh.indices[i],
+					material = mat,
+					transform = TransMatrix(),
+					RenderOrder = mat.RenderOrder??Draw.CurrentRenderOrder,
+				});
+			}
 
 		}
 
@@ -252,7 +247,7 @@ namespace Monocle {
 			return this;
 		}
 		public BasicModelRenderer SetMesh(MonocleModel mesh) {
-			this.mesh = mesh;
+			this.Mesh = mesh;
 			return this;
 		}
 	}

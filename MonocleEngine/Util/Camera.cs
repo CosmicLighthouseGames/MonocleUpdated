@@ -424,6 +424,7 @@ namespace Monocle {
 			}
 
 			foreach (var obj in render) {
+				Draw.CurrentRenderOrder = obj.RenderOrder;
 				obj.Render();
 			}
 

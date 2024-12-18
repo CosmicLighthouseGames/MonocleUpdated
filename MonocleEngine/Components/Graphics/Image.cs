@@ -66,63 +66,63 @@ namespace Monocle
 				Draw.Texture(Texture, matrix, Color, Stencil, (FlipX ? SpriteEffects.FlipHorizontally : SpriteEffects.None) | (FlipY ? SpriteEffects.FlipVertically : SpriteEffects.None), material);
 			}
 		}
-		public void Render9Slice(Vector2 point, Point size, Rectangle center) {
+		public void Render9Slice(Vector3 position, Point size, Rectangle center) {
 			if (Texture != null) {
 
 				Matrix matrix;
 
-				//if (GameplayRenderer.CurrentPass == RenderingPass.ScreenUI) {
+				float ppu = PixelsPerUnit??Engine.PixelsPerUnit;
 
-				//	Rectangle clip = new Rectangle(0, 0, 0, center.Y);
-				//	Vector2 pos = new Vector2(point.X, point.Y);
-				//	Vector2 scale = new Vector2(1, 1);
-				//	for (int y = 0; y < 3; y++) {
+				Rectangle clip = new Rectangle(0, 0, 0, center.Y);
+				Vector3 pos = position;
+				pos.Y += (size.Y - center.Y - 1) / ppu;
+				Vector2 scale = new Vector2(1, 1);
+				Vector2 offsets = new Vector2(size.X, size.Y) / ppu;
+				for (int y = 0; y < 3; y++) {
 
-				//		switch (y) {
-				//			case 1:
-				//				pos.Y += center.Y;
-				//				clip.Y = center.Y;
-				//				clip.Height = center.Height;
-				//				scale.Y = (size.Y - Texture.Height) / center.Height;
-				//				break;
-				//			case 2:
-				//				pos.Y = (point.Y + size.Y) - center.Bottom;
-				//				clip.Y = center.Bottom;
-				//				clip.Height = Texture.Height - center.Bottom;
-				//				scale.Y = 1;
-				//				break;
-				//		}
-				//		for (int x = 0; x < 3; x++) {
-				//			switch (x) {
-				//				case 0:
-				//					pos.X = point.X;
-				//					clip.X = 0;
-				//					clip.Width = center.X;
-				//					break;
-				//				case 1:
-				//					pos.X += center.X;
-				//					clip.X = center.X;
-				//					clip.Width = center.Width;
-				//					scale.X = (size.X - Texture.Width) / center.Width;
-				//					break;
-				//				case 2:
-				//					pos.X = (point.X + size.X) - center.Right;
-				//					clip.X = center.Right;
-				//					clip.Width = Texture.Width - center.Right;
-				//					scale.X = 1;
-				//					break;
-				//			}
+					switch (y) {
+						case 1:
+							pos.Y = position.Y + (Texture.Height - center.Bottom + 0) / ppu;
+							clip.Y = center.Y;
+							clip.Height = center.Height;
+							scale.Y = (size.Y - Texture.Height) / center.Height;
+							break;
+						case 2:
+							pos.Y = position.Y;
+							clip.Y = center.Bottom;
+							clip.Height = Texture.Height - center.Bottom;
+							scale.Y = 1;
+							break;
+					}
+					for (int x = 0; x < 3; x++) {
+						switch (x) {
+							case 0:
+								pos.X = position.X;
+								clip.X = 0;
+								clip.Width = center.X;
+								break;
+							case 1:
+								pos.X += center.X / ppu;
+								clip.X = center.X;
+								clip.Width = center.Width;
+								scale.X = (size.X - Texture.Width) / center.Width;
+								break;
+							case 2:
+								pos.X = (position.X + offsets.X) - center.Right / ppu;
+								clip.X = center.Right;
+								clip.Width = Texture.Width - center.Right;
+								scale.X = 1;
+								break;
+						}
 
-				//			Draw.SpriteBatch.Draw(Texture.Texture, new Vector2(pos.X, pos.Y), clip, Color, 0, Origin, scale, SpriteEffects.None, Draw.RealDepth);
+						Draw.Texture(Texture.GetSubtexture(clip), new Vector3(pos.X, pos.Y, pos.Z), Vector2.Zero, scale, Calc.EulerAngle(0, 0, 0), Color);
+						//break;
 
-				//		}
-				//	}
+					}
+					//if (y == 1)
+					//	break;
+				}
 
-				//}
-				//else {
-
-				//	throw new NotImplementedException();
-				//}
 			}
 		}
 

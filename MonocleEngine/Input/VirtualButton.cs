@@ -8,6 +8,7 @@ namespace Monocle
 {
 	public enum MonocleJoyButton {
 
+		None = 0,
 		PadLeft = Buttons.DPadLeft, PadRight = Buttons.DPadRight, PadUp = Buttons.DPadUp, PadDown = Buttons.DPadDown,
 
 		ShoulderAny, TriggerAny = 100,
@@ -16,8 +17,8 @@ namespace Monocle
 
 		OptionsA = Buttons.Start, OptionsB = Buttons.Back,
 
-		LeftJoystickLeft, LeftJoystickRight, LeftJoystickUp, LeftJoystickDown,
-		RightJoystickLeft, RightJoystickRight, RightJoystickUp, RightJoystickDown,
+		LeftJoystickLeft, LeftJoystickRight, LeftJoystickUp, LeftJoystickDown, LeftJoystickPress = Buttons.LeftStick,
+		RightJoystickLeft, RightJoystickRight, RightJoystickUp, RightJoystickDown, RightJoystickPress = Buttons.RightStick,
 		ButtonLeft, ButtonRight, ButtonUp, ButtonDown,
 
 		TypicalLeft, TypicalRight, TypicalUp, TypicalDown,

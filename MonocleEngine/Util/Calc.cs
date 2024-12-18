@@ -1780,6 +1780,7 @@ namespace Monocle
 		public static Quaternion EulerAngle(Vector3 rotation, string format) {
 			return EulerAngle(rotation.X, rotation.Y, rotation.Z, format);
 		}
+        [DebuggerHidden]
 		public static Quaternion EulerAngle(float x, float y, float z) {
 
             return 

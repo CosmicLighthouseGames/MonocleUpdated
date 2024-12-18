@@ -30,6 +30,7 @@ namespace Monocle
             enumerators = new Stack<IEnumerator>();
         }
 
+
         public override void Update()
         {
             ended = false;

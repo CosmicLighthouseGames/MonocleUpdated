@@ -4,9 +4,12 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 
 namespace Monocle {
 	public interface IDrawCall {
+
+		int RenderOrder { get; set; }
 
 		void Render(GraphicsDevice device);
 	}
@@ -81,6 +84,8 @@ namespace Monocle {
 		public static float RealDepth;
 		private static int entityDepth;
 
+		public static int CurrentRenderOrder;
+
 		private static Rectangle rect;
 
 		class DrawCallList {
@@ -104,6 +109,7 @@ namespace Monocle {
 			/// </summary>
 			private void Settle() {
 
+				//callList.Sort((a, b) => { return a.RenderOrder.CompareTo(b.RenderOrder); });
 
 				dirty = false;
 			}
@@ -125,7 +131,7 @@ namespace Monocle {
 
 			public IEnumerable<IDrawCall> GetItems() {
 
-				foreach (var item in callList) {
+				foreach (var item in callList.OrderBy((a) => a.RenderOrder)) {
 					yield return item;
 				}
 
@@ -134,9 +140,9 @@ namespace Monocle {
 			}
 
 			public void Sort() {
-				if (dirty) {
-					Settle();
-				}
+				//if (dirty) {
+				//	Settle();
+				//}
 
 			}
 		}
@@ -148,6 +154,8 @@ namespace Monocle {
 			public static int[] indices = new int[]{
 				1, 2, 3, 2, 1, 0
 			};
+
+			public int RenderOrder { get; set; }
 
 			public static void Initialize() {
 				meshes = new List<MonocleVertex[]>();
@@ -178,6 +186,8 @@ namespace Monocle {
 				return retval;
 			}
 			public static SpriteDrawCall Draw(MTexture texture, Matrix transform, Color color, SpriteEffects flip, int stencil = 0, Material mat = null) {
+				if (texture == null)
+					return null;
 				var retval = AddMesh(transform, color, texture.Texture, texture.ClipRect, flip);
 
 				retval.material = mat??DefaultMaterial;
@@ -238,7 +248,8 @@ namespace Monocle {
 				
 				return new SpriteDrawCall() {
 					mesh = mesh,
-					start = index
+					start = index,
+					RenderOrder = CurrentRenderOrder
 				};
 			}
 			static SpriteDrawCall AddMesh(Matrix transform, Color color, Texture2D texture, Rectangle clipRect, SpriteEffects flip) {
@@ -361,7 +372,12 @@ namespace Monocle {
 									else if (param.ParameterClass == EffectParameterClass.Vector) {
 										switch (param.ColumnCount) {
 											case 4:
-												param.SetValue(Vector4.Zero);
+												if (param.Elements.Count > 1) {
+													param.SetValue(new Vector4[param.Elements.Count]);
+												}
+												else {
+													param.SetValue(Vector4.Zero);
+												}
 												break;
 											default:
 												param.SetValue(0.0f);
@@ -512,6 +528,9 @@ namespace Monocle {
 
 		public static void Texture(MTexture tex, Matrix matrix, Color color, int stencil = 0, SpriteEffects flipping = SpriteEffects.None, Material mat = null) {
 
+			if (tex == null)
+				return;
+
 			if (mat == null) {
 				mat = DefaultMaterial;
 			}
@@ -520,8 +539,11 @@ namespace Monocle {
 
 		}
 		public static void Texture(MTexture tex, Vector3 position, Material mat = null) {
+			if (tex == null)
+				return;
 
 			var matrix = Matrix.Identity
+				* Matrix.CreateScale(1f / Engine.PixelsPerUnit, 1f / Engine.PixelsPerUnit, 1)
 				* Matrix.CreateTranslation(position.X, position.Y, position.Z)
 				;
 
@@ -530,9 +552,12 @@ namespace Monocle {
 
 		public static void Texture(MTexture tex, Vector3 position, Vector2 origin, Vector2 scale, Quaternion rotation, Color color, int stencil = 0, SpriteEffects flipping = SpriteEffects.None) {
 
+			if (tex == null)
+				return;
+
 			var matrix = Matrix.Identity
-				* Matrix.CreateTranslation(new Vector3(-origin.X, -origin.Y, 0))
 				* Matrix.CreateScale(scale.X / Engine.PixelsPerUnit, scale.Y / Engine.PixelsPerUnit, 1)
+				* Matrix.CreateTranslation(new Vector3(-origin.X / 2, -origin.Y / 2, 0))
 				* Matrix.CreateFromQuaternion(rotation)
 				* Matrix.CreateTranslation(position.X, position.Y, position.Z)
 				;

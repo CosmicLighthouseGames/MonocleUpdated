@@ -495,6 +495,7 @@ namespace Monocle {
 			resizing = true;
 			Graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
 			Graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
+			Graphics.ApplyChanges();
 			Graphics.IsFullScreen = true;
 			Graphics.ApplyChanges();
 			resizing = false;

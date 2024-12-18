@@ -1,86 +1,77 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "D:\\WillT\\Documents\\source\\IsaMonocle\\",
+  "WorkspaceRootPath": "D:\\WillT\\Documents\\source\\MonocleUpdated\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{5BE4012F-99A1-46C7-A568-52DA434D967B}|MonocleCompiler\\MonocleCompiler.shproj|d:\\willt\\documents\\source\\isamonocle\\monoclecompiler\\compiler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{5BE4012F-99A1-46C7-A568-52DA434D967B}|MonocleCompiler\\MonocleCompiler.shproj|d:\\willt\\documents\\source\\monocleupdated\\monoclecompiler\\compiler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{5BE4012F-99A1-46C7-A568-52DA434D967B}|MonocleCompiler\\MonocleCompiler.shproj|solutionrelative:monoclecompiler\\compiler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|d:\\willt\\documents\\source\\isamonocle\\monocleengine\\components\\colliders\\hitbox3d.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|solutionrelative:monocleengine\\components\\colliders\\hitbox3d.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|d:\\willt\\documents\\source\\isamonocle\\monocleengine\\components\\colliders\\grid3d.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|solutionrelative:monocleengine\\components\\colliders\\grid3d.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|d:\\willt\\documents\\source\\isamonocle\\monocleengine\\components\\colliders\\cylinder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|solutionrelative:monocleengine\\components\\colliders\\cylinder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{39AC3B1C-C8DD-4FB5-96FC-15DEA8FF87D4}|MonocleEngine\\Monocle.shproj|d:\\willt\\documents\\source\\isamonocle\\monocleengine\\components\\colliders\\trigger.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{39AC3B1C-C8DD-4FB5-96FC-15DEA8FF87D4}|MonocleEngine\\Monocle.shproj|solutionrelative:monocleengine\\components\\colliders\\trigger.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{39AC3B1C-C8DD-4FB5-96FC-15DEA8FF87D4}|MonocleEngine\\Monocle.shproj|d:\\willt\\documents\\source\\isamonocle\\monocleengine\\components\\colliders\\collide.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{39AC3B1C-C8DD-4FB5-96FC-15DEA8FF87D4}|MonocleEngine\\Monocle.shproj|solutionrelative:monocleengine\\components\\colliders\\collide.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{39AC3B1C-C8DD-4FB5-96FC-15DEA8FF87D4}|MonocleEngine\\Monocle.shproj|d:\\willt\\documents\\source\\isamonocle\\monocleengine\\components\\colliders\\collider.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{39AC3B1C-C8DD-4FB5-96FC-15DEA8FF87D4}|MonocleEngine\\Monocle.shproj|solutionrelative:monocleengine\\components\\colliders\\collider.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|d:\\willt\\documents\\source\\isamonocle\\monocleengine\\components\\colliders\\actor.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|solutionrelative:monocleengine\\components\\colliders\\actor.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|d:\\willt\\documents\\source\\isamonocle\\monocletest\\monocletest.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|",
+      "AbsoluteMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|d:\\willt\\documents\\source\\monocleupdated\\monocletest\\monocletest.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|",
       "RelativeMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|solutionrelative:monocletest\\monocletest.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{39AC3B1C-C8DD-4FB5-96FC-15DEA8FF87D4}|MonocleEngine\\Monocle.shproj|d:\\willt\\documents\\source\\isamonocle\\monocleengine\\renderers\\basicrenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{39AC3B1C-C8DD-4FB5-96FC-15DEA8FF87D4}|MonocleEngine\\Monocle.shproj|d:\\willt\\documents\\source\\monocleupdated\\monocleengine\\renderers\\basicrenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{39AC3B1C-C8DD-4FB5-96FC-15DEA8FF87D4}|MonocleEngine\\Monocle.shproj|solutionrelative:monocleengine\\renderers\\basicrenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|d:\\willt\\documents\\source\\isamonocle\\monocletest\\game1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|d:\\willt\\documents\\source\\monocleupdated\\monocletest\\game1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|solutionrelative:monocletest\\game1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|d:\\willt\\documents\\source\\isamonocle\\monocleengine\\util\\camera.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|d:\\willt\\documents\\source\\monocleupdated\\monocleengine\\util\\camera.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|solutionrelative:monocleengine\\util\\camera.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|d:\\willt\\documents\\source\\isamonocle\\monocleengine\\graphics\\modelatlas.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|d:\\willt\\documents\\source\\monocleupdated\\monocleengine\\graphics\\modelatlas.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|solutionrelative:monocleengine\\graphics\\modelatlas.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|d:\\willt\\documents\\source\\isamonocle\\monocleengine\\components\\graphics\\modelrenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|solutionrelative:monocleengine\\components\\graphics\\modelrenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|d:\\willt\\documents\\source\\isamonocle\\monocleengine\\graphics\\meshdata.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|d:\\willt\\documents\\source\\monocleupdated\\monocleengine\\graphics\\meshdata.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|solutionrelative:monocleengine\\graphics\\meshdata.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|d:\\willt\\documents\\source\\isamonocle\\monocleengine\\graphics\\draw.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|d:\\willt\\documents\\source\\monocleupdated\\monocleengine\\graphics\\draw.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|solutionrelative:monocleengine\\graphics\\draw.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|d:\\willt\\documents\\source\\isamonocle\\monocleengine\\components\\graphics\\image.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|d:\\willt\\documents\\source\\monocleupdated\\monocleengine\\components\\graphics\\image.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|solutionrelative:monocleengine\\components\\graphics\\image.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{39AC3B1C-C8DD-4FB5-96FC-15DEA8FF87D4}|MonocleEngine\\Monocle.shproj|d:\\willt\\documents\\source\\isamonocle\\monocleengine\\engine.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{39AC3B1C-C8DD-4FB5-96FC-15DEA8FF87D4}|MonocleEngine\\Monocle.shproj|d:\\willt\\documents\\source\\monocleupdated\\monocleengine\\engine.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{39AC3B1C-C8DD-4FB5-96FC-15DEA8FF87D4}|MonocleEngine\\Monocle.shproj|solutionrelative:monocleengine\\engine.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|d:\\willt\\documents\\source\\isamonocle\\monocleengine\\graphics\\material.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|d:\\willt\\documents\\source\\monocleupdated\\monocleengine\\graphics\\material.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|solutionrelative:monocleengine\\graphics\\material.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Solid.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:MonocleEngine\\Components\\Colliders\\Solid.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Solid.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Cylinder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Grid3D.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Hitbox3D.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Collider.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Actor.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Graphics\\ModelRenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Collide.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Trigger.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -94,11 +85,11 @@
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 15,
+              "DocumentIndex": 7,
               "Title": "Draw.cs",
-              "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Graphics\\Draw.cs",
+              "DocumentMoniker": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleEngine\\Graphics\\Draw.cs",
               "RelativeDocumentMoniker": "MonocleEngine\\Graphics\\Draw.cs",
-              "ToolTip": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Graphics\\Draw.cs",
+              "ToolTip": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleEngine\\Graphics\\Draw.cs",
               "RelativeToolTip": "MonocleEngine\\Graphics\\Draw.cs",
               "ViewState": "AQIAAPMAAAAAAAAAAAAiwAwBAAANAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -107,82 +98,82 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 12,
               "Title": "Cylinder.cs",
               "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Cylinder.cs",
-              "RelativeDocumentMoniker": "MonocleEngine\\Components\\Colliders\\Cylinder.cs",
+              "RelativeDocumentMoniker": "..\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Cylinder.cs",
               "ToolTip": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Cylinder.cs",
-              "RelativeToolTip": "MonocleEngine\\Components\\Colliders\\Cylinder.cs",
+              "RelativeToolTip": "..\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Cylinder.cs",
               "ViewState": "AQIAAD8AAAAAAAAAAAAWwFYAAAAfAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2024-03-05T08:03:09.4Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 13,
               "Title": "Grid3D.cs",
               "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Grid3D.cs",
-              "RelativeDocumentMoniker": "MonocleEngine\\Components\\Colliders\\Grid3D.cs",
+              "RelativeDocumentMoniker": "..\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Grid3D.cs",
               "ToolTip": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Grid3D.cs",
-              "RelativeToolTip": "MonocleEngine\\Components\\Colliders\\Grid3D.cs",
+              "RelativeToolTip": "..\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Grid3D.cs",
               "ViewState": "AQIAANUBAAAAAAAAAAAtwO0BAAADAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2024-03-05T08:02:16.207Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 14,
               "Title": "Hitbox3D.cs",
               "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Hitbox3D.cs",
-              "RelativeDocumentMoniker": "MonocleEngine\\Components\\Colliders\\Hitbox3D.cs",
+              "RelativeDocumentMoniker": "..\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Hitbox3D.cs",
               "ToolTip": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Hitbox3D.cs",
-              "RelativeToolTip": "MonocleEngine\\Components\\Colliders\\Hitbox3D.cs",
+              "RelativeToolTip": "..\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Hitbox3D.cs",
               "ViewState": "AQIAAPkAAAAAAAAAAAAhwFYBAAAZAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2024-03-05T08:01:49.677Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 15,
               "Title": "Collider.cs",
               "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Collider.cs",
-              "RelativeDocumentMoniker": "MonocleEngine\\Components\\Colliders\\Collider.cs",
+              "RelativeDocumentMoniker": "..\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Collider.cs",
               "ToolTip": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Collider.cs",
-              "RelativeToolTip": "MonocleEngine\\Components\\Colliders\\Collider.cs",
+              "RelativeToolTip": "..\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Collider.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAACIAAAArAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2024-03-05T08:00:07.487Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 16,
               "Title": "Actor.cs",
               "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Actor.cs",
-              "RelativeDocumentMoniker": "MonocleEngine\\Components\\Colliders\\Actor.cs",
+              "RelativeDocumentMoniker": "..\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Actor.cs",
               "ToolTip": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Actor.cs",
-              "RelativeToolTip": "MonocleEngine\\Components\\Colliders\\Actor.cs",
+              "RelativeToolTip": "..\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Actor.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAABYAAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2024-03-05T07:58:49.299Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 1,
               "Title": "MonocleTest",
-              "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleTest\\MonocleTest.csproj",
+              "DocumentMoniker": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleTest\\MonocleTest.csproj",
               "RelativeDocumentMoniker": "MonocleTest\\MonocleTest.csproj",
-              "ToolTip": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleTest\\MonocleTest.csproj",
+              "ToolTip": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleTest\\MonocleTest.csproj",
               "RelativeToolTip": "MonocleTest\\MonocleTest.csproj",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
               "WhenOpened": "2024-03-05T07:52:55.293Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 4,
               "Title": "Camera.cs",
-              "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Util\\Camera.cs",
+              "DocumentMoniker": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleEngine\\Util\\Camera.cs",
               "RelativeDocumentMoniker": "MonocleEngine\\Util\\Camera.cs",
-              "ToolTip": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Util\\Camera.cs",
+              "ToolTip": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleEngine\\Util\\Camera.cs",
               "RelativeToolTip": "MonocleEngine\\Util\\Camera.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAAGYAAAAHAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -190,11 +181,11 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 5,
               "Title": "ModelAtlas.cs",
-              "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Graphics\\ModelAtlas.cs",
+              "DocumentMoniker": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleEngine\\Graphics\\ModelAtlas.cs",
               "RelativeDocumentMoniker": "MonocleEngine\\Graphics\\ModelAtlas.cs",
-              "ToolTip": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Graphics\\ModelAtlas.cs",
+              "ToolTip": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleEngine\\Graphics\\ModelAtlas.cs",
               "RelativeToolTip": "MonocleEngine\\Graphics\\ModelAtlas.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAABUAAAAuAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -202,11 +193,11 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 6,
               "Title": "MeshData.cs",
-              "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Graphics\\MeshData.cs",
+              "DocumentMoniker": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleEngine\\Graphics\\MeshData.cs",
               "RelativeDocumentMoniker": "MonocleEngine\\Graphics\\MeshData.cs",
-              "ToolTip": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Graphics\\MeshData.cs",
+              "ToolTip": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleEngine\\Graphics\\MeshData.cs",
               "RelativeToolTip": "MonocleEngine\\Graphics\\MeshData.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAAOMCAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -214,12 +205,12 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 17,
               "Title": "ModelRenderer.cs",
               "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Graphics\\ModelRenderer.cs",
-              "RelativeDocumentMoniker": "MonocleEngine\\Components\\Graphics\\ModelRenderer.cs",
+              "RelativeDocumentMoniker": "..\\IsaMonocle\\MonocleEngine\\Components\\Graphics\\ModelRenderer.cs",
               "ToolTip": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Graphics\\ModelRenderer.cs",
-              "RelativeToolTip": "MonocleEngine\\Components\\Graphics\\ModelRenderer.cs",
+              "RelativeToolTip": "..\\IsaMonocle\\MonocleEngine\\Components\\Graphics\\ModelRenderer.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAAB0AAAAfAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2024-03-02T04:39:35.249Z"
@@ -228,9 +219,9 @@
               "$type": "Document",
               "DocumentIndex": 0,
               "Title": "Compiler.cs",
-              "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleCompiler\\Compiler.cs",
+              "DocumentMoniker": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleCompiler\\Compiler.cs",
               "RelativeDocumentMoniker": "MonocleCompiler\\Compiler.cs",
-              "ToolTip": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleCompiler\\Compiler.cs",
+              "ToolTip": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleCompiler\\Compiler.cs",
               "RelativeToolTip": "MonocleCompiler\\Compiler.cs",
               "ViewState": "AQIAAJYBAAAAAAAAAAD4v7MBAAAGAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -239,47 +230,47 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 18,
               "Title": "Collide.cs",
               "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Collide.cs",
-              "RelativeDocumentMoniker": "MonocleEngine\\Components\\Colliders\\Collide.cs",
+              "RelativeDocumentMoniker": "..\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Collide.cs",
               "ToolTip": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Collide.cs",
-              "RelativeToolTip": "MonocleEngine\\Components\\Colliders\\Collide.cs",
+              "RelativeToolTip": "..\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Collide.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2024-03-05T08:03:15.472Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 19,
+              "DocumentIndex": 11,
               "Title": "Solid.cs",
               "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Solid.cs",
-              "RelativeDocumentMoniker": "MonocleEngine\\Components\\Colliders\\Solid.cs",
+              "RelativeDocumentMoniker": "..\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Solid.cs",
               "ToolTip": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Solid.cs",
-              "RelativeToolTip": "MonocleEngine\\Components\\Colliders\\Solid.cs",
+              "RelativeToolTip": "..\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Solid.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2024-04-20T18:37:46.434Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 19,
               "Title": "Trigger.cs",
               "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Trigger.cs",
-              "RelativeDocumentMoniker": "MonocleEngine\\Components\\Colliders\\Trigger.cs",
+              "RelativeDocumentMoniker": "..\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Trigger.cs",
               "ToolTip": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Trigger.cs",
-              "RelativeToolTip": "MonocleEngine\\Components\\Colliders\\Trigger.cs",
+              "RelativeToolTip": "..\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Trigger.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2024-03-05T08:03:22.699Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 3,
               "Title": "Game1.cs",
-              "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleTest\\Game1.cs",
+              "DocumentMoniker": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleTest\\Game1.cs",
               "RelativeDocumentMoniker": "MonocleTest\\Game1.cs",
-              "ToolTip": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleTest\\Game1.cs",
+              "ToolTip": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleTest\\Game1.cs",
               "RelativeToolTip": "MonocleTest\\Game1.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAABkAAAAZAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -287,11 +278,11 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 18,
+              "DocumentIndex": 10,
               "Title": "Material.cs",
-              "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Graphics\\Material.cs",
+              "DocumentMoniker": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleEngine\\Graphics\\Material.cs",
               "RelativeDocumentMoniker": "MonocleEngine\\Graphics\\Material.cs",
-              "ToolTip": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Graphics\\Material.cs",
+              "ToolTip": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleEngine\\Graphics\\Material.cs",
               "RelativeToolTip": "MonocleEngine\\Graphics\\Material.cs",
               "ViewState": "AQIAAAMAAAAAAAAAAAAAABsAAAARAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -299,11 +290,11 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 16,
+              "DocumentIndex": 8,
               "Title": "Image.cs",
-              "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Graphics\\Image.cs",
+              "DocumentMoniker": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleEngine\\Components\\Graphics\\Image.cs",
               "RelativeDocumentMoniker": "MonocleEngine\\Components\\Graphics\\Image.cs",
-              "ToolTip": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Graphics\\Image.cs",
+              "ToolTip": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleEngine\\Components\\Graphics\\Image.cs",
               "RelativeToolTip": "MonocleEngine\\Components\\Graphics\\Image.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAADcAAABEAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -311,11 +302,11 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 2,
               "Title": "BasicRenderer.cs",
-              "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Renderers\\BasicRenderer.cs",
+              "DocumentMoniker": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleEngine\\Renderers\\BasicRenderer.cs",
               "RelativeDocumentMoniker": "MonocleEngine\\Renderers\\BasicRenderer.cs",
-              "ToolTip": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Renderers\\BasicRenderer.cs",
+              "ToolTip": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleEngine\\Renderers\\BasicRenderer.cs",
               "RelativeToolTip": "MonocleEngine\\Renderers\\BasicRenderer.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAABMAAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -323,11 +314,11 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 17,
+              "DocumentIndex": 9,
               "Title": "Engine.cs",
-              "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Engine.cs",
+              "DocumentMoniker": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleEngine\\Engine.cs",
               "RelativeDocumentMoniker": "MonocleEngine\\Engine.cs",
-              "ToolTip": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Engine.cs",
+              "ToolTip": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleEngine\\Engine.cs",
               "RelativeToolTip": "MonocleEngine\\Engine.cs",
               "ViewState": "AQIAABIBAAAAAAAAAAAhwD8BAAACAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",

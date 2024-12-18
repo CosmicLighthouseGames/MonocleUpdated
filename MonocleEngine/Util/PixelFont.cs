@@ -252,12 +252,13 @@ namespace Monocle
 			var up = Vector3.Transform(Vector3.Up / Engine.PixelsPerUnit, rotation);
 			var right = Vector3.Transform(Vector3.Right / Engine.PixelsPerUnit, rotation);
 
+			
 			for (int i = 0; i < text.Length; i++)
 			{
 				if (text[i] == '\n')
 				{
 					offset.X = 0;
-					offset.Y += LineHeight;
+					offset.Y -= LineHeight;
 					if (justify.X != 0)
 						justified.X = WidthToNextLine(text, i + 1) * justify.X;
 					continue;

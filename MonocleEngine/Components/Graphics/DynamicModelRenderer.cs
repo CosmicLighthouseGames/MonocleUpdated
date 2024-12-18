@@ -10,16 +10,17 @@ namespace Monocle {
 	public unsafe class DynamicModelRenderCall : IDrawCall {
 		static MonocleVertex[] buffer = new MonocleVertex[0x2000];
 
-		public Material material {
-			set {
-				materials = new Material[] { value };
-			}
-		}
+		public Material material;
 		public MonocleVertex[] vertices;
-		public short[][] indices;
-		public Material[] materials;
+		public short[] indices;
 		public Matrix transform;
-		public List<TransformVertex> transforms;
+		public List<TransformVertex> modifiers;
+
+		public int RenderOrder { get; set; }
+
+		public DynamicModelRenderCall() {
+
+		}
 
 
 		public void Render(GraphicsDevice device) {
@@ -30,7 +31,7 @@ namespace Monocle {
 					for (int i = 0; i < vertices.Length; i++) {
 						var vert = meshPtr[i];
 
-						foreach (var t in transforms) {
+						foreach (var t in modifiers) {
 							t(ref vert);
 						}
 
@@ -90,20 +91,16 @@ namespace Monocle {
 				techPass.Apply();
 			}
 
-			for (int i = 0; i < indices.Length; i++) {
-				Material newMat;
-				if (Draw.OverridingMaterial != null) {
-					newMat = Draw.OverridingMaterial;
-				}
-				else if (i >= materials.Length) {
-					newMat = materials[0];
-				}
-				else {
-					newMat = materials[i];
-				}
-				SetMaterial(newMat);
-				device.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, buffer, 0, vertices.Length, indices[i], 0, indices[i].Length / 3);
+			Material newMat;
+			if (Draw.OverridingMaterial != null) {
+				newMat = Draw.OverridingMaterial;
 			}
+			else {
+				newMat = material;
+			}
+			SetMaterial(newMat);
+			device.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, buffer, 0, vertices.Length, indices, 0, indices.Length / 3);
+			
 		}
 	}
 	public class DynamicModelRenderer : BasicModelRenderer {
@@ -120,19 +117,18 @@ namespace Monocle {
 			if (Mesh == null)
 				return;
 
-			Vector3 position = Position;
-
-			if (Entity != null) {
-				position += Entity.Position;
+			for (int i = 0; i < Mesh.indices.Length; i++) {
+				var mat = materials.Length > 0 ? ((i < materials.Length) ? materials[i] : materials[0]) : Draw.DefaultMaterial;
+				Draw.CustomDrawCall(new DynamicModelRenderCall() {
+					vertices = Mesh.vertices,
+					indices = Mesh.indices[i],
+					material = mat,
+					modifiers = Transforms,
+					transform = TransMatrix(),
+					RenderOrder = mat.RenderOrder??Draw.CurrentRenderOrder,
+				});
 			}
 
-			Draw.CustomDrawCall(new DynamicModelRenderCall() {
-				vertices = Mesh.vertices,
-				indices = Mesh.indices,
-				material = Material??Draw.DefaultMaterial,
-				transforms = Transforms,
-				transform = TransMatrix()
-			});
 
 		}
 	}

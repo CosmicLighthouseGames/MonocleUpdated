@@ -26,6 +26,8 @@ namespace Monocle {
 		public ScreenFilter[] Filters;
 		public Action? AfterRender;
 
+		public int RenderOrder { get; set; }
+
 		public void Render(GraphicsDevice device) {
 
 			var dState = device.DepthStencilState;
@@ -135,6 +137,7 @@ namespace Monocle {
 			Draw.CustomDrawCall(new FilterCall() {
 				Filters = Filters.ToArray(),
 				AfterRender = AfterRender,
+				RenderOrder = RenderOrder,
 			});
 
 		}

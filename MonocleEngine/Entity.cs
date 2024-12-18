@@ -13,7 +13,10 @@ namespace Monocle
             UUID = data.id;
             FromData = data.constantEntity;
         }
-    }
+		public override string ToString() {
+            return UUID;
+		}
+	}
     public interface IMonocleRenderer {
         public uint Tag { get; }
         public int RenderOrder { get; }

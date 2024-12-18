@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -120,6 +121,7 @@ namespace Monocle
             return Entities.ContainsKey(typeof(T));
         }
 
+        [DebuggerHidden]
         public bool IsComponentTracked<T>() where T : Component
         {
             return Components.ContainsKey(typeof(T));
@@ -231,6 +233,7 @@ namespace Monocle
             return nearest;
         }
 
+        [DebuggerHidden]
         public List<Component> GetComponents<T>() where T : Component
         {
 #if DEBUG

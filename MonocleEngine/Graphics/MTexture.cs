@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Xml;
 
@@ -31,7 +32,8 @@ namespace Monocle
             SetUtil();
         }
 
-        public MTexture(MTexture parent, int x, int y, int width, int height)
+		[DebuggerHidden]
+		public MTexture(MTexture parent, int x, int y, int width, int height)
         {
             Parent = parent;
             AtlasPath = null;
@@ -43,6 +45,7 @@ namespace Monocle
             SetUtil();
         }
 
+        [DebuggerHidden]
         public MTexture(MTexture parent, Rectangle clipRect)
             : this(parent, clipRect.X, clipRect.Y, clipRect.Width, clipRect.Height)
         {
@@ -94,7 +97,8 @@ namespace Monocle
             SetUtil();
         }
 
-        private void SetUtil()
+		[DebuggerHidden]
+		private void SetUtil()
         {
             Center = new Vector2(Width, Height) * 0.5f;
             LeftUV = ClipRect.Left / (float)Texture.Width;
@@ -128,6 +132,7 @@ namespace Monocle
             }
         }
 
+        [DebuggerHidden]
         public MTexture GetSubtexture(Rectangle rect)
         {
             return new MTexture(this, rect);
@@ -175,12 +180,14 @@ namespace Monocle
                 return "MTexture [" + Texture.Width + " x " + Texture.Height + "]";
         }
 
-        public Rectangle GetRelativeRect(Rectangle rect)
+		[DebuggerHidden]
+		public Rectangle GetRelativeRect(Rectangle rect)
         {
             return GetRelativeRect(rect.X, rect.Y, rect.Width, rect.Height);
         }
 
-        public Rectangle GetRelativeRect(int x, int y, int width, int height)
+		[DebuggerHidden]
+		public Rectangle GetRelativeRect(int x, int y, int width, int height)
         {
             int atX = (int)(ClipRect.X - DrawOffset.X + x);
             int atY = (int)(ClipRect.Y - DrawOffset.Y + y);

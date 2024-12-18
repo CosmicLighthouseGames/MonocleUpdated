@@ -86,6 +86,8 @@ namespace Monocle {
 		public MTexture Texture;
 		public int Stencil;
 
+		public int? RenderOrder = null;
+
 		public Dictionary<string, dynamic> parameterData = new Dictionary<string, dynamic>();
 
 		public Material SetTechnique(string technique) {
@@ -110,6 +112,10 @@ namespace Monocle {
 		}
 		public Material SetStencil(int stencil) {
 			Stencil = stencil;
+			return this;
+		}
+		public Material SetRenderOrder(int? renderPass) {
+			RenderOrder = renderPass;
 			return this;
 		}
 	}
