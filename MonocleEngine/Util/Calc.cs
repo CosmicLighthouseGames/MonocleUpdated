@@ -2125,6 +2125,7 @@ namespace Monocle
 
         #region XML
 
+        [DebuggerHidden]
         public static XmlDocument LoadContentXML(string filename)
         {
             XmlDocument xml = new XmlDocument();

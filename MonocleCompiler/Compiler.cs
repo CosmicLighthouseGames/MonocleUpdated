@@ -32,7 +32,7 @@ namespace MonocleCompiler {
 
 		string RawFilesPath, CompiledPath, DumpPath;
 
-		bool isDebug;
+		public bool isDebug { get; private set; }
 
 		string solutionPath, projectFolder, projectName, contentPath, engineContentPath, compiledPath;
 

@@ -116,7 +116,7 @@ namespace Monocle {
 			this.depthStencilState = depthStencilState;
 			return this;
 		}
-		public ScreenFilter SetRenderTargets(RenderTarget2D[] renderTargets) {
+		public ScreenFilter SetRenderTargets(params RenderTarget2D[] renderTargets) {
 			this.renderTargets = renderTargets.Select((a) => { return (RenderTargetBinding)a; }).ToArray();
 			return this;
 		}

@@ -351,19 +351,19 @@ namespace Monocle
 		{
 		}
 		
-		public PixelFontSize AddFontSize(string path, Atlas atlas = null, bool outline = false)
+		public PixelFont AddFontSize(string path, Atlas atlas = null, bool outline = false)
 		{
 			var data = Calc.LoadXML(path)["font"];
 			return AddFontSize(path, data, atlas, outline);
 		}
 
-		public PixelFontSize AddFontSize(string path, XmlElement data, Atlas atlas = null, bool outline = false)
+		public PixelFont AddFontSize(string path, XmlElement data, Atlas atlas = null, bool outline = false)
 		{
 			// check if size already exists
 			var size = data["info"].AttrFloat("size");
 			foreach (var fs in Sizes)
 				if (fs.Size == size)
-					return fs;
+					return this;
 
 			// get textures
 			Textures = new List<MTexture>();
@@ -375,7 +375,12 @@ namespace Monocle
 
 				if (atlas != null && atlas.Has(atlasPath))
 				{
-					Textures.Add(atlas[atlasPath]);
+					if (atlas.Has(Path.Combine(path, atlasPath))) {
+						Textures.Add(atlas[Path.Combine(path, atlasPath)]);
+					}
+					else {
+						Textures.Add(atlas[atlasPath]);
+					}
 				}
 				else
 				{
@@ -419,7 +424,7 @@ namespace Monocle
 			Sizes.Add(fontSize);
 			Sizes.Sort((a, b) => { return Math.Sign(a.Size - b.Size); });
 
-			return fontSize;
+			return this;
 		}
 
 		public PixelFontSize Get(float size)

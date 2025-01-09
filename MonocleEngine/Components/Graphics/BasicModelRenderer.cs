@@ -133,6 +133,11 @@ namespace Monocle {
 				}
 			}
 		}
+		public Material[] Materials {
+			get {
+				return materials;
+			}
+		}
 		protected Material[] materials;
 
 		public Material this[int i] {

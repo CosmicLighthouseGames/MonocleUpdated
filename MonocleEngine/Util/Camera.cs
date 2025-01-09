@@ -211,7 +211,7 @@ namespace Monocle {
 
 				if (bindings != null) {
 					for (int i = 0; i < bindings.Length; i++) {
-						RenderTargets[i] = new RenderTarget2D(Draw.GraphicsDevice, (int)(Engine.UnitWidth * Engine.PixelsPerUnit), (int)(Engine.UnitHeight * Engine.PixelsPerUnit), false, RenderTargets[i].Format, RenderTargets[i].DepthStencilFormat);
+						RenderTargets[i] = new RenderTarget2D(Draw.GraphicsDevice, (int)(Engine.WindowWidth), (int)(Engine.WindowHeight), false, RenderTargets[i].Format, RenderTargets[i].DepthStencilFormat, 0, RenderTargetUsage.PreserveContents);
 						bindings[i] = RenderTargets[i];
 					}
 				}
@@ -249,14 +249,20 @@ namespace Monocle {
 		public Func<Entity, bool> DoesRender;
 		public Func<Component, bool> DoesRenderComponent;
 
+
 		public void SetRenderTargets(params RenderTarget2D[] textures) {
 			if (textures == null) {
 
 			}
 			else if (windowSize) {
+				if (RenderTargets == null) {
+					RenderTargets = new RenderTarget2D[textures.Length];
+					bindings = new RenderTargetBinding[textures.Length];
+				}
 
 				for (int i = 0; i < textures.Length; i++) {
-					RenderTargets[i] = new RenderTarget2D(Draw.GraphicsDevice, (int)(Engine.UnitWidth * Engine.PixelsPerUnit), (int)(Engine.UnitHeight * Engine.PixelsPerUnit), false, RenderTargets[i].Format, RenderTargets[i].DepthStencilFormat);
+					RenderTargets[i]?.Dispose();
+					RenderTargets[i] = new RenderTarget2D(Draw.GraphicsDevice, (int)(textures[i].Width), (int)(textures[i].Height), false, textures[i].Format, textures[i].DepthStencilFormat);
 					bindings[i] = RenderTargets[i];
 				}
 			}
