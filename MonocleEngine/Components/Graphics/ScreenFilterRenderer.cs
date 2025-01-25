@@ -24,11 +24,12 @@ namespace Monocle {
 		}
 
 		public ScreenFilter[] Filters;
-		public Action? AfterRender;
+		public Action BeforeRender, AfterRender;
 
 		public int RenderOrder { get; set; }
 
 		public void Render(GraphicsDevice device) {
+
 
 			var dState = device.DepthStencilState;
 			var bState = device.BlendState;
@@ -43,19 +44,18 @@ namespace Monocle {
 			var targets = device.GetRenderTargets();
 
 
+			BeforeRender?.Invoke();
 
 			foreach (var filter in Filters) {
 
 				if (filter.renderTargets != null)
 					device.SetRenderTargets(filter.renderTargets);
 
-				device.BlendState = filter.blendState??BlendState.AlphaBlend;
 
 				var material = filter.material;
 				var tech = material.Technique;
 				var techPass = tech.Passes[0];
 
-				device.DepthStencilState = filter.depthStencilState;
 
 				var tex = material.Texture??Draw.Pixel;
 				var drawcall = this;
@@ -79,6 +79,10 @@ namespace Monocle {
 				});
 
 				techPass.Apply();
+
+				device.BlendState = filter.blendState??BlendState.AlphaBlend;
+				device.DepthStencilState = filter.depthStencilState;
+
 				device.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, vertices, 0, 4, indices, 0, 2);
 			}
 
@@ -125,7 +129,7 @@ namespace Monocle {
 
 		public List<ScreenFilter> Filters = new List<ScreenFilter>();
 
-		public Action AfterRender;
+		public Action BeforeRender, AfterRender;
 
 		public ScreenFilterRenderer(int RenderOrder) : base(true) {
 			this.RenderOrder = RenderOrder;
@@ -136,6 +140,7 @@ namespace Monocle {
 
 			Draw.CustomDrawCall(new FilterCall() {
 				Filters = Filters.ToArray(),
+				BeforeRender = BeforeRender,
 				AfterRender = AfterRender,
 				RenderOrder = RenderOrder,
 			});

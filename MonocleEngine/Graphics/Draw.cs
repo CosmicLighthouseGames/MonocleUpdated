@@ -48,6 +48,8 @@ namespace Monocle {
 			}
 		}
 
+		public static DepthStencilState DefaultDepthState;
+
 		static Effect effect;
 		public static Effect DefaultEffect {
 			get => effect;
@@ -185,23 +187,23 @@ namespace Monocle {
 
 				return retval;
 			}
-			public static SpriteDrawCall Draw(MTexture texture, Matrix transform, Color color, SpriteEffects flip, int stencil = 0, Material mat = null) {
+			public static SpriteDrawCall Draw(MTexture texture, Matrix transform, Color color, SpriteEffects flip, DepthStencilState? stencil = null, Material mat = null) {
 				if (texture == null)
 					return null;
 				var retval = AddMesh(transform, color, texture.Texture, texture.ClipRect, flip);
 
 				retval.material = mat??DefaultMaterial;
 				retval.overrideTexture = texture;
-				retval.stencil = stencil;
+				retval.DepthStencilState = stencil;
 
 				return retval;
 			}
-			public static SpriteDrawCall Draw(MTexture texture, Matrix transform, Color color, Rectangle clipRect, SpriteEffects flip, int stencil = 0, Material mat = null) {
+			public static SpriteDrawCall Draw(MTexture texture, Matrix transform, Color color, Rectangle clipRect, SpriteEffects flip, DepthStencilState? stencil = null, Material mat = null) {
 				var retval = AddMesh(transform, color, texture.Texture, clipRect, flip);
 
 				retval.material = mat??DefaultMaterial;
 				retval.overrideTexture = texture;
-				retval.stencil = stencil;
+				retval.DepthStencilState = stencil;
 
 				return retval;
 			}
@@ -265,7 +267,7 @@ namespace Monocle {
 			public MTexture overrideTexture;
 			public MonocleVertex[] mesh;
 			public int start;
-			public int? stencil;
+			public DepthStencilState DepthStencilState;
 
 			public void Render(GraphicsDevice device) {
 
@@ -274,13 +276,9 @@ namespace Monocle {
 				var tech = mat.Technique;
 				var techPass = tech.Passes[0];
 
-				var stencil = this.stencil??mat.Stencil;
-
-				if (stencil != device.DepthStencilState.ReferenceStencil) {
-					var dsMask = new DepthStencilState();
-					dsMask.ReadFrom(device.DepthStencilState);
-					dsMask.ReferenceStencil = stencil;
-					device.DepthStencilState = dsMask;
+				var stencil = DepthStencilState??mat.DepthStencilState??DefaultDepthState;
+				if (stencil != device.DepthStencilState) {
+					device.DepthStencilState = stencil;
 				}
 
 				var tex = overrideTexture??mat.Texture;
@@ -412,6 +410,9 @@ namespace Monocle {
 			Material.Initialize();
 			SpriteDrawCall.Initialize();
 
+			DefaultDepthState = new DepthStencilState();
+			DefaultDepthState.ReadFrom(DepthStencilState.Default);
+
 			UseDebugPixelTexture();
 
 			for (int i = 0; i < drawStack.Length; i++) {
@@ -526,7 +527,7 @@ namespace Monocle {
 
 		#region 3D Images
 
-		public static void Texture(MTexture tex, Matrix matrix, Color color, int stencil = 0, SpriteEffects flipping = SpriteEffects.None, Material mat = null) {
+		public static void Texture(MTexture tex, Matrix matrix, Color color, DepthStencilState? stencil = null, SpriteEffects flipping = SpriteEffects.None, Material mat = null) {
 
 			if (tex == null)
 				return;
@@ -550,7 +551,7 @@ namespace Monocle {
 			Texture(tex, matrix, Color.White);
 		}
 
-		public static void Texture(MTexture tex, Vector3 position, Vector2 origin, Vector2 scale, Quaternion rotation, Color color, int stencil = 0, SpriteEffects flipping = SpriteEffects.None) {
+		public static void Texture(MTexture tex, Vector3 position, Vector2 origin, Vector2 scale, Quaternion rotation, Color color, DepthStencilState? stencil = null, SpriteEffects flipping = SpriteEffects.None) {
 
 			if (tex == null)
 				return;

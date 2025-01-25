@@ -12,9 +12,42 @@ namespace Monocle
         public Quaternion Rotation = Quaternion.Identity;
         public Color Color = Color.White;
         public Matrix? OverrideMatrix;
-        public int Stencil;
+        public DepthStencilState DepthStencilState;
 
-        public GraphicsComponent(bool active)
+        public int? Stencil {
+            get {
+                if (DepthStencilState == null) return null;
+                return DepthStencilState.StencilWriteMask;
+            }
+		}
+		public int? StencilMask {
+			get {
+				if (DepthStencilState == null)
+					return null;
+				return DepthStencilState.StencilMask;
+			}
+		}
+
+        void CheckNull() {
+			if (DepthStencilState == null) {
+				DepthStencilState = new DepthStencilState();
+				DepthStencilState.ReadFrom(Draw.DefaultDepthState);
+			}
+
+		}
+
+		public void SetStencilWrite(int stencil) {
+            CheckNull();
+
+            DepthStencilState.StencilEnable = true;
+			DepthStencilState.StencilWriteMask = ~0;
+			DepthStencilState.StencilMask = stencil;
+			DepthStencilState.StencilFunction = CompareFunction.Always;
+			DepthStencilState.CounterClockwiseStencilFunction = CompareFunction.Always;
+			DepthStencilState.StencilPass = StencilOperation.Replace;
+		}
+
+		public GraphicsComponent(bool active)
             : base(active, true)
         {
 

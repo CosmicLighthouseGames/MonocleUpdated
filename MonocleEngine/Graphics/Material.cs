@@ -71,7 +71,7 @@ namespace Monocle {
 			Color = other.Color;
 			Name = other.Name;
 			Texture = other.Texture;
-			Stencil = other.Stencil;
+			DepthStencilState = other.DepthStencilState;
 			foreach (var param in other.parameterData) {
 				parameterData[param.Key] = param.Value;
 			}
@@ -84,7 +84,42 @@ namespace Monocle {
 
 		public Color Color;
 		public MTexture Texture;
-		public int Stencil;
+		public DepthStencilState DepthStencilState;
+
+		public int? Stencil {
+			get {
+				if (DepthStencilState == null)
+					return null;
+				return DepthStencilState.StencilWriteMask;
+			}
+			set {
+				if (value == null)
+					return;
+
+				if (DepthStencilState == null) {
+					DepthStencilState = new DepthStencilState();
+					DepthStencilState.ReadFrom(Draw.DefaultDepthState);
+				}
+				DepthStencilState.StencilWriteMask = value.Value;
+			}
+		}
+		public int? StencilMask {
+			get {
+				if (DepthStencilState == null)
+					return null;
+				return DepthStencilState.StencilMask;
+			}
+			set {
+				if (value == null)
+					return;
+
+				if (DepthStencilState == null) {
+					DepthStencilState = new DepthStencilState();
+					DepthStencilState.ReadFrom(Draw.DefaultDepthState);
+				}
+				DepthStencilState.StencilMask = value.Value;
+			}
+		}
 
 		public int? RenderOrder = null;
 
@@ -112,6 +147,7 @@ namespace Monocle {
 		}
 		public Material SetStencil(int stencil) {
 			Stencil = stencil;
+			StencilMask = stencil;
 			return this;
 		}
 		public Material SetRenderOrder(int? renderPass) {

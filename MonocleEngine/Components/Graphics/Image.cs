@@ -63,7 +63,7 @@ namespace Monocle
 
 				}
 
-				Draw.Texture(Texture, matrix, Color, Stencil, (FlipX ? SpriteEffects.FlipHorizontally : SpriteEffects.None) | (FlipY ? SpriteEffects.FlipVertically : SpriteEffects.None), material);
+				Draw.Texture(Texture, matrix, Color, DepthStencilState, (FlipX ? SpriteEffects.FlipHorizontally : SpriteEffects.None) | (FlipY ? SpriteEffects.FlipVertically : SpriteEffects.None), material);
 			}
 		}
 		public void Render9Slice(Vector3 position, Point size, Rectangle center) {

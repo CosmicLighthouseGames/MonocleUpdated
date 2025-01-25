@@ -13,6 +13,7 @@ namespace Monocle {
 		public MonocleVertex[] vertices;
 		public short[] indices;
 		public Matrix transform;
+		public DepthStencilState DepthStencilState;
 
 
 		public int RenderOrder { get; set; }
@@ -31,14 +32,14 @@ namespace Monocle {
 				}
 				mat = newMat;
 
+				
+
 				var tech = mat.Technique;
 				var techPass = tech.Passes[0];
 
-				if (mat.Stencil != device.DepthStencilState.ReferenceStencil) {
-					var dsMask = new DepthStencilState();
-					dsMask.ReadFrom(device.DepthStencilState);
-					dsMask.ReferenceStencil = mat.Stencil;
-					device.DepthStencilState = dsMask;
+				var stencil = DepthStencilState??mat.DepthStencilState??Draw.DefaultDepthState;
+				if (stencil != device.DepthStencilState) {
+					device.DepthStencilState = stencil;
 				}
 
 				var tex = mat.Texture??Draw.Pixel;
@@ -220,6 +221,7 @@ namespace Monocle {
 					material = mat,
 					transform = TransMatrix(),
 					RenderOrder = mat.RenderOrder??Draw.CurrentRenderOrder,
+					DepthStencilState = DepthStencilState,
 				});
 			}
 

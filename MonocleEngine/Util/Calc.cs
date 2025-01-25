@@ -472,11 +472,34 @@ namespace Monocle
 
         public static Vector3 Range(this Random random, Vector3 min, Vector3 max) {
             return min + new Vector3(random.NextFloat(max.X - min.X), random.NextFloat(max.Y - min.Y), random.NextFloat(max.Z - min.Z));
-        }
+		}
 
-        #endregion
+		/// <summary>
+		/// Returns a random integer between min (inclusive) and max (exclusive)
+		/// </summary>
+		/// <param name="random"></param>
+		/// <param name="min"></param>
+		/// <param name="max"></param>
+		/// <returns></returns>
+		public static T Range<T>(this Random random, List<T> items) {
+            return Range(random, items.ToArray());
+		}
 
-        public static int Facing(this Random random)
+		/// <summary>
+		/// Returns a random integer between min (inclusive) and max (exclusive)
+		/// </summary>
+		/// <param name="random"></param>
+		/// <param name="min"></param>
+		/// <param name="max"></param>
+		/// <returns></returns>
+		public static T Range<T>(this Random random, T[] items) {
+            int id = random.Range(0, items.Length);
+            return items[id];
+		}
+
+		#endregion
+
+		public static int Facing(this Random random)
         {
             return (random.NextFloat() < 0.5f ? -1 : 1);
         }
@@ -2914,20 +2937,31 @@ namespace Monocle
 
         public static DepthStencilState CreateFilterStencil(int mask, int value, bool ifEqual) {
             var st = new DepthStencilState();
-            st.ReadFrom(DepthStencilState.None);
+            st.ReadFrom(DepthStencilState.DepthRead);
+
+            st.Name = "FilterStencil";
 
             st.StencilEnable = true;
             st.ReferenceStencil = value;
             st.StencilMask = mask;
+            st.DepthBufferEnable = false;
             if (ifEqual) {
                 st.StencilFunction = CompareFunction.Equal;
             }
             else {
                 st.StencilFunction = CompareFunction.NotEqual;
-			}
-			st.StencilFunction = CompareFunction.Never;
+            }
+            
 
-			return st;
+            st.StencilDepthBufferFail = StencilOperation.Keep;
+            st.StencilFail = StencilOperation.Keep;
+            st.CounterClockwiseStencilFail = StencilOperation.Keep;
+            st.CounterClockwiseStencilDepthBufferFail = StencilOperation.Keep;
+
+            st.StencilPass = StencilOperation.Replace;
+            st.CounterClockwiseStencilPass = StencilOperation.Replace;
+
+            return st;
         }
 
 		#endregion

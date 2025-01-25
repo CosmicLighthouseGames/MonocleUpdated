@@ -83,7 +83,6 @@ namespace Monocle {
 
 		public RasterizerState R_State = RasterizerState.CullClockwise;
 		public BlendState B_State = BlendState.NonPremultiplied;
-		public DepthStencilState DS_State= DepthStencilState.Default;
 
 		public ClearOptions ClearOptions = ClearOptions.Target | ClearOptions.DepthBuffer | ClearOptions.Stencil;
 
@@ -436,7 +435,6 @@ namespace Monocle {
 
 			graphics.RasterizerState = R_State;
 			graphics.BlendState = B_State;
-			graphics.DepthStencilState = DS_State;
 
 			graphics.Viewport = Viewport;
 

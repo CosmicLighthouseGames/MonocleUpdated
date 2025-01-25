@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 
 namespace Monocle
@@ -738,6 +739,7 @@ namespace Monocle
             return closest;
         }
 
+        [DebuggerHidden]
         public T SceneAs<T>() where T : Scene
         {
             return Scene as T;
