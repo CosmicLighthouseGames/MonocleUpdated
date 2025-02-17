@@ -2937,7 +2937,7 @@ namespace Monocle
 
         public static DepthStencilState CreateFilterStencil(int mask, int value, bool ifEqual) {
             var st = new DepthStencilState();
-            st.ReadFrom(DepthStencilState.DepthRead);
+            st.ReadFrom(DepthStencilState.None);
 
             st.Name = "FilterStencil";
 

@@ -58,9 +58,9 @@ namespace Monocle
                             enumerators.Push(now.Current as IEnumerator);
                         }
                     }
-                    else if (!ended)
-                    {
-                        enumerators.Pop();
+                    else if (!ended) {
+						RunNextItem = true;
+						enumerators.Pop();
                         if (enumerators.Count == 0)
                         {
                             Finished = true;

@@ -36,6 +36,8 @@ namespace Monocle
 		public float Size;
 		public bool Outline;
 
+		public static Material FontMaterial;
+
 		private StringBuilder temp = new StringBuilder();
 
 		public string AutoNewline(string text, int width)
@@ -234,14 +236,16 @@ namespace Monocle
 				var measure = Measure(character);
 				var justified = new Vector2(measure.X * justify.X, measure.Y * justify.Y);
 				var pos = position + (new Vector3(c.XOffset, c.YOffset, 0) - justified.XY_()) * scale.XY_(1);
-				c.Texture.Draw(Calc.Floor(pos), Vector2.Zero, color, scale);
+				Monocle.Draw.Texture(c.Texture, Calc.Floor(pos), Vector2.Zero, color, scale, FontMaterial??Monocle.Draw.DefaultMaterial);
 			}
 		}
-
+		 
 		public void Draw(string text, Vector3 position, Vector2 justify, Quaternion rotation, Vector2 scale, Color color, float edgeDepth, Color edgeColor, float stroke, Color strokeColor)
 		{
 			if (string.IsNullOrEmpty(text))
 				return;
+
+			var mat = FontMaterial??Monocle.Draw.DefaultMaterial;
 
 			//scale *= Engine.PixelsPerUnit;
 
@@ -277,36 +281,36 @@ namespace Monocle
 						Monocle.Draw.Depth--;
 						if (edgeDepth > 0)
 						{
-							c.Texture.Draw(pos + right * -stroke, Vector2.Zero, strokeColor, scale);
+							Monocle.Draw.Texture(c.Texture, pos + right * -stroke, Vector2.Zero, scale, rotation, strokeColor, mat);
 							for (var j = -stroke; j < edgeDepth + stroke; j += stroke)
 							{
-								c.Texture.Draw(pos + right * -stroke + up * j, Vector2.Zero, strokeColor, scale);
-								c.Texture.Draw(pos + right * stroke + up * j, Vector2.Zero, strokeColor, scale);
+								Monocle.Draw.Texture(c.Texture, pos + right * -stroke + up * j, Vector2.Zero, scale, rotation, strokeColor, mat);
+								Monocle.Draw.Texture(c.Texture, pos + right * stroke + up * j, Vector2.Zero, scale, rotation, strokeColor, mat);
 							}
-							c.Texture.Draw(pos + right * -stroke + up * (edgeDepth + stroke), Vector2.Zero, strokeColor, scale);
-							c.Texture.Draw(pos + up * (edgeDepth + stroke), Vector2.Zero, strokeColor, scale);
-							c.Texture.Draw(pos + right * stroke + up * (edgeDepth + stroke), Vector2.Zero, strokeColor, scale);
+							Monocle.Draw.Texture(c.Texture, pos + right * -stroke + up * (edgeDepth + stroke), Vector2.Zero, scale, rotation, strokeColor, mat);
+							Monocle.Draw.Texture(c.Texture,pos + up * (edgeDepth + stroke), Vector2.Zero, scale, rotation, strokeColor, mat);
+							Monocle.Draw.Texture(c.Texture,pos + right * stroke + up * (edgeDepth + stroke), Vector2.Zero, scale, rotation, strokeColor, mat);
 						}
 						else
 						{
-							c.Texture.Draw(pos + (-right - up) * stroke, Vector2.Zero, strokeColor, scale);
-							c.Texture.Draw(pos + (-up) * stroke, Vector2.Zero, strokeColor, scale);
-							c.Texture.Draw(pos + (right - up) * stroke, Vector2.Zero, strokeColor, scale);
-							c.Texture.Draw(pos + (-right) * stroke, Vector2.Zero, strokeColor, scale);
-							c.Texture.Draw(pos + (right) * stroke, Vector2.Zero, strokeColor, scale);
-							c.Texture.Draw(pos + (-right + up) * stroke, Vector2.Zero, strokeColor, scale);
-							c.Texture.Draw(pos + (up) * stroke, Vector2.Zero, strokeColor, scale);
-							c.Texture.Draw(pos + (right + up) * stroke, Vector2.Zero, strokeColor, scale);
+							Monocle.Draw.Texture(c.Texture,pos + (-right - up) * stroke, Vector2.Zero, scale, rotation, strokeColor, mat);
+							Monocle.Draw.Texture(c.Texture,pos + (-up) * stroke, Vector2.Zero, scale, rotation, strokeColor, mat);
+							Monocle.Draw.Texture(c.Texture,pos + (right - up) * stroke, Vector2.Zero, scale, rotation, strokeColor, mat);
+							Monocle.Draw.Texture(c.Texture,pos + (-right) * stroke, Vector2.Zero, scale, rotation, strokeColor, mat);
+							Monocle.Draw.Texture(c.Texture,pos + (right) * stroke, Vector2.Zero, scale, rotation, strokeColor, mat);
+							Monocle.Draw.Texture(c.Texture,pos + (-right + up) * stroke, Vector2.Zero, scale, rotation, strokeColor, mat);
+							Monocle.Draw.Texture(c.Texture,pos + (up) * stroke, Vector2.Zero, scale, rotation, strokeColor, mat);
+							Monocle.Draw.Texture(c.Texture,pos + (right + up) * stroke, Vector2.Zero, scale, rotation, strokeColor, mat);
 						}
 						Monocle.Draw.Depth++;
 					}
 
 					// draw edge
 					if (edgeDepth > 0)
-						c.Texture.Draw(pos + up * edgeDepth, Vector2.Zero, edgeColor, scale);
+						Monocle.Draw.Texture(c.Texture,pos + up * edgeDepth, Vector2.Zero, scale, rotation, edgeColor, mat);
 
 					// draw normal character
-					c.Texture.Draw(pos, Vector2.Zero, color, scale);
+					Monocle.Draw.Texture(c.Texture,pos, Vector2.Zero, scale, rotation, color, mat);
 
 					offset.X += c.XAdvance;
 
@@ -524,6 +528,11 @@ namespace Monocle
 		public void Draw(string text, Vector3 position, Vector2 justify, Vector2 scale, Color color) {
 			var fontSize = Sizes[0];
 			fontSize.Draw(text, position, justify, Quaternion.Identity, scale, color, 0, Color.Transparent, 0, Color.Transparent);
+		}
+
+		public void Draw(string text, Vector3 position, Vector2 justify, Quaternion rotation, Vector2 scale, Color color) {
+			var fontSize = Sizes[0];
+			fontSize.Draw(text, position, justify, rotation, scale, color, 0, Color.Transparent, 0, Color.Transparent);
 		}
 
 		public void DrawOutline(string text, Vector3 position, Vector2 justify, Vector2 scale, Color color, float stroke, Color strokeColor) {

@@ -40,8 +40,9 @@ namespace Monocle
             CheckNull();
 
             DepthStencilState.StencilEnable = true;
-			DepthStencilState.StencilWriteMask = ~0;
-			DepthStencilState.StencilMask = stencil;
+			DepthStencilState.StencilWriteMask = int.MaxValue;
+			DepthStencilState.StencilMask = int.MaxValue;
+            DepthStencilState.ReferenceStencil = stencil;
 			DepthStencilState.StencilFunction = CompareFunction.Always;
 			DepthStencilState.CounterClockwiseStencilFunction = CompareFunction.Always;
 			DepthStencilState.StencilPass = StencilOperation.Replace;

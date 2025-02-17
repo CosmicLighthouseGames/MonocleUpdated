@@ -300,6 +300,8 @@ namespace Monocle {
 									param.SetValue(data.Texture);
 								else if (data is Color)
 									param.SetValue(data.ToVector4());
+								else if (data is Color[])
+									param.SetValue(((Color[])data).Select((a) => { return a.ToVector4(); }).ToArray());
 								else
 									param.SetValue(pData[param.Name]);
 								return true;
@@ -539,6 +541,21 @@ namespace Monocle {
 			opaque.Add(SpriteDrawCall.Draw(tex, matrix, color, flipping, stencil, mat));
 
 		}
+		public static void Texture(MTexture tex, Vector3 position, Vector2 origin, Color color, Vector2 scale, Material mat = null) {
+
+			if (tex == null)
+				return;
+
+			var matrix = Matrix.Identity
+				* Matrix.CreateScale(1f / Engine.PixelsPerUnit, 1f / Engine.PixelsPerUnit, 1)
+				* Matrix.CreateTranslation(-origin.X, -origin.Y, 0)
+				* Matrix.CreateScale(scale.X, scale.Y, 1)
+				* Matrix.CreateTranslation(position.X, position.Y, position.Z)
+				;
+
+			Texture(tex, matrix, color, mat:mat);
+
+		}
 		public static void Texture(MTexture tex, Vector3 position, Material mat = null) {
 			if (tex == null)
 				return;
@@ -551,7 +568,7 @@ namespace Monocle {
 			Texture(tex, matrix, Color.White);
 		}
 
-		public static void Texture(MTexture tex, Vector3 position, Vector2 origin, Vector2 scale, Quaternion rotation, Color color, DepthStencilState? stencil = null, SpriteEffects flipping = SpriteEffects.None) {
+		public static void Texture(MTexture tex, Vector3 position, Vector2 origin, Vector2 scale, Quaternion rotation, Color color, Material mat = null, DepthStencilState? stencil = null, SpriteEffects flipping = SpriteEffects.None) {
 
 			if (tex == null)
 				return;

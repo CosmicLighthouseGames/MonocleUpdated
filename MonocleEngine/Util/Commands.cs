@@ -770,10 +770,15 @@ namespace Monocle {
                     Draw.DefaultFont.Draw(drawCommands[i].Text, new Vector2(1, 3.5f + (fontHeight * i)), Vector2.Zero, Vector2.One, drawCommands[i].Color);
             }
 
+            var def = Draw.DefaultDepthState;
+
+            Draw.DefaultDepthState = DepthStencilState.None;
             Draw.GraphicsDevice.RasterizerState = RasterizerState.CullNone;
-            Draw.GraphicsDevice.DepthStencilState = DepthStencilState.None;
+//            Draw.GraphicsDevice.DepthStencilState = DepthStencilState.None;
             Draw.RenderPass();
             Draw.ClearGraphics();
+
+            Draw.DefaultDepthState = def;
 
             //batch.End();
         }

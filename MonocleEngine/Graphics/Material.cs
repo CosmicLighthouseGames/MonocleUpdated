@@ -90,7 +90,7 @@ namespace Monocle {
 			get {
 				if (DepthStencilState == null)
 					return null;
-				return DepthStencilState.StencilWriteMask;
+				return DepthStencilState.ReferenceStencil;
 			}
 			set {
 				if (value == null)
@@ -99,7 +99,16 @@ namespace Monocle {
 				if (DepthStencilState == null) {
 					DepthStencilState = new DepthStencilState();
 					DepthStencilState.ReadFrom(Draw.DefaultDepthState);
+
+					DepthStencilState.StencilEnable = true;
+					DepthStencilState.StencilWriteMask = int.MaxValue;
+					DepthStencilState.StencilMask = int.MaxValue;
+					DepthStencilState.StencilFunction = CompareFunction.Always;
+					DepthStencilState.CounterClockwiseStencilFunction = CompareFunction.Always;
+					DepthStencilState.StencilPass = StencilOperation.Replace;
+
 				}
+				DepthStencilState.ReferenceStencil = value.Value;
 				DepthStencilState.StencilWriteMask = value.Value;
 			}
 		}
@@ -146,6 +155,7 @@ namespace Monocle {
 			return this;
 		}
 		public Material SetStencil(int stencil) {
+
 			Stencil = stencil;
 			StencilMask = stencil;
 			return this;

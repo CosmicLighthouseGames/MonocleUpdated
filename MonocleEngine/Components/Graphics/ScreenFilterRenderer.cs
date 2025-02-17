@@ -81,7 +81,17 @@ namespace Monocle {
 				techPass.Apply();
 
 				device.BlendState = filter.blendState??BlendState.AlphaBlend;
+				device.DepthStencilState = new DepthStencilState() {
+					StencilEnable = true,
+					StencilPass = StencilOperation.Keep,
+					StencilFail = StencilOperation.Keep,
+					StencilMask = int.MaxValue,
+					StencilWriteMask = 0,
+					ReferenceStencil = 2,
+					StencilFunction = CompareFunction.Equal,
+				};
 				device.DepthStencilState = filter.depthStencilState;
+				//
 
 				device.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, vertices, 0, 4, indices, 0, 2);
 			}
