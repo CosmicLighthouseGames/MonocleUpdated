@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Runtime;
 using System.Xml;
 
 namespace Monocle {
@@ -81,6 +82,7 @@ namespace Monocle {
 			}
 		}
 
+		public DepthStencilState DS_State = null;
 		public RasterizerState R_State = RasterizerState.CullClockwise;
 		public BlendState B_State = BlendState.NonPremultiplied;
 
@@ -216,9 +218,9 @@ namespace Monocle {
 				}
 			}
 			if (bindings == null) {
-				Viewport.Width =  Engine.WindowWidth;
-				Viewport.Height = Engine.WindowHeight;
 			}
+			Viewport.Width =  Engine.WindowWidth;
+			Viewport.Height = Engine.WindowHeight;
 			UpdateMatrices();
 		}
 
@@ -249,12 +251,16 @@ namespace Monocle {
 		public Func<Component, bool> DoesRenderComponent;
 
 
-		public void SetRenderTargets(params RenderTarget2D[] textures) {
+		public void SetRenderTargets(bool keepSize, params RenderTarget2D[] textures) {
 			if (textures == null) {
 
 			}
-			else if (windowSize) {
+			else if (keepSize) {
 				if (RenderTargets == null) {
+					RenderTargets = new RenderTarget2D[textures.Length];
+					bindings = new RenderTargetBinding[textures.Length];
+				}
+				if (RenderTargets.Length != textures.Length) {
 					RenderTargets = new RenderTarget2D[textures.Length];
 					bindings = new RenderTargetBinding[textures.Length];
 				}
@@ -288,6 +294,11 @@ namespace Monocle {
 				viewSize.Width = newWidth;
 				viewSize.Height = newHeight;
 			}
+
+			windowSize = !keepSize;
+		}
+		public void SetRenderTargets(params RenderTarget2D[] textures) {
+			SetRenderTargets(windowSize, textures);
 		}
 
 		public override void Update() {
@@ -433,6 +444,9 @@ namespace Monocle {
 				obj.Render();
 			}
 
+			if (DS_State != null)
+				Draw.DefaultDepthState = DS_State;
+			
 			graphics.RasterizerState = R_State;
 			graphics.BlendState = B_State;
 
