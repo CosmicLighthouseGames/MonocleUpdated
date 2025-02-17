@@ -295,7 +295,7 @@ namespace Monocle {
 				viewSize.Height = newHeight;
 			}
 
-			windowSize = !keepSize;
+			windowSize = keepSize;
 		}
 		public void SetRenderTargets(params RenderTarget2D[] textures) {
 			SetRenderTargets(windowSize, textures);
