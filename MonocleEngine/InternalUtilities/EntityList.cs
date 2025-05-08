@@ -121,7 +121,7 @@ namespace Monocle
 
         public void Remove(Entity entity)
         {
-            if (!removing.Contains(entity) && current.Contains(entity))
+            if (!removing.Contains(entity))
             {
                 removing.Add(entity);
                 toRemove.Add(entity);

@@ -725,7 +725,7 @@ namespace Monocle
 		#region Dictionaries
 
         public static int GetInt(this Dictionary<string, object> dict, string value, int defValue = 0) {
-            if (!dict.ContainsKey(value))
+            if (!dict.ContainsKey(value) || dict[value] == null)
                 return defValue;
 
             object retVal = dict[value];
@@ -743,7 +743,7 @@ namespace Monocle
         }
 
         public static float GetFloat(this Dictionary<string, object> dict, string value, float defValue = 0) {
-            if (!dict.ContainsKey(value))
+            if (!dict.ContainsKey(value) || dict[value] == null)
                 return defValue;
 
             object retVal = dict[value];
@@ -761,14 +761,14 @@ namespace Monocle
         }
 
         public static Vector2 GetVector(this Dictionary<string, object> dict, string value, Vector2 defValue) {
-            if (!dict.ContainsKey(value))
+            if (!dict.ContainsKey(value) || dict[value] == null)
                 return defValue;
 
             return (Vector2)dict[value];
         }
 
         public static bool GetBool(this Dictionary<string, object> dict, string value, bool defValue = false) {
-            if (!dict.ContainsKey(value))
+            if (!dict.ContainsKey(value) || dict[value] == null)
                 return defValue;
 
             return (bool)dict[value];
@@ -1180,8 +1180,8 @@ namespace Monocle
 		[DebuggerHidden]
 		public static float ReflectAngle(float angle, float axis = 0)
         {
-            angle = ClampLoop(-MathHelper.Pi, MathHelper.Pi, angle);
-            return ClampLoop(-MathHelper.Pi, MathHelper.Pi, -(angle - axis) + axis);
+            angle = ClampLoop(angle, -MathHelper.Pi, MathHelper.Pi);
+            return ClampLoop(-(angle - axis) + axis, -MathHelper.Pi, MathHelper.Pi);
         }
 
 		[DebuggerHidden]
@@ -1450,13 +1450,13 @@ namespace Monocle
             float a = _v.Angle();
             float b = _other.Angle();
 
-            return Math.Abs(ClampLoop(-MathHelper.Pi, MathHelper.Pi, a - b));
+            return Math.Abs(ClampLoop(a - b, -MathHelper.Pi, MathHelper.Pi));
         }
         public static float AngleBetween(this Vector2 _v, float _other)
         {
             float a = _v.Angle();
 
-            return Math.Abs(ClampLoop(-MathHelper.Pi, MathHelper.Pi, a - _other));
+            return Math.Abs(ClampLoop(a - _other, -MathHelper.Pi, MathHelper.Pi));
         }
 
         public static Vector2 Clamp(this Vector2 val, float minX, float minY, float maxX, float maxY)
@@ -1464,7 +1464,7 @@ namespace Monocle
             return new Vector2(MathHelper.Clamp(val.X, minX, maxX), MathHelper.Clamp(val.Y, minY, maxY));
         }
 
-        public static float ClampLoop(float a, float b, float value)
+        public static float ClampLoop(float value, float a, float b)
         {
             value -= a;
             value %= b - a;
@@ -1475,19 +1475,18 @@ namespace Monocle
             value += a;
             return value;
         }
-        public static int ClampLoop(int _a, int _b, int _value)
-        {
-            if (_a == _b)
-                return _a;
+        public static int ClampLoop(int value, int a, int b) {
+            if (a == b)
+                return a;
 
-            _value -= _a;
-            _value %= _b - _a;
-            if (_value < 0)
+            value -= a;
+            value %= b - a;
+            if (value < 0)
             {
-                _value = (_b - _a) + _value;
+                value = (b - a) + value;
             }
-            _value += _a;
-            return _value;
+            value += a;
+            return value;
         }
 
         public static Vector2 Floor(this Vector2 val)
@@ -1507,9 +1506,13 @@ namespace Monocle
         public static Vector2 Abs(this Vector2 val)
         {
             return new Vector2(Math.Abs(val.X), Math.Abs(val.Y));
-        }
+		}
 
-        public static Vector2 Approach(Vector2 val, Vector2 target, float maxMove)
+		public static Vector3 Abs(this Vector3 val) {
+			return new Vector3(Math.Abs(val.X), Math.Abs(val.Y), Math.Abs(val.Z));
+		}
+
+		public static Vector2 Approach(Vector2 val, Vector2 target, float maxMove)
         {
             if (maxMove == 0 || val == target)
                 return val;
@@ -1609,6 +1612,8 @@ namespace Monocle
 
         public static Vector2 Project(Vector2 vector, Vector2 projectTo)
         {
+            //projectTo.Normalize();
+
             float thetaD = (float)Math.Atan2(vector.Y, vector.X),
                 thetaA = (float)Math.Atan2(projectTo.Y, projectTo.X),
                 miniD = Vector2.Distance(vector, Vector2.Zero);
@@ -1833,30 +1838,46 @@ namespace Monocle
 		}
 		public static Quaternion CreateLookat(Vector3 up, Vector3 forward) {
 
-            up.Normalize();
-            forward.Normalize();
+            throw new NotImplementedException();
+   //         up.Normalize();
+   //         forward.Normalize();
 
-            float x, z; 
+   //         var mat = Matrix.CreateLookAt(Vector3.Zero, forward, up);
 
-            if (up.XZ() == Vector2.Zero) {
-                x = 0;
-				z = 0;
-			}
-            else {
-                x = new Vector2(up.Y, up.XZ().Length()).Angle();
-                z = MathHelper.PiOver2 - up.XZ().Angle();
-			}
+			//var ret = mat.Rotation();
+   //         return ret;
 
-			var q =
-				Quaternion.CreateFromYawPitchRoll(z, 0, 0) *
-				Quaternion.CreateFromYawPitchRoll(0, x, 0);
+   //         float x, z; 
 
-            Vector3 dir = Vector3.Transform(forward, Quaternion.Inverse(q));
+   //         if (up.XZ() == Vector2.Zero) {
+   //             x = 0;
+			//	z = 0;
+			//}
+   //         else {
+   //             x = new Vector2(up.Y, up.XZ().Length()).Angle();
+   //             z = MathHelper.PiOver2 - up.XZ().Angle();
+			//}
+
+			//var q =
+			//	Quaternion.CreateFromYawPitchRoll(z, 0, 0) *
+			//	Quaternion.CreateFromYawPitchRoll(0, x, 0);
+
+   //         Vector3 dir = Vector3.Transform(forward, Quaternion.Inverse(q));
 			
-            q *= Quaternion.CreateFromYawPitchRoll(MathHelper.PiOver2 * 3 - dir.XZ().Angle(), 0, 0);
+   //         q *= Quaternion.CreateFromYawPitchRoll(MathHelper.PiOver2 * 3 - dir.XZ().Angle(), 0, 0);
 
-			return q;
+			//return q;
         }
+
+  //      public static Quaternion Rotation(this Matrix m1) {
+		//	float w = (float)Math.Sqrt(1.0 + m1.M11 + m1.M22 + m1.M33) / 2.0f;
+		//	float w4 = (4.0f * w);
+		//	float x = (m1.M32 - m1.M23) / w4;
+		//	float y = (m1.M13 - m1.M31) / w4;
+		//	float z = (m1.M21 - m1.M12) / w4;
+
+  //          return new Quaternion(x, y, z, w);
+		//}
 
 		#endregion
 

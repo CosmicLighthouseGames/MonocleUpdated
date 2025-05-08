@@ -206,6 +206,7 @@ namespace Monocle {
 
 
 		public override void HandleGraphicsReset() {
+			
 			if (windowSize) {
 				viewSize.Width =  Engine.WindowWidth;
 				viewSize.Height = Engine.WindowHeight;
@@ -216,11 +217,16 @@ namespace Monocle {
 						bindings[i] = RenderTargets[i];
 					}
 				}
+				Viewport.Width =  Engine.WindowWidth;
+				Viewport.Height = Engine.WindowHeight;
+			}
+			else {
+
+				Viewport.Width =  RenderTargets[0].Width;
+				Viewport.Height = RenderTargets[0].Height;
 			}
 			if (bindings == null) {
 			}
-			Viewport.Width =  Engine.WindowWidth;
-			Viewport.Height = Engine.WindowHeight;
 			UpdateMatrices();
 		}
 
@@ -420,7 +426,11 @@ namespace Monocle {
 			if (backgroundColor == null)
 				opt &= ~ClearOptions.Target;
 
-			if (bindings == null || bindings.Length == 1) {
+			if (bindings == null) {
+				graphics.SetRenderTarget(null);
+				graphics.Clear(opt, bgColor, 1, 0);
+			}
+			else if (bindings.Length == 1) {
 				graphics.SetRenderTargets(bindings);
 				graphics.Clear(opt, bgColor, 1, 0);
 			}
@@ -445,7 +455,7 @@ namespace Monocle {
 			}
 
 			if (DS_State != null)
-				Draw.DefaultDepthState = DS_State;
+				Draw.FallbackDepthState = DS_State;
 			
 			graphics.RasterizerState = R_State;
 			graphics.BlendState = B_State;

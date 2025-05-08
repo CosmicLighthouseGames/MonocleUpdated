@@ -49,6 +49,7 @@ namespace Monocle {
 		}
 
 		public static DepthStencilState DefaultDepthState;
+		public static DepthStencilState FallbackDepthState;
 
 		static Effect effect;
 		public static Effect DefaultEffect {
@@ -276,10 +277,8 @@ namespace Monocle {
 				var tech = mat.Technique;
 				var techPass = tech.Passes[0];
 
-				var stencil = DepthStencilState??mat.DepthStencilState??DefaultDepthState;
-				if (stencil != device.DepthStencilState) {
-					device.DepthStencilState = stencil;
-				}
+				var stencil = DepthStencilState??mat.DepthStencilState??FallbackDepthState;
+				device.DepthStencilState = stencil;
 
 				var tex = overrideTexture??mat.Texture;
 				var drawcall = this;
@@ -414,6 +413,9 @@ namespace Monocle {
 
 			DefaultDepthState = new DepthStencilState();
 			DefaultDepthState.ReadFrom(DepthStencilState.Default);
+			FallbackDepthState = new DepthStencilState();
+			FallbackDepthState.ReadFrom(DepthStencilState.Default);
+
 
 			UseDebugPixelTexture();
 
@@ -459,6 +461,7 @@ namespace Monocle {
 		}
 
 		public static void RenderPass() {
+
 
 			opaque.Sort();
 

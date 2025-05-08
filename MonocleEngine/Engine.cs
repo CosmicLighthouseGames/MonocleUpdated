@@ -95,10 +95,12 @@ namespace Monocle {
 		// util
 		public static Color ClearColor;
 		public static bool ExitOnEscapeKeypress;
+		public static event Action OnNextFrame;
 
 		// scene
 		private Scene scene;
 		private Scene nextScene;
+
 
 		public static float UpdateFrameData;
 
@@ -234,6 +236,10 @@ namespace Monocle {
 
 		protected override void Update(GameTime gameTime) {
 
+			if (OnNextFrame != null) {
+				OnNextFrame();
+				OnNextFrame = null;
+			}
 
 			RealTimeActive += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
@@ -335,9 +341,14 @@ namespace Monocle {
 		float lastFrameRender = 0;
 		protected override void Draw(GameTime gameTime) {
 
+			Stopwatch sw = Stopwatch.StartNew();
 			Monocle.Draw.UpdatePerFrame();
 
 			RenderCore();
+
+			sw.Stop();
+
+			lastFrameRender = MathHelper.Lerp(lastFrameRender, (float)sw.Elapsed.TotalMilliseconds, 0.01f);
 
 			base.Draw(gameTime);
 			if (Commands.Open || Commands.TempOpen > 0)
@@ -364,15 +375,25 @@ namespace Monocle {
 				}
 
 				float w = WindowWidth / PixelsPerUnit,
-					h = WindowHeight / PixelsPerUnit;
+				h = WindowHeight / PixelsPerUnit;
 
 				Monocle.Draw.ClearGraphics(w, h);
+
+				Monocle.Draw.FallbackDepthState = DepthStencilState.None;
+				Monocle.Draw.GraphicsDevice.RasterizerState = RasterizerState.CullNone;
 
 				Vector2 size = Monocle.Draw.DefaultFont.MeasureString(name);
 				float y = h - (size.Y + 0.1f);
 
 				Monocle.Draw.Rect(w - size.X - 0.4f, y, size.X + 0.4f, size.Y + 0.1f, Color.Black);
 				Monocle.Draw.DefaultFont.Draw(name, new Vector3(w - size.X - 0.1f, y - 0.05f, 0), color);
+
+
+				name = "(" + (1000 / lastFrameRender).ToString("F1") + " FPS)";
+				size = Monocle.Draw.DefaultFont.MeasureString(name);
+				y -= (size.Y + 0.1f);
+				Monocle.Draw.Rect(w - size.X - 0.4f, y, size.X + 0.4f, size.Y + 0.1f, Color.Black);
+				Monocle.Draw.DefaultFont.Draw(name, new Vector3(w - size.X - 0.1f, y, 0), color);
 
 				name = (GC.GetTotalMemory(false) / 1048576f).ToString("F") + " MB";
 				size = Monocle.Draw.DefaultFont.MeasureString(name);
@@ -392,7 +413,6 @@ namespace Monocle {
 			Monocle.Draw.ClearGraphics();
 			GraphicsDevice.SetRenderTarget(null);
 			GC.Collect();
-
 		}
 
 		/// <summary>

@@ -74,5 +74,29 @@ namespace Monocle
             if (File.Exists(Filename))
                 System.Diagnostics.Process.Start(Filename);
         }
-    }
+	}
+	public static class DebugLog {
+		public const string Filename = "debug_log.txt";
+
+        static TextWriter log;
+
+        public static void Write(string str) {
+
+            if (log == null) {
+				log = new StreamWriter(Filename, true);
+			}
+			StringBuilder s = new StringBuilder();
+
+			s.Append($"[{DateTime.Now.ToString()}] ");
+			s.AppendLine(str);
+
+			log.Write(s.ToString());
+			log.Flush();
+		}
+
+		//public static void Open() {
+		//	if (File.Exists(Filename))
+		//		System.Diagnostics.Process.Start(Filename);
+		//}
+	}
 }

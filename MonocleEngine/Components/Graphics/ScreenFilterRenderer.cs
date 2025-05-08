@@ -31,7 +31,6 @@ namespace Monocle {
 		public void Render(GraphicsDevice device) {
 
 
-			var dState = device.DepthStencilState;
 			var bState = device.BlendState;
 			var rState = device.RasterizerState;
 
@@ -96,7 +95,6 @@ namespace Monocle {
 				device.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, vertices, 0, 4, indices, 0, 2);
 			}
 
-			device.DepthStencilState = dState;
 			device.BlendState = bState;
 			device.RasterizerState = rState;
 			Draw.WorldProjection = worldProj;

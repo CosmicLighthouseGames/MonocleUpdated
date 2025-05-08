@@ -14,6 +14,7 @@ using System.Reflection;
 using System.Threading;
 using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
+using System.Diagnostics;
 
 namespace Monocle {
 
@@ -99,14 +100,77 @@ namespace Monocle {
 			}
 			return retval;
 		}
-	}
-	public struct LevelPackHeader {
-		public string PackName;
-		public string PackNameSafe;
-		public string LevelToStart;
+
+		public bool IsInFolder(string folder) {
+			return Path.Replace('/', '\\').StartsWith(folder.Replace('/', '\\'));
+		}
 	}
 
 	public static class AssetLoader {
+
+		class FolderWatcher {
+			internal string Directory;
+			private FileSystemWatcher contentUpdateWatcher;
+
+			public FolderWatcher(string dir) {
+				Directory = dir;
+
+				contentUpdateWatcher = new FileSystemWatcher(dir, "*");
+
+				contentUpdateWatcher.IncludeSubdirectories = true;
+
+				contentUpdateWatcher.Created += Created;
+				contentUpdateWatcher.Deleted += Deleted;
+				contentUpdateWatcher.Changed += Changed;
+				contentUpdateWatcher.Renamed += Renamed;
+
+				contentUpdateWatcher.EnableRaisingEvents = true;
+			}
+
+			public event Action<string, string> OnAssetAdded, OnAssetUpdated, OnAssetDeleted;
+
+
+			private void Renamed(object sender, RenamedEventArgs e) {
+				Deleted(sender,
+					new FileSystemEventArgs(WatcherChangeTypes.Renamed, Path.GetDirectoryName(e.FullPath), Path.GetFileName(e.OldFullPath)));
+				Created(sender,
+					new FileSystemEventArgs(WatcherChangeTypes.Renamed, Path.GetDirectoryName(e.FullPath), Path.GetFileName(e.FullPath)));
+			}
+
+			private void Changed(object sender, FileSystemEventArgs e) {
+				var path = e.FullPath.Replace(Directory + '\\', "");
+
+				var ext = Path.GetExtension(path);
+				if (string.IsNullOrWhiteSpace(ext) || path.Contains('~')) {
+					return;
+				}
+
+				OnAssetUpdated?.Invoke(path, e.FullPath);
+			}
+
+			private void Deleted(object sender, FileSystemEventArgs e) {
+				var path = e.FullPath.Replace(Directory + '\\', "");
+
+				var ext = Path.GetExtension(path);
+				if (string.IsNullOrWhiteSpace(ext) || path.Contains('~')) {
+					return;
+				}
+
+				OnAssetDeleted?.Invoke(path, e.FullPath);
+			}
+
+			private void Created(object sender, FileSystemEventArgs e) {
+				var path = e.FullPath.Replace(Directory + '\\', "");
+
+				var ext = Path.GetExtension(path);
+				if (string.IsNullOrWhiteSpace(ext) || path.Contains('~')) {
+					return;
+				}
+
+				OnAssetAdded?.Invoke(path, e.FullPath);
+			}
+
+		}
 		//static AssetLoader() {
 		//	yamlParse = new DeserializerBuilder().IncludeNonPublicProperties().WithNamingConvention(NullNamingConvention.Instance).Build();
 		//	yamlSaver = new SerializerBuilder().IncludeNonPublicProperties().WithNamingConvention(NullNamingConvention.Instance).Build();
@@ -115,12 +179,9 @@ namespace Monocle {
 		//private readonly static IDeserializer yamlParse;
 		//private readonly static ISerializer yamlSaver;
 
-		public static Dictionary<string, LevelPackHeader> LevelPacks = new Dictionary<string, LevelPackHeader>();
+		public static event Action<LoadedAsset> OnAssetAdded, OnAssetUpdated, OnAssetDeleted;
 
-		private static Dictionary<string, List<Action<string>>>
-			assetAddedEvents = new Dictionary<string, List<Action<string>>>(),
-			assetDeletedEvents = new Dictionary<string, List<Action<string>>>(),
-			assetUpdatedEvents = new Dictionary<string, List<Action<string>>>();
+		static List<FolderWatcher> Folders = new List<FolderWatcher>();
 
 		//public static T ParseYaml<T>(string yamlData) {
 		//	return yamlParse.Deserialize<T>(yamlData);
@@ -129,35 +190,48 @@ namespace Monocle {
 		//	return yamlSaver.Serialize(yamlObject);
 		//}
 
-		private static FileSystemWatcher contentUpdateWatcher;
 
-		private static Dictionary<string, LoadedAsset> content = new Dictionary<string, LoadedAsset>();
+		private static Dictionary<string, List<LoadedAsset>> Content = new Dictionary<string, List<LoadedAsset>>();
 		private static List<ZipArchive> zipFiles = new List<ZipArchive>();
 
 		public static bool HasContent(string path) {
 			path = path.Replace('/', '\\');
-			return content.ContainsKey(path);
+			return Content.ContainsKey(path) && Content[path].Count > 0;
 		}
 		public static LoadedAsset GetContent(string path) {
 			path = path.Replace('/', '\\');
 
-			if (content.ContainsKey(path)) {
-				return content[path];
+			if (Content.ContainsKey(path) && Content[path].Count > 0) {
+				return Content[path][0];
+			}
+
+			return null;
+		}
+		public static LoadedAsset[] GetContents(string path) {
+			path = path.Replace('/', '\\');
+
+			if (Content.ContainsKey(path)) {
+				return Content[path].ToArray();
 			}
 
 			return null;
 		}
 		public static IEnumerable<LoadedAsset> FindAssetsByRegex(string pattern) {
-			foreach (var key in content.Keys) {
+			foreach (var key in Content.Keys) {
 				if (Regex.IsMatch(key, pattern)) {
-					yield return content[key];
+					foreach (var c in Content[key]) {
+						yield return c;
+					}
+					//yield return content[key];
 				}
 			}
 		}
 		public static IEnumerable<LoadedAsset> FindAssetsByExtension(string ext) {
-			foreach (var key in content.Keys) {
+			foreach (var key in Content.Keys) {
 				if (Path.GetExtension(key) == ext) {
-					yield return content[key];
+					foreach (var c in Content[key]) {
+						yield return c;
+					}
 				}
 			}
 		}
@@ -169,9 +243,11 @@ namespace Monocle {
 
 			return retval;
 		}
+		[DebuggerHidden]
 		public static string GetText(string path) {
 			return GetContent(path).GetText();
 		}
+
 		public static string GetLiteralPath(string assetPath) {
 
 			var asset = GetContent(assetPath);
@@ -187,10 +263,30 @@ namespace Monocle {
 			if (!path.EndsWith('\\'))
 				path += '\\';
 
-			foreach (var pair in content) {
-				if (pair.Key.StartsWith(path) && (extention == null || pair.Value.Extention == extention))
-					yield return pair.Value;
+			foreach (var pair in Content) {
+				if (pair.Key.StartsWith(path) && (extention == null || pair.Value[0].Extention == extention)) {
+					foreach (var c in pair.Value) {
+						yield return c;
+					}
+				}
 			}
+		}
+
+		static LoadedAsset AddOpenContent(string path, string name) {
+			if (Path.GetExtension(path) == ".xnb")
+				return null;
+
+			path = path.Replace('/', '\\');
+			name = name.Replace('/', '\\');
+
+			var asset = new LoadedAsset(path, name, File.GetLastWriteTime(path));
+
+			if (!Content.ContainsKey(name)) {
+				Content[name] = new List<LoadedAsset>();
+			}
+			Content[name].Add(asset);
+
+			return asset;
 		}
 
 		public static void AddFolder(string path) {
@@ -198,36 +294,10 @@ namespace Monocle {
 			if (!Directory.Exists(path))
 				return;
 
-
-			void AddOpenContent(string path, string name) {
-				if (Path.GetExtension(path) == ".xnb")
+			foreach (var folder in Folders) {
+				if (folder.Directory == path)
 					return;
-
-				if (content.ContainsKey(name))
-					return;
-
-				content[name] = new LoadedAsset(path, name, File.GetLastWriteTime(path));
 			}
-
-			//#if DEBUG
-			//			string projectPath = Path.GetFullPath(VanillaContent + "\\..\\..\\..\\..\\Content");
-			//			foreach (var dir in Directory.EnumerateFiles(projectPath, "*", SearchOption.AllDirectories)) {
-			//				if (dir.EndsWith("mgcb") || dir.EndsWith("ldtk") || dir.EndsWith("spritefont"))
-			//					continue;
-
-			//				string subpath = dir[(projectPath.Length + 1)..];
-			//				if (subpath.StartsWith("bin\\") || subpath.StartsWith("obj\\")) {
-			//					continue;
-			//				}
-
-			//				AddOpenContent(dir, subpath);
-
-			//				Directory.CreateDirectory(Path.GetDirectoryName(Path.Combine(VanillaContent, subpath)));
-
-			//				//File.Copy(dir, Path.Combine(VanillaContent, subpath), true);
-
-			//			}
-			//#endif
 
 			foreach (var dir in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories)) {
 				string subpath = dir[(path.Length + 1)..];
@@ -235,61 +305,13 @@ namespace Monocle {
 				AddOpenContent(dir, subpath);
 			}
 
-			//if (Directory.Exists(ModdedContent)) {
+			var watcher = new FolderWatcher(path);
+			watcher.OnAssetAdded += OnAdded;
+			watcher.OnAssetDeleted += OnDeleted;
+			watcher.OnAssetUpdated += OnChanged;
 
-			//	foreach (var dir in Directory.EnumerateDirectories(ModdedContent)) {
+			Folders.Add(watcher);
 
-			//		foreach (var c in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories)) {
-
-			//			string ext = Path.GetExtension(c);
-			//			if (ext == ".ldtk")
-			//				continue;
-
-			//			string subpath = c[(dir.Length + 1)..];
-
-			//			if (subpath.StartsWith("Levels") && content.ContainsKey(subpath))
-			//				continue;
-
-			//			AddOpenContent(c, subpath);
-			//		}
-			//	}
-			//	foreach (var zip in Directory.EnumerateFiles(ModdedContent, "*.zip")) {
-			//		var file = ZipFile.Open(zip, ZipArchiveMode.Read);
-
-			//		zipFiles.Add(file);
-
-			//		DateTime lastEdit = File.GetLastWriteTime(zip);
-
-
-			//		foreach (var entry in file.Entries) {
-
-			//			if (entry.FullName.StartsWith("Levels") && content.ContainsKey(entry.FullName))
-			//				continue;
-			//			if (entry.FullName.StartsWith("Levels") && entry.FullName.EndsWith(".ldtkl"))
-			//				continue;
-
-			//			AddZipContent(entry, zip, lastEdit);
-			//		}
-			//	}
-
-			//	//foreach (var item in FindAssetsByRegex(".+\\.pack")) {
-			//	//	var pack = JsonConvert.DeserializeObject<LevelPackHeader>(item.GetText());
-
-			//	//	LevelPacks.Add(pack.PackNameSafe, pack);
-			//	//}
-
-
-			//	contentUpdateWatcher = new FileSystemWatcher(ModdedContent, "*");
-
-			//	contentUpdateWatcher.IncludeSubdirectories = true;
-
-			//	contentUpdateWatcher.Created += ContentUpdateWatcher_Created;
-			//	contentUpdateWatcher.Deleted += ContentUpdateWatcher_Deleted;
-			//	contentUpdateWatcher.Changed += ContentUpdateWatcher_Changed;
-			//	contentUpdateWatcher.Renamed += ContentUpdateWatcher_Renamed;
-
-			//	contentUpdateWatcher.EnableRaisingEvents = true;
-			//}
 		}
 		public static void AddZipFile(string path) {
 
@@ -308,14 +330,19 @@ namespace Monocle {
 					// I don't know if I should allow raw levels
 				}
 				else {
-					content[zipEntry.FullName] = new LoadedAsset(zipEntry, zipPath, lastEdit);
+					var asset = new LoadedAsset(zipEntry, zipPath, lastEdit);
+					if (!Content.ContainsKey(zipEntry.FullName)) {
+						Content[zipEntry.FullName] = new List<LoadedAsset>();
+					}
+					Content[zipEntry.FullName].Add(asset);
+
 				}
 			}
 
 
 			foreach (var entry in file.Entries) {
 
-				if (entry.FullName.StartsWith("Levels") && content.ContainsKey(entry.FullName))
+				if (entry.FullName.StartsWith("Levels") && Content.ContainsKey(entry.FullName))
 					continue;
 				if (entry.FullName.StartsWith("Levels") && entry.FullName.EndsWith(".ldtkl"))
 					continue;
@@ -325,85 +352,48 @@ namespace Monocle {
 		}
 		internal static void Initialize() {
 
-			content.Clear();
-			LevelPacks.Clear();
+			Content.Clear();
 
 			AddFolder(Path.Combine(Directory.GetCurrentDirectory(), "Content"));
 		}
 
-		//private static void ContentUpdateWatcher_Renamed(object sender, RenamedEventArgs e) {
-		//	ContentUpdateWatcher_Deleted(sender,
-		//		new FileSystemEventArgs(WatcherChangeTypes.Renamed, Path.GetDirectoryName(e.FullPath), Path.GetFileName(e.OldFullPath)));
-		//	ContentUpdateWatcher_Created(sender,
-		//		new FileSystemEventArgs(WatcherChangeTypes.Renamed, Path.GetDirectoryName(e.FullPath), Path.GetFileName(e.FullPath)));
-		//}
+		private static void OnChanged(string path, string fullPath) {
 
-		//private static void ContentUpdateWatcher_Changed(object sender, FileSystemEventArgs e) {
-		//	var path = e.FullPath.Replace(ModdedContent + '\\', "");
-		//	var modName = path.Split('\\')[0];
+			if (!Content.ContainsKey(path)) {
+				return;
+			}
+			foreach (var c in Content[path]) {
+				if (c.LiteralPath == fullPath) {
+					OnAssetUpdated?.Invoke(c);
+					break;
+				}
+			}
+		}
 
-		//	path = path.Remove(0, modName.Length);
-		//	var localAsset = path.Substring(1);
+		private static void OnDeleted(string path, string fullPath) {
 
-		//	foreach (var l in assetUpdatedEvents) {
-		//		if (path.StartsWith(l.Key)) {
-		//			foreach (var item in l.Value) {
-		//				item(localAsset);
-		//			}
-		//		}
-		//	}
-		//}
+			if (!Content.ContainsKey(path)) {
+				return;
+			}
+			foreach (var c in Content[path]) {
+				if (c.LiteralPath == fullPath) {
+					OnAssetDeleted?.Invoke(c);
+					Content[path].Remove(c);
+					break;
+				}
+			}
+		}
 
-		//private static void ContentUpdateWatcher_Deleted(object sender, FileSystemEventArgs e) {
-		//	var path = e.FullPath.Replace(ModdedContent + '\\', "");
-		//}
-
-		//private static void ContentUpdateWatcher_Created(object sender, FileSystemEventArgs e) {
-		//	var path = e.FullPath.Replace(ModdedContent + '\\', "");
-		//}
+		private static void OnAdded(string path, string fullPath) {
+			OnAssetAdded?.Invoke(AddOpenContent(fullPath, path));
+		}
 
 		internal static void Unload() {
 			foreach (var zip in zipFiles) {
 				zip.Dispose();
 			}
 			zipFiles.Clear();
-			content.Clear();
-		}
-
-		public static void OnAssetAddedEvent(string subfolder, Action<string> onAdded) {
-			subfolder = subfolder.Replace('/', '\\');
-			if (!subfolder.EndsWith('\\'))
-				subfolder += '\\';
-
-			if (!assetAddedEvents.ContainsKey(subfolder)) {
-				assetAddedEvents.Add(subfolder, new List<Action<string>>());
-			}
-			var item = assetAddedEvents[subfolder];
-			item.Add(onAdded);
-		}
-		public static void OnAssetDeletedEvent(string subfolder, Action<string> onDeleted) {
-			subfolder = subfolder.Replace('/', '\\');
-			if (!subfolder.EndsWith('\\'))
-				subfolder += '\\';
-
-
-			if (!assetDeletedEvents.ContainsKey(subfolder)) {
-				assetDeletedEvents.Add(subfolder, new List<Action<string>>());
-			}
-			var item = assetDeletedEvents[subfolder];
-			item.Add(onDeleted);
-		}
-		public static void OnAssetUpdatedEvent(string subfolder, Action<string> onUpdated) {
-			subfolder = subfolder.Replace('/', '\\');
-			if (!subfolder.EndsWith('\\'))
-				subfolder += '\\';
-
-
-			if (!assetUpdatedEvents.ContainsKey(subfolder)) {
-				assetUpdatedEvents.Add(subfolder, new List<Action<string>>());
-			}
-			var item = assetUpdatedEvents[subfolder];
-			item.Add(onUpdated);
+			Content.Clear();
 		}
 
 	}

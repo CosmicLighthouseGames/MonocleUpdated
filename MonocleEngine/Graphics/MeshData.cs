@@ -17,14 +17,14 @@ namespace Monocle {
 
 	public class FBXNode {
 
-		internal static FBXNode GetFBX(string asset) {
+		internal static FBXNode GetFBX(LoadedAsset asset) {
 
 
 			FBXNode node = new FBXNode();
-			node.name = Path.GetFileNameWithoutExtension(asset);
+			node.name = Path.GetFileNameWithoutExtension(asset.Path);
 
 			node.properties = new object[0];
-			using BinaryReader br = new BinaryReader(AssetLoader.GetContent(asset).ContentStream);
+			using BinaryReader br = new BinaryReader(asset.ContentStream);
 
 			if (br.ReadNullTerminatedString() != "Kaydara FBX Binary  ") {
 				throw new FormatException();
@@ -35,6 +35,9 @@ namespace Monocle {
 			node.children = GetArray(br);
 
 			return node;
+		}
+		internal static FBXNode GetFBX(string asset) {
+			return GetFBX(AssetLoader.GetContent(asset));
 		}
 		static FBXNode[] GetArray(BinaryReader br) {
 
@@ -243,8 +246,732 @@ namespace Monocle {
 		}
 	}
 
-	public class FBXScene {
+	/// <summary>
+	/// What I need:
+	/// - Bone structure in the scene class
+	/// 
+	/// </summary>
+	
+	public class MonocleBone {
 
+		List<MonocleBone> children;
+		public MonocleBone Parent { get; private set; }
+		MonocleArmature armature;
+
+		public string Name { get; private set; }
+
+		Vector3 Position_orig;
+		Quaternion Rotation_orig;
+
+		public Vector3 LocalPosition, LocalScale;
+
+		public Vector2 LocalShearX, LocalShearY, LocalShearZ;
+
+		Quaternion rotation, localLocalRotation;
+		public Quaternion LocalRotation {
+			get => rotation; 
+			set {
+				rotation = value;
+				localLocalRotation = Quaternion.Inverse(Rotation_orig) * value * Rotation_orig;
+			}
+		}
+
+		public Matrix Transform {
+			get {
+				Vector3 globalOffset = GlobalOffset(LocalPosition);
+
+				var mat = Matrix.CreateTranslation(-Position_orig) * GlobalTransform() * Matrix.CreateTranslation(Position_orig);
+
+				return mat;
+			}
+		}
+		public Matrix LocalTransform {
+			get {
+				var mat = new Matrix(
+					LocalScale.X, 0, 0, 0,
+					0, LocalScale.Y, 0, 0,
+					0, 0, LocalScale.Z, 0,
+					0, 0, 0, 1)
+					* Matrix.CreateFromQuaternion(localLocalRotation);
+
+				mat *= Matrix.CreateTranslation(LocalPosition);
+
+				return mat;
+			}
+			set {
+
+				var val = value;
+
+				LocalPosition = val.Translation;
+				val.Translation = Vector3.Zero;
+
+				localLocalRotation = Quaternion.CreateFromRotationMatrix(val);
+				localLocalRotation.Normalize();
+				val *= Matrix.CreateFromQuaternion(Quaternion.Inverse(localLocalRotation));
+
+				LocalScale = Calc.Snap(new Vector3(val.M11, val.M22, val.M33), 0.001f);
+
+				LocalShearX = Vector2.Zero;
+				LocalShearY = Vector2.Zero;
+				LocalShearZ = Vector2.Zero;
+			}
+		}
+
+		private Matrix GlobalTransform() {
+
+			Matrix mat;
+
+			mat = Matrix.CreateScale(LocalScale) * Matrix.CreateFromQuaternion(localLocalRotation);
+			
+			if (Parent != null) {
+				mat *= Parent.GlobalTransform();
+			}
+
+			return mat;
+		}
+		private Vector3 GlobalOffset(Vector3 pos) {
+
+
+			if (Parent != null) {
+				Matrix mat = Parent.GlobalTransform();
+				Vector3 parentPos = Parent.GlobalOffset(Parent.LocalPosition);
+				pos = Vector3.Transform(pos, mat);
+				pos += parentPos;
+			}
+
+			return pos;
+		}
+
+
+		public MonocleBone(string name) {
+			Name = name;
+			children = new List<MonocleBone>();
+
+			LocalScale = Vector3.One;
+			rotation = Quaternion.Identity;
+			Rotation_orig = Quaternion.Identity;
+		}
+		public MonocleBone(string name, Matrix matrix) {
+			Name = name;
+			children = new List<MonocleBone>();
+
+			LocalScale = Vector3.One;
+			rotation = Quaternion.Identity;
+			Rotation_orig = Quaternion.CreateFromRotationMatrix(matrix);
+			Rotation_orig.Normalize();
+			Position_orig = matrix.Translation;
+		}
+
+
+		internal void AddChild(MonocleBone child) {
+			child.Parent = this;
+			children.Add(child);
+			child.SetArmature(armature);
+		}
+		internal void SetArmature(MonocleArmature armature) {
+			if (this.armature != armature) {
+				if (this.armature != null) {
+					this.armature.RemoveBone(this);
+				}
+				this.armature = armature;
+				armature.AddBone(this);
+			}
+			foreach (var child in children) {
+				child.SetArmature(armature);
+			}
+		}
+
+		public IEnumerable<MonocleBone> EnumerateChildren() {
+			return children.AsEnumerable();
+		}
+	}
+	public class MonocleArmature {
+
+		Dictionary<string, MonocleBone> bones;
+
+		public MonocleBone this[string name] {
+			get => bones[name];
+		}
+
+
+		public MonocleArmature() {
+			bones = new Dictionary<string, MonocleBone>();
+		}
+
+		internal void AddBone(MonocleBone bone) {
+			if (!bones.ContainsKey(bone.Name))
+				bones.Add(bone.Name, bone);
+			bone.SetArmature(this);
+		}
+		internal void RemoveBone(MonocleBone bone) {
+			bones.Remove(bone.Name);
+		}
+
+		public MonocleBone GetBone(string name) { 
+			return bones[name];
+		}
+
+		public IEnumerable<TransformVertex> Transform(MonocleModel mesh) {
+
+			foreach (var bone in bones.Values) {
+				void transform(int index, ref MonocleVertex vertex) {
+					var matrix = bone.Transform;
+					float factor = mesh.GetBalancedWeight(bone.Name, index);
+					vertex.Position = Vector3.Lerp(vertex.Position, Vector3.Transform(vertex.Position, matrix), factor);
+					vertex.Normal = Vector3.Lerp(vertex.Normal, Vector3.TransformNormal(vertex.Normal, matrix), factor);
+				}
+
+				yield return transform;
+			}
+
+			yield break;
+		}
+	}
+
+	public class FBXScene {
+		public static FBXScene Import(LoadedAsset content) {
+
+			FBXScene retval = new FBXScene();
+
+			retval.meshes = new Dictionary<string, (MonocleVertex[], int[][])>();
+			retval.armatures = new Dictionary<string, MonocleArmature>();
+			retval.weights = new Dictionary<string, Dictionary<string, float[]>>();
+
+			var array = FBXNode.GetFBX(content);
+
+			int[] pvi = null;
+
+			IEnumerable GetArray<T>(FBXNode node, string name) {
+
+				if (node[name] == null) {
+					node = node[$"LayerElement{name}"];
+				}
+				if (node == null)
+					yield break;
+
+				var data = node[name];
+				var indices = node[$"{name}Index"];
+				if (data == null)
+					data = node[$"{name}s"];
+				if (indices == null)
+					indices = node[$"{name}sIndex"];
+				if (data == null || indices == null)
+					yield break;
+
+				if (typeof(T) == typeof(Vector2) || typeof(T) == typeof(Vector3) ||typeof(T) == typeof(Vector4)) {
+					float[] fArray;
+					if (data.properties[0] is double[]) {
+						fArray = ((double[])data.properties[0]).Select(x => (float)x).ToArray();
+					}
+					else if (data.properties[0] is long[]) {
+						fArray = ((long[])data.properties[0]).Select(x => (float)x).ToArray();
+					}
+					else if (data.properties[0] is int[]) {
+						fArray = ((int[])data.properties[0]).Select(x => (float)x).ToArray();
+					}
+					else {
+						fArray = (float[])data.properties[0];
+					}
+
+					int[] iArray = (int[])indices.properties[0];
+
+					if (node["MappingInformationType"].properties[0].ToString() == "ByVertice") {
+						int[] newArray = new int[pvi.Length];
+
+						for (int i = 0; i < pvi.Length; i++) {
+							int v = pvi[i];
+							if (v < 0)
+								v = ~v;
+							newArray[i] = iArray[v];
+						}
+
+						iArray = newArray;
+					}
+
+					if (typeof(T) == typeof(Vector2)) {
+						for (int i = 0; i < iArray.Length; i++) {
+							int idx = iArray[i] * 2;
+							yield return new Vector2(fArray[idx], fArray[idx + 1]);
+						}
+					}
+					else if (typeof(T) == typeof(Vector3)) {
+						for (int i = 0; i < iArray.Length; i++) {
+							int idx = iArray[i] * 3;
+							yield return new Vector3(fArray[idx], fArray[idx + 1], fArray[idx + 2]);
+						}
+					}
+					else if (typeof(T) == typeof(Vector4)) {
+						for (int i = 0; i < iArray.Length; i++) {
+							int idx = iArray[i] * 4;
+							yield return new Vector4(fArray[idx], fArray[idx + 1], fArray[idx + 2], fArray[idx + 3]);
+						}
+					}
+				}
+
+
+				yield break;
+			}
+
+			var objects = array["Objects"];
+
+			//Dictionary<long, (MonocleVertex[] verts, int[][] indices, int[] mapping)> meshes = new Dictionary<long, (MonocleVertex[] verts, int[][] indices, int[] mapping)>();
+
+			//Dictionary<long, MonocleBone> boneIDs = new Dictionary<long, MonocleBone>();
+			//Dictionary<long, MonocleArmature> armatureIDs = new Dictionary<long, MonocleArmature>();
+			Dictionary<long, FBXNode> nodeIDs = new Dictionary<long, FBXNode>();
+
+			//Queue<(long, Matrix)> boneTransforms = new Queue<(long, Matrix)>();
+			//Queue<string> meshNames = new Queue<string>();
+			//Queue<MonocleArmature> armatureIDQueue = new Queue<MonocleArmature>();
+
+			Dictionary<long, List<long>> parent2Child = new Dictionary<long, List<long>>();
+			Dictionary<long, List<long>> child2Parent = new Dictionary<long, List<long>>();
+
+			List<FBXNode> meshes = new List<FBXNode>();
+			List<FBXNode> armatures = new List<FBXNode>();
+			IEnumerable<(string, float[])> getWeights(List<MonocleVertex> comp, int[] mapping, FBXNode parentNode) {
+
+
+				if (!parent2Child.ContainsKey((long)parentNode.properties[0]))
+					yield break;
+
+				foreach (var val in parent2Child[(long)parentNode.properties[0]]) {
+					var node = nodeIDs[val];
+
+					if (node.name == "Model" || node.properties[2] as string == "LimbNode") {
+						foreach (var weight in getWeights(comp, mapping, node)) {
+							yield return weight;
+						}
+					}
+					if (node.name != "Deformer" || node.properties[2] as string != "Cluster")
+						continue;
+
+
+
+					var indices = node["Indexes"].properties[0] as int[];
+					var weights = node["Weights"].properties[0] as double[];
+
+					float[] values = new float[comp.Count];
+
+					for (int i = 0; i < values.Length; i++) {
+						values[i] = 0;
+						int index = Array.IndexOf(indices, mapping[i]);
+						if (index >= 0) {
+							values[i] = (float)weights[index];
+						}
+					}
+
+					yield return ((node.properties[1] as string).Split("\0\u0001")[0], values);
+					foreach (var weight in getWeights(comp, mapping, node)) {
+						yield return weight;
+					}
+
+				}
+			}
+			object compileNode(FBXNode child) {
+
+				string name = ((string)child.properties[1]).Split("\0\u0001")[0];
+				var type = ((string)child.properties[2]);
+
+				long uuid = (long)child.properties[0];
+
+				switch (child.name) {
+					default:
+						break;
+					case "Pose":
+						break;
+					case "Deformer": {
+
+						if (type == "Skin") {
+
+							List<float[]> weights = new List<float[]>();
+							if (parent2Child.ContainsKey(uuid)) {
+								foreach (var val in parent2Child[uuid]) {
+									var node = nodeIDs[val];
+
+								}
+							}
+
+							return weights.ToArray();
+						}
+						else if (type == "SubDeformer" && child.HasChild("Indexes")) {
+
+						}
+						else {
+
+						}
+
+						break;
+					}
+					case "Material":
+					case "Texture":
+					case "Video":
+						break;
+					case "NodeAttribute": {
+
+						switch ((string)child.properties[2]) {
+							case "Null":
+								//armatureIDQueue.Enqueue(armature);
+								if (parent2Child.ContainsKey(uuid)) {
+									foreach (var val in parent2Child[uuid]) {
+										var node = nodeIDs[val];
+										var matrix = compileNode(node);
+									}
+								}
+								break;
+							case "LimbNode": {
+								(long, Matrix) mat;
+								//if (!boneTransforms.TryDequeue(out mat)) {
+								//	mat = (-1, Matrix.Identity);
+								//}
+
+								//boneIDs.Add((long)child.properties[0], bone);
+								//if (mat.Item1 >= 0) {
+								//	boneIDs.Add(mat.Item1, bone);
+								//}
+
+
+								break;
+							}
+							default:
+								break;
+						}
+
+						break;
+					}
+					case "Geometry": {
+
+						var dArray = child["Vertices"].properties[0] as double[];
+						Vector3[] verts = new Vector3[dArray.Length / 3];
+						for (int i = 0; i < dArray.Length; i += 3) {
+							verts[i / 3] = new Vector3((float)dArray[i], (float)dArray[i + 2], -(float)dArray[i + 1]);
+						}
+
+						List<Vector3> normals = new List<Vector3>();
+
+						pvi = child["PolygonVertexIndex"].properties[0] as int[];
+
+						MonocleVertex[] data = new MonocleVertex[pvi.Length];
+
+						// Triangulating faces
+						List<int> faceCount = new List<int>();
+						int c = 0;
+						for (int i = 0; i < data.Length; i++) {
+							c++;
+							int index = pvi[i];
+							if (index < 0) {
+								index = ~index;
+								faceCount.Add(c);
+								c = 0;
+							}
+							data[i].Position = verts[index];
+						}
+
+						// Other properties
+						int idx = 0;
+						if (child[$"LayerElementColor"] == null) {
+
+							for (int i = 0; i < data.Length; i++) {
+								data[i].Color = Vector4.One;
+							}
+						}
+						else {
+							foreach (Vector4 item in GetArray<Vector4>(child, "Color")) {
+								data[idx++].Color = item;
+							}
+						}
+						idx = 0;
+						foreach (Vector2 item in GetArray<Vector2>(child, "UV")) {
+							data[idx++].TextureCoordinate = new Vector2(item.X, 1 - item.Y);
+						}
+						idx = 0;
+						foreach (Vector3 item in GetArray<Vector3>(child, "Normal")) {
+							data[idx++].Normal = new Vector3(item.X, item.Z, -item.Y);
+						}
+
+						List<MonocleVertex> comp = new List<MonocleVertex>(data.Distinct());
+						List<List<int>> finalIndices = new List<List<int>>();
+
+						// Material Mapping
+						string mappingType = "AllSame";
+						if (child.HasChild("LayerElementMaterial")) {
+							mappingType = child["LayerElementMaterial"]["MappingInformationType"].properties[0].ToString();
+						}
+						switch (mappingType) {
+							default:
+							case "AllSame": {
+
+								List<int> indices = new List<int>();
+								idx = 0;
+								for (int i = 0; i < faceCount.Count; i++) {
+									for (int j = 0; j < faceCount[i] - 2; j++) {
+										indices.Add(comp.IndexOf(data[idx]));
+										indices.Add(comp.IndexOf(data[idx + j + 2]));
+										indices.Add(comp.IndexOf(data[idx + j + 1]));
+									}
+									idx += faceCount[i];
+								}
+								finalIndices.Add(indices);
+								break;
+							}
+							case "ByPolygon": {
+								var exChild = child["LayerElementMaterial"];
+
+								idx = 0;
+
+
+								int[] matArray = exChild["Materials"].properties[0] as int[];
+
+								for (int i = 0; i < faceCount.Count; i++) {
+									int index = matArray[i];
+									while (finalIndices.Count <= index) {
+										finalIndices.Add(new List<int>());
+									}
+									for (int j = 0; j < faceCount[i] - 2; j++) {
+										finalIndices[index].Add(comp.IndexOf(data[idx]));
+										finalIndices[index].Add(comp.IndexOf(data[idx + j + 2]));
+										finalIndices[index].Add(comp.IndexOf(data[idx + j + 1]));
+									}
+									idx += faceCount[i];
+								}
+								break;
+							}
+						}
+
+						int[] mapping = new int[comp.Count];
+
+						for (int i = 0; i < comp.Count; i++) {
+							mapping[i] = Array.IndexOf(verts, comp[i].Position);
+						}
+
+						List<object> retval = new List<object>(){
+							comp.ToArray(),
+							finalIndices.Select((l) => { return l.ToArray(); }).ToArray(),
+						};
+
+						if (parent2Child.ContainsKey(uuid)) {
+							foreach (var val in parent2Child[uuid]) {
+								var node = nodeIDs[val];
+								if (node.name == "Deformer" && node.properties[2] as string == "Skin") {
+									foreach (var value in getWeights(comp, mapping, node)) {
+										retval.Add(value);
+									}
+									//getWeights(comp, mapping, node);
+								}
+							}
+						}
+
+						return retval.ToArray();
+					}
+					case "Model": {
+
+						switch (type) {
+							case "LimbNode": {
+								var properties = child["Properties70"];
+
+								var matrix = Matrix.Identity;
+
+								foreach (var pr in properties.children) {
+									switch (pr.properties[0].ToString()) {
+										case "Lcl Translation":
+											matrix *= Matrix.CreateTranslation(new Vector3(Convert.ToSingle(pr.properties[4]), Convert.ToSingle(pr.properties[5]), Convert.ToSingle(pr.properties[6])));
+											break;
+										case "Lcl Rotation":
+											matrix *= Matrix.CreateFromQuaternion(Calc.EulerAngle(MathHelper.ToRadians(Convert.ToSingle(pr.properties[4])), MathHelper.ToRadians(Convert.ToSingle(pr.properties[5])), MathHelper.ToRadians(Convert.ToSingle(pr.properties[6]))));
+											break;
+										case "Lcl Scaling":
+											matrix *= Matrix.CreateScale(new Vector3(Convert.ToSingle(pr.properties[4]), Convert.ToSingle(pr.properties[5]), Convert.ToSingle(pr.properties[6])));
+											break;
+									}
+								}
+								var bone = new MonocleBone(name, matrix);
+
+								if (parent2Child.ContainsKey(uuid)) {
+									foreach (var val in parent2Child[uuid]) {
+										var node = nodeIDs[val];
+										if (node.name == "Model") {
+											var childBone = compileNode(node) as MonocleBone;
+											if (childBone != null) {
+												bone.AddChild(childBone);
+											}
+										}
+									}
+								}
+
+								return bone;
+
+								break;
+							}
+						}
+						break;
+					}
+				}
+
+				return null;
+			}
+
+			foreach (var child in objects.children) {
+				nodeIDs.Add((long)child.properties[0], child);
+				if (child.name == "Model") {
+					if ((string)child.properties[2] == "Mesh") {
+						meshes.Add(child);
+					}
+					else if ((string)child.properties[2] == "Null") {
+						armatures.Add(child);
+					}
+				}
+				//else if (child.name == "Deformer" && (string)child.properties[2] == "Skin") {
+				//	deformers.Add(child);
+				//}
+			}
+			foreach (var child in array["Connections"].children) {
+				long parentID = (long)child.properties[2];
+				long childID = (long)child.properties[1];
+
+				if (parentID != 0) {
+					if (!parent2Child.ContainsKey(parentID))
+						parent2Child[parentID] = new List<long>();
+					parent2Child[parentID].Add(childID);
+
+					if (!child2Parent.ContainsKey(childID))
+						child2Parent[childID] = new List<long>();
+					child2Parent[childID].Add(parentID);
+				}
+			}
+
+
+
+			foreach (var mesh in meshes) {
+				long uuid = (long)mesh.properties[0];
+				string[] split = ((string)mesh.properties[1]).Split("\0\u0001");
+				var type = ((string)mesh.properties[2]);
+
+				object[] meshData = null!;
+
+				if (parent2Child.ContainsKey(uuid)) {
+					foreach (var val in parent2Child[uuid]) {
+						var node = nodeIDs[val];
+						switch (node.name) {
+							case "Geometry":
+								meshData = compileNode(node) as object[];
+								break;
+						}
+					}
+				}
+				if (child2Parent.ContainsKey(uuid)) {
+					foreach (var val in child2Parent[uuid]) {
+						var node = nodeIDs[val];
+					}
+				}
+
+				retval.meshes[split[0]] = ((MonocleVertex[])meshData[0], (int[][])meshData[1]);
+				var dict = retval.weights[split[0]] = new Dictionary<string, float[]>();
+
+				for (int i = 2; i < meshData.Length; i++) {
+					(string, float[]) weights = ((string, float[]))meshData[i];
+					dict.Add(weights.Item1, weights.Item2);
+				}
+			}
+
+			foreach (var arm in armatures) {
+				long uuid = (long)arm.properties[0];
+				string[] split = ((string)arm.properties[1]).Split("\0\u0001");
+				var type = ((string)arm.properties[2]);
+
+				var armature = retval.armatures[split[0]] = new MonocleArmature();
+
+				if (parent2Child.ContainsKey(uuid)) {
+					foreach (var val in parent2Child[uuid]) {
+						var node = nodeIDs[val];
+						if (node.name == "Model") {
+							var bone = compileNode(node) as MonocleBone;
+							armature.AddBone(bone);
+						}
+					}
+				}
+			}
+
+			//foreach (var child in objects.children) {
+
+
+
+			//	//switch (child.name) {
+			//	//	case "Deformer": {
+
+			//	//		if (type == "Skin") {
+			//	//		}
+			//	//		else if (type == "SubDeformer" && child.HasChild("Indexes")) {
+
+			//	//		}
+			//	//		else {
+
+			//	//		}
+
+			//	//		break;
+			//	//	}
+			//	//	case "Model":
+
+			//	//		switch (type) {
+			//	//			case "Mesh":
+			//	//				break;
+			//	//			case "Null":
+			//	//				break;
+			//	//			default:
+			//	//				break;
+			//	//		}
+			//	//		break;
+			//	//}
+			//}
+
+			return retval;
+		}
+
+		Dictionary<string, (MonocleVertex[], int[][])> meshes;
+		Dictionary<string, Dictionary<string, float[]>> weights;
+
+		Dictionary<string, MonocleArmature> armatures;
+
+		FBXScene() {
+
+		}
+
+		public MonocleModel GetMesh(string mesh) {
+			var pair = meshes[mesh];
+			MonocleVertex[] verts = new MonocleVertex[pair.Item1.Length];
+			Array.Copy(pair.Item1, verts, pair.Item1.Length);
+			int[][] indices = new int[pair.Item2.Length][];
+			for (int i = 0; i < indices.Length; i++) {
+				indices[i] = new int[pair.Item2[i].Length];
+				Array.Copy(pair.Item2[i], indices[i], pair.Item2[i].Length);
+			}
+
+			Dictionary<string, float[]> weights = new Dictionary<string, float[]>();
+			if (this.weights.ContainsKey(mesh)) {
+				var toCopy = this.weights[mesh];
+				foreach (var key in toCopy.Keys) {
+					float[] array = new float[toCopy[key].Length];
+					Array.Copy(toCopy[key], array, array.Length);
+					weights.Add(key, array);
+				}
+			}
+			var retval = new MonocleModel(verts, indices, weights);
+
+			retval.CalculateTangent();
+
+			return retval;
+		}
+		public Dictionary<string, MonocleModel> GetMeshes() {
+			Dictionary<string, MonocleModel> retval = new Dictionary<string, MonocleModel>();
+
+			foreach (var key in meshes.Keys) {
+				retval[key] = GetMesh(key);
+			}
+
+			return retval;
+		}
+		public MonocleArmature GetArmature(string armature) {
+			return armatures[armature];
+		}
 	}
 
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -540,7 +1267,6 @@ namespace Monocle {
 			CalculateTangent(vertices, newInds.ToArray());
 		}
 
-
 		public static MonocleModel CreateCube(float size, bool invert, bool smooth = false) {
 
 			size /= 2;
@@ -680,16 +1406,212 @@ namespace Monocle {
 			return md;
 		}
 
-		public static MonocleModel ImportFromFBX(FBXNode node) {
+		//public static Dictionary<string, MonocleModel> ImportMeshes(FBXNode node) {
 
-			return null;
-		}
 
+		//	int[] pvi = null;
+
+		//	IEnumerable GetArray<T>(FBXNode node, string name) {
+
+		//		if (node[name] == null) {
+		//			node = node[$"LayerElement{name}"];
+		//		}
+		//		if (node == null)
+		//			yield break;
+
+		//		var data = node[name];
+		//		var indices = node[$"{name}Index"];
+		//		if (data == null)
+		//			data = node[$"{name}s"];
+		//		if (indices == null)
+		//			indices = node[$"{name}sIndex"];
+		//		if (data == null || indices == null)
+		//			yield break;
+
+		//		if (typeof(T) == typeof(Vector2) || typeof(T) == typeof(Vector3) ||typeof(T) == typeof(Vector4)) {
+		//			float[] fArray;
+		//			if (data.properties[0] is double[]) {
+		//				fArray = ((double[])data.properties[0]).Select(x => (float)x).ToArray();
+		//			}
+		//			else if (data.properties[0] is long[]) {
+		//				fArray = ((long[])data.properties[0]).Select(x => (float)x).ToArray();
+		//			}
+		//			else if (data.properties[0] is int[]) {
+		//				fArray = ((int[])data.properties[0]).Select(x => (float)x).ToArray();
+		//			}
+		//			else {
+		//				fArray = (float[])data.properties[0];
+		//			}
+
+		//			int[] iArray = (int[])indices.properties[0];
+
+		//			if (node["MappingInformationType"].properties[0].ToString() == "ByVertice") {
+		//				int[] newArray = new int[pvi.Length];
+
+		//				for (int i = 0; i < pvi.Length; i++) {
+		//					int v = pvi[i];
+		//					if (v < 0)
+		//						v = ~v;
+		//					newArray[i] = iArray[v];
+		//				}
+
+		//				iArray = newArray;
+		//			}
+
+		//			if (typeof(T) == typeof(Vector2)) {
+		//				for (int i = 0; i < iArray.Length; i++) {
+		//					int idx = iArray[i] * 2;
+		//					yield return new Vector2(fArray[idx], fArray[idx + 1]);
+		//				}
+		//			}
+		//			else if (typeof(T) == typeof(Vector3)) {
+		//				for (int i = 0; i < iArray.Length; i++) {
+		//					int idx = iArray[i] * 3;
+		//					yield return new Vector3(fArray[idx], fArray[idx + 1], fArray[idx + 2]);
+		//				}
+		//			}
+		//			else if (typeof(T) == typeof(Vector4)) {
+		//				for (int i = 0; i < iArray.Length; i++) {
+		//					int idx = iArray[i] * 4;
+		//					yield return new Vector4(fArray[idx], fArray[idx + 1], fArray[idx + 2], fArray[idx + 3]);
+		//				}
+		//			}
+		//		}
+
+
+		//		yield break;
+		//	}
+
+
+		//	var objects = node["Objects"];
+
+		//	Dictionary<string, MonocleModel> retval = new Dictionary<string, MonocleModel>();
+		//	List<(MonocleVertex[] verts, int[][] indices)> meshes = new List<(MonocleVertex[], int[][])>();
+		//	int meshIndex = 0;
+
+
+		//	foreach (var child in objects.children) {
+		//		switch (child.name) {
+		//			case "Geometry": {
+
+		//				var dArray = child["Vertices"].properties[0] as double[];
+		//				Vector3[] verts = new Vector3[dArray.Length / 3];
+		//				for (int i = 0; i < dArray.Length; i += 3) {
+		//					verts[i / 3] = new Vector3((float)dArray[i], (float)dArray[i + 2], -(float)dArray[i + 1]);
+		//				}
+
+		//				List<Vector3> normals = new List<Vector3>();
+
+		//				pvi = child["PolygonVertexIndex"].properties[0] as int[];
+
+		//				MonocleVertex[] data = new MonocleVertex[pvi.Length];
+
+		//				List<int> faceCount = new List<int>();
+		//				int c = 0;
+
+		//				for (int i = 0; i < data.Length; i++) {
+		//					c++;
+		//					int index = pvi[i];
+		//					if (index < 0) {
+		//						index = ~index;
+		//						faceCount.Add(c);
+		//						c = 0;
+		//					}
+		//					data[i].Position = verts[index];
+		//				}
+
+		//				int idx = 0;
+		//				if (child[$"LayerElementColor"] == null) {
+
+		//					for (int i = 0; i < data.Length; i++) {
+		//						data[i].Color = Vector4.One;
+		//					}
+		//				}
+		//				else {
+		//					foreach (Vector4 item in GetArray<Vector4>(child, "Color")) {
+		//						data[idx++].Color = item;
+		//					}
+		//				}
+		//				idx = 0;
+		//				foreach (Vector2 item in GetArray<Vector2>(child, "UV")) {
+		//					data[idx++].TextureCoordinate = new Vector2(item.X, 1 - item.Y);
+		//				}
+		//				idx = 0;
+		//				foreach (Vector3 item in GetArray<Vector3>(child, "Normal")) {
+		//					data[idx++].Normal = new Vector3(item.X, item.Z, -item.Y);
+		//				}
+
+		//				List<MonocleVertex> comp = new List<MonocleVertex>(data.Distinct());
+		//				List<List<int>> finalIndices = new List<List<int>>();
+
+		//				string asdf = "AllSame";
+		//				if (child.HasChild("LayerElementMaterial")) {
+		//					asdf = child["LayerElementMaterial"]["MappingInformationType"].properties[0].ToString();
+		//				}
+		//				switch (asdf) {
+		//					default:
+		//					case "AllSame": {
+
+		//						List<int> indices = new List<int>();
+		//						idx = 0;
+		//						for (int i = 0; i < faceCount.Count; i++) {
+		//							for (int j = 0; j < faceCount[i] - 2; j++) {
+		//								indices.Add(comp.IndexOf(data[idx]));
+		//								indices.Add(comp.IndexOf(data[idx + j + 2]));
+		//								indices.Add(comp.IndexOf(data[idx + j + 1]));
+		//							}
+		//							idx += faceCount[i];
+		//						}
+		//						finalIndices.Add(indices);
+		//						break;
+		//					}
+		//					case "ByPolygon": {
+		//						var exChild = child["LayerElementMaterial"];
+
+		//						idx = 0;
+
+
+		//						int[] matArray = exChild["Materials"].properties[0] as int[];
+
+		//						for (int i = 0; i < faceCount.Count; i++) {
+		//							int index = matArray[i];
+		//							while (finalIndices.Count <= index) {
+		//								finalIndices.Add(new List<int>());
+		//							}
+		//							for (int j = 0; j < faceCount[i] - 2; j++) {
+		//								finalIndices[index].Add(comp.IndexOf(data[idx]));
+		//								finalIndices[index].Add(comp.IndexOf(data[idx + j + 2]));
+		//								finalIndices[index].Add(comp.IndexOf(data[idx + j + 1]));
+		//							}
+		//							idx += faceCount[i];
+		//						}
+		//						break;
+		//					}
+		//				}
+
+
+
+		//				meshes.Add((comp.ToArray(), finalIndices.Select((l) => { return l.ToArray(); }).ToArray()));
+
+		//				break;
+		//			}
+		//			case "Model": {
+
+		//				if (child.properties[2].ToString() == "Mesh") {
+
+		//					retval[child.properties[1].ToString().Split("\0\u0001")[0]] = new MonocleModel(meshes[meshIndex].verts, meshes[meshIndex].indices);
+		//					retval[child.properties[1].ToString().Split("\0\u0001")[0]].CalculateTangent();
+
+		//					meshIndex++;
+		//				}
+		//				break;
+		//			}
+		//		}
+		//	}
+
+		//	return retval;
+		//}
 		public static Dictionary<string, MonocleModel> Import(string contentPath) {
-
-			if (models.ContainsKey(contentPath)) {
-				return models[contentPath];
-			}
 
 			var ext = Path.GetExtension(contentPath);
 			var asset = AssetLoader.GetContent(contentPath);
@@ -801,227 +1723,25 @@ namespace Monocle {
 
 					AddObject();
 
-					models[contentPath] = retval;
 					return retval;
 				}
-				case ".fbx": {
+				//case ".fbx": {
 
-					int[] pvi = null;
+				//	return ImportMeshes(FBXNode.GetFBX(contentPath));
 
-					IEnumerable GetArray<T>(FBXNode node, string name) {
-
-						if (node[name] == null) {
-							node = node[$"LayerElement{name}"];
-						}
-						if (node == null)
-							yield break;
-
-						var data = node[name];
-						var indices = node[$"{name}Index"];
-						if (data == null)
-							data = node[$"{name}s"];
-						if (indices == null)
-							indices = node[$"{name}sIndex"];
-						if (data == null || indices == null)
-							yield break;
-
-						if (typeof(T) == typeof(Vector2) || typeof(T) == typeof(Vector3) ||typeof(T) == typeof(Vector4)) {
-							float[] fArray;
-							if (data.properties[0] is double[]) {
-								fArray = ((double[])data.properties[0]).Select(x => (float)x).ToArray();
-							}
-							else if (data.properties[0] is long[]) {
-								fArray = ((long[])data.properties[0]).Select(x => (float)x).ToArray();
-							}
-							else if (data.properties[0] is int[]) {
-								fArray = ((int[])data.properties[0]).Select(x => (float)x).ToArray();
-							}
-							else {
-								fArray = (float[])data.properties[0];
-							}
-
-							int[] iArray = (int[])indices.properties[0];
-
-							if (node["MappingInformationType"].properties[0].ToString() == "ByVertice") {
-								int[] newArray = new int[pvi.Length];
-
-								for (int i = 0; i < pvi.Length; i++) {
-									int v = pvi[i];
-									if (v < 0)
-										v = ~v;
-									newArray[i] = iArray[v];
-								}
-
-								iArray = newArray;
-							}
-
-							if (typeof(T) == typeof(Vector2)) {
-								for (int i = 0; i < iArray.Length; i++) {
-									int idx = iArray[i] * 2;
-									yield return new Vector2(fArray[idx], fArray[idx + 1]);
-								}
-							}
-							else if (typeof(T) == typeof(Vector3)) {
-								for (int i = 0; i < iArray.Length; i++) {
-									int idx = iArray[i] * 3;
-									yield return new Vector3(fArray[idx], fArray[idx + 1], fArray[idx + 2]);
-								}
-							}
-							else if (typeof(T) == typeof(Vector4)) {
-								for (int i = 0; i < iArray.Length; i++) {
-									int idx = iArray[i] * 4;
-									yield return new Vector4(fArray[idx], fArray[idx + 1], fArray[idx + 2], fArray[idx + 3]);
-								}
-							}
-						}
-
-
-						yield break;
-					}
-
-					var array = FBXNode.GetFBX(contentPath);
-
-					var objects = array["Objects"];
-
-					Dictionary<string, MonocleModel> retval = new Dictionary<string, MonocleModel>();
-					List<(MonocleVertex[] verts, int[][] indices)> meshes = new List<(MonocleVertex[], int[][])>();
-					int meshIndex = 0;
-
-
-					foreach (var child in objects.children) {
-						switch (child.name) {
-							case "Geometry": {
-
-								var dArray = child["Vertices"].properties[0] as double[];
-								Vector3[] verts = new Vector3[dArray.Length / 3];
-								for (int i = 0; i < dArray.Length; i += 3) {
-									verts[i / 3] = new Vector3((float)dArray[i], (float)dArray[i + 2], -(float)dArray[i + 1]);
-								}
-
-								List<Vector3> normals = new List<Vector3>();
-
-								pvi = child["PolygonVertexIndex"].properties[0] as int[];
-
-								MonocleVertex[] data = new MonocleVertex[pvi.Length];
-
-								List<int> faceCount = new List<int>();
-								int c = 0;
-
-								for (int i = 0; i < data.Length; i++) {
-									c++;
-									int index = pvi[i];
-									if (index < 0) {
-										index = ~index;
-										faceCount.Add(c);
-										c = 0;
-									}
-									data[i].Position = verts[index];
-								}
-
-								int idx = 0;
-								if (child[$"LayerElementColor"] == null) {
-
-									for (int i = 0; i < data.Length; i++) {
-										data[i].Color = Vector4.One;
-									}
-								}
-								else {
-									foreach (Vector4 item in GetArray<Vector4>(child, "Color")) {
-										data[idx++].Color = item;
-									}
-								}
-								idx = 0;
-								foreach (Vector2 item in GetArray<Vector2>(child, "UV")) {
-									data[idx++].TextureCoordinate = new Vector2(item.X, 1 - item.Y);
-								}
-								idx = 0;
-								foreach (Vector3 item in GetArray<Vector3>(child, "Normal")) {
-									data[idx++].Normal = new Vector3(item.X, item.Z, -item.Y);
-								}
-
-								List<MonocleVertex> comp = new List<MonocleVertex>(data.Distinct());
-								List<List<int>> finalIndices = new List<List<int>>();
-
-								string asdf = "AllSame";
-								if (child.HasChild("LayerElementMaterial")) {
-									asdf = child["LayerElementMaterial"]["MappingInformationType"].properties[0].ToString();
-								}
-								switch (asdf) {
-									default:
-									case "AllSame": {
-
-										List<int> indices = new List<int>();
-										idx = 0;
-										for (int i = 0; i < faceCount.Count; i++) {
-											for (int j = 0; j < faceCount[i] - 2; j++) {
-												indices.Add(comp.IndexOf(data[idx]));
-												indices.Add(comp.IndexOf(data[idx + j + 2]));
-												indices.Add(comp.IndexOf(data[idx + j + 1]));
-											}
-											idx += faceCount[i];
-										}
-										finalIndices.Add(indices);
-										break;
-									}
-									case "ByPolygon": {
-										var exChild = child["LayerElementMaterial"];
-
-										idx = 0;
-
-
-										int[] matArray = exChild["Materials"].properties[0] as int[];
-
-										for (int i = 0; i < faceCount.Count; i++) {
-											int index = matArray[i];
-											while (finalIndices.Count <= index) {
-												finalIndices.Add(new List<int>());
-											}
-											for (int j = 0; j < faceCount[i] - 2; j++) {
-												finalIndices[index].Add(comp.IndexOf(data[idx]));
-												finalIndices[index].Add(comp.IndexOf(data[idx + j + 2]));
-												finalIndices[index].Add(comp.IndexOf(data[idx + j + 1]));
-											}
-											idx += faceCount[i];
-										}
-										break;
-									}
-								}
-
-
-
-								meshes.Add((comp.ToArray(), finalIndices.Select((l) => { return l.ToArray(); } ).ToArray()));
-
-								break;
-							}
-							case "Model": {
-
-								if (child.properties[2].ToString() == "Mesh") {
-
-									retval[child.properties[1].ToString().Split("\0\u0001")[0]] = new MonocleModel(meshes[meshIndex].verts, meshes[meshIndex].indices);
-									retval[child.properties[1].ToString().Split("\0\u0001")[0]].CalculateTangent();
-
-									meshIndex++;
-								}
-								break;
-							}
-						}
-					}
-
-
-					models[contentPath] = retval;
-					return retval;
-				}
+				//}
 			}
 
 			return null;
 		}
 
-		internal static Dictionary<string, Dictionary<string, MonocleModel>> models = new Dictionary<string, Dictionary<string, MonocleModel>>();
+
 
 		public int MaterialCount => indices.Length;
 
 		internal MonocleVertex[] vertices;
 		internal short[][] indices;
+		internal Dictionary<string, float[]> weights, balanced;
 
 		public MonocleModel(MonocleVertex[] vertices) {
 			this.vertices = vertices;
@@ -1048,6 +1768,40 @@ namespace Monocle {
 					this.indices[i][j] = (short)indices[i][j];
 				}
 			}
+		}
+		public MonocleModel(MonocleVertex[] vertices, int[][] indices, Dictionary<string, float[]> weights) {
+			this.weights = weights;
+			this.vertices = vertices;
+			this.indices = new short[indices.Length][];
+			for (int i = 0; i < indices.Length; i++) {
+				this.indices[i] = new short[indices[i].Length];
+				for (int j = 0; j < indices[i].Length; j++) {
+					this.indices[i][j] = (short)indices[i][j];
+				}
+			}
+			balanced = new Dictionary<string, float[]>();
+
+			if (weights.Count > 0) {
+				float[] total = new float[vertices.Length];
+
+				foreach (var value in weights.Values) {
+					for (int i = 0; i < value.Length; i++) {
+						total[i] += value[i];
+					}
+				}
+				foreach (var key in weights.Keys) {
+					float[] value = new float[total.Length];
+					for (int i = 0; i < total.Length; i++) {
+						if (total[i] == 0)
+							value[i] = 0;
+						else
+							value[i] = weights[key][i] / total[i];
+					}
+					balanced.Add(key, value);
+				}
+
+			}
+
 		}
 		public MonocleModel(Vector3[] points, int[] indices) {
 
@@ -1105,6 +1859,17 @@ namespace Monocle {
 		}
 		public void CalculateTangent() {
 			CalculateTangent(vertices, indices);
+		}
+
+		public float GetWeight(string tag, int index) {
+			if (weights.ContainsKey(tag))
+				return weights[tag][index];
+			return 0;
+		}
+		public float GetBalancedWeight(string tag, int index) {
+			if (balanced.ContainsKey(tag))
+				return balanced[tag][index];
+			return 0;
 		}
 	}
 }

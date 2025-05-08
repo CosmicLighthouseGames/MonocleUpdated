@@ -10,7 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)Components\Component.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Components\Graphics\BasicModelRenderer.cs" />
+    <Compile Include="..\MonocleUpdated\MonocleEngine\Components\Graphics\ModelRenderer.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)components\graphics\DynamicModelRenderer.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Graphics\GraphicsComponent.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Graphics\Image.cs" />

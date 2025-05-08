@@ -10,6 +10,7 @@ using System.Xml;
 using MonoGame;
 using YamlDotNet.Core.Tokens;
 using System.Diagnostics;
+using System.Threading;
 
 namespace Monocle
 {
@@ -17,6 +18,64 @@ namespace Monocle
 	{
 		private Dictionary<string, MTexture> textures = new Dictionary<string, MTexture>(StringComparer.OrdinalIgnoreCase);
 		private Dictionary<string, List<MTexture>> orderedTexturesCache = new Dictionary<string, List<MTexture>>();
+
+		string Folder;
+
+		public Atlas() {
+			AssetLoader.OnAssetAdded += OnAdded;
+			AssetLoader.OnAssetUpdated += OnUpdated;
+		}
+
+		private void OnUpdated(LoadedAsset item) {
+			OnAdded(item);
+		}
+
+
+		private void OnAdded(LoadedAsset item) {
+			if (item.IsInFolder(Folder)) {
+
+				Engine.OnNextFrame += () => {
+
+					for (int i = 0; i < 10; i++) {
+
+
+						string filepath = Path.ChangeExtension(item.Path, null);
+						filepath = filepath.Replace('\\', '/');
+						filepath = filepath.Substring(Folder.Length + 1);
+
+						Texture2D tex = null;
+
+						try {
+							Engine.LockGraphicsDevice(() => {
+								tex = Texture2D.FromStream(Draw.GraphicsDevice, item.ContentStream);
+							});
+
+							if (OnLoadTexture != null) {
+								tex = OnLoadTexture(item, tex);
+							}
+
+						}
+						catch {
+							Thread.Sleep(10);
+						}
+
+						if (tex == null)
+							return;
+
+						if (textures.ContainsKey(filepath)) {
+							textures[filepath].SetTexture(tex);
+						}
+						else {
+							textures[filepath] = new MTexture(tex);
+						}
+						return;
+					}
+				};
+
+			}
+		}
+
+		public event Func<LoadedAsset, Texture2D, Texture2D> OnLoadTexture;
 
 		[DebuggerHidden]
 		public static Texture2D TextureFromStream(BinaryReader reader) {
@@ -47,12 +106,13 @@ namespace Monocle
 			return texture;
 		}
 
-		public static Atlas FromAssetLoader(string contentFolder) {
+		public static Atlas FromAssetLoader(string contentFolder, Func<LoadedAsset, Texture2D, Texture2D> loadTex = null) {
 
 			contentFolder = contentFolder.Replace('\\', '/');
 
 			var atlas = new Atlas();
 			atlas.textures = new Dictionary<string, MTexture>();
+			atlas.Folder = contentFolder;
 
 			var graphics = Engine.Instance.GraphicsDevice;
 
@@ -84,8 +144,6 @@ namespace Monocle
 						filepath = filepath.Replace('\\', '/');
 						filepath = filepath.Substring(contentFolder.Length + 1);
 
-						if (atlas.textures.ContainsKey(filepath))
-							break;
 						Engine.LockGraphicsDevice(() => {
 							texture = Texture2D.FromStream(graphics, item.ContentStream);
 						});
@@ -97,24 +155,33 @@ namespace Monocle
 				if (texture == null)
 					continue;
 
+				if (loadTex != null) {
+					texture = loadTex(item, texture);
+				}
 				// load
-				atlas.textures.Add(filepath, new MTexture(texture));
+				if (atlas.textures.ContainsKey(filepath)) {
+					atlas.textures[filepath].SetTexture(texture);
+				}
+				else {
+					atlas.textures.Add(filepath, new MTexture(texture));
+				}
+
 			}
 
-			AssetLoader.OnAssetUpdatedEvent(contentFolder, (s) => {
+			//AssetLoader.OnAssetUpdatedEvent(contentFolder, (s) => {
 
-				var item = AssetLoader.GetContent(s);
-				Texture2D tex = null;
-				Engine.LockGraphicsDevice(() => {
-					tex = Texture2D.FromStream(graphics, item.ContentStream);
-				});
+			//	var item = AssetLoader.GetContent(s);
+			//	Texture2D tex = null;
+			//	Engine.LockGraphicsDevice(() => {
+			//		tex = Texture2D.FromStream(graphics, item.ContentStream);
+			//	});
 
-				var filepath = Path.ChangeExtension(item.Path, null);
-				filepath = filepath.Replace('\\', '/');
-				filepath = filepath.Substring(contentFolder.Length + 1);
+			//	var filepath = Path.ChangeExtension(item.Path, null);
+			//	filepath = filepath.Replace('\\', '/');
+			//	filepath = filepath.Substring(contentFolder.Length + 1);
 
-				atlas.textures[s] = new MTexture(tex);
-			});
+			//	atlas.textures[s] = new MTexture(tex);
+			//});
 
 			return atlas;
 		}
@@ -203,6 +270,6 @@ namespace Monocle
 			orderedTexturesCache.Clear();
 		}
 	
-
+		
 	}
 }

@@ -411,13 +411,56 @@ namespace MonocleCompiler {
 						sub = Regex.Replace(sub, regex, replace);
 					}
 
-					if (!Directory.Exists(Path.GetDirectoryName(item))) {
-
+					if (!Directory.Exists(Path.GetDirectoryName(Path.Combine(DumpPath, sub)))) {
+						Directory.CreateDirectory(Path.GetDirectoryName(Path.Combine(DumpPath, sub))!);
 					}
 					
-					Directory.CreateDirectory(Path.GetDirectoryName(Path.Combine(DumpPath, sub))!);
 					File.Copy(item, Path.Combine(DumpPath, sub), true);
 				}
+			}
+		}
+		public void CopyFromContent(string regex, Action<string, string, string> onFile) {
+			string folder = Path.GetDirectoryName(Path.Combine(Path.GetDirectoryName(solutionPath)!, projectPaths[args[0]]))!;
+			string contentPath = Path.Combine(folder, "Content");
+			DumpPath = Path.Combine(folder, args[1], "Content");
+
+			foreach (var item in Directory.EnumerateFiles(contentPath, "*", SearchOption.AllDirectories)) {
+				string sub = item.Replace(contentPath + "\\", "");
+				if (sub.StartsWith("obj\\") || sub.StartsWith("bin\\"))
+					continue;
+
+				foreach (var f in IgnoredFolders) {
+					if (sub.StartsWith(f)) {
+						sub = null;
+						break;
+					}
+				}
+				if (sub == null)
+					continue;
+
+				sub = sub.Replace('\\', '/');
+
+				if (Regex.Match(sub, regex).Success) {
+					onFile(contentPath, DumpPath, sub);
+				}
+			}
+		}
+		public void CopyFile(string file) {
+			CopyFile(file, (a, b, c) => {
+				Directory.CreateDirectory(Path.GetDirectoryName(Path.Combine(b, c))!);
+				File.Copy(Path.Combine(a, c), Path.Combine(b, c), true);
+			});
+		}
+		public void CopyFile(string file, Action<string, string, string> onFile) {
+			string folder = Path.GetDirectoryName(Path.Combine(Path.GetDirectoryName(solutionPath)!, projectPaths[args[0]]))!;
+			string contentPath = Path.Combine(folder, "Content");
+			DumpPath = Path.Combine(folder, args[1], "Content");
+
+			file = file.Replace('\\', '/');
+
+			if (File.Exists(Path.Combine(contentPath, file))) {
+				onFile(contentPath, DumpPath, file);
+
 			}
 		}
 

@@ -21,6 +21,8 @@ namespace Monocle
 		public Action<string> OnLastFrame;
 		public Action<string, string> OnChange;
 
+		public float AnimationTimer => animationTimer;
+
 		private Atlas atlas;
 		public string Path;
 		private Dictionary<string, Animation> animations;
@@ -435,13 +437,14 @@ namespace Monocle
 			CurrentAnimationID = "";
 		}
 
-		#endregion     
+
+		#endregion
 
 		#region Properties
 
 		public bool Animating
 		{
-			get; private set;
+			get; set;
 		}
 
 		public string CurrentAnimationID
