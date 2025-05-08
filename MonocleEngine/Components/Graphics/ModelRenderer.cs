@@ -8,21 +8,54 @@ using Microsoft.Xna.Framework.Graphics;
 using Newtonsoft.Json.Linq;
 
 namespace Monocle {
-	public class ModelRenderCall : IDrawCall {
+	public delegate void TransformVertex(int index, ref MonocleVertex vertex);
+	public unsafe class ModelRenderCall : IDrawCall {
+		static MonocleVertex[] buffer = new MonocleVertex[0x2000];
+
 		public Material material;
 		public MonocleVertex[] vertices;
 		public short[] indices;
 		public Matrix transform;
 		public DepthStencilState DepthStencilState;
 
+		public List<TransformVertex> modifiers;
+
 
 		public int RenderOrder { get; set; }
 
 		public void Render(GraphicsDevice device) {
 
-			if (indices.Length < 3)
+			if (indices.Length == 0)
 				return;
-			
+
+			if (modifiers != null) {
+
+				fixed (MonocleVertex* meshPtr = vertices) {
+					fixed (MonocleVertex* bufferPtr = buffer) {
+						for (int i = 0; i < vertices.Length; i++) {
+							var vert = meshPtr[i];
+
+							foreach (var t in modifiers) {
+								t(i, ref vert);
+							}
+
+							bufferPtr[i] = vert;
+						}
+					}
+				}
+			}
+			else {
+				fixed (MonocleVertex* meshPtr = vertices) {
+					fixed (MonocleVertex* bufferPtr = buffer) {
+						for (int i = 0; i < vertices.Length; i++) {
+							var vert = meshPtr[i];
+
+							bufferPtr[i] = vert;
+						}
+					}
+				}
+			}
+
 			Material mat = null;
 			var drawcall = this;
 
@@ -32,15 +65,11 @@ namespace Monocle {
 				}
 				mat = newMat;
 
-				
-
 				var tech = mat.Technique;
 				var techPass = tech.Passes[0];
 
-				var stencil = DepthStencilState??mat.DepthStencilState??Draw.DefaultDepthState;
-				if (stencil != device.DepthStencilState) {
-					device.DepthStencilState = stencil;
-				}
+				var stencil = DepthStencilState??mat.DepthStencilState??Draw.FallbackDepthState;
+				device.DepthStencilState = stencil;
 
 				var tex = mat.Texture??Draw.Pixel;
 				var pData = mat.parameterData;
@@ -59,24 +88,12 @@ namespace Monocle {
 						default:
 							if (pData.ContainsKey(param.Name)) {
 								var data = pData[param.Name];
-								if (data == null)
-									return false;
-								;
 								if (data is MTexture)
 									param.SetValue(data.Texture);
 								else if (data is Color)
 									param.SetValue(data.ToVector4());
-								else if (data is int || data is float) {
-									if (param.ParameterType is EffectParameterType.Single) {
-										param.SetValue((float)pData[param.Name]);
-									}
-									else {
-										param.SetValue((int)pData[param.Name]);
-									}
-								}
-								else {
+								else
 									param.SetValue(pData[param.Name]);
-								}
 								return true;
 							}
 							return false;
@@ -94,11 +111,12 @@ namespace Monocle {
 				newMat = material;
 			}
 			SetMaterial(newMat);
-			device.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, vertices, 0, vertices.Length, indices, 0, indices.Length / 3);
-			
+			device.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, buffer, 0, vertices.Length, indices, 0, indices.Length / 3);
+
 		}
 	}
-	public class BasicModelRenderer : GraphicsComponent {
+
+	public class ModelRenderer : GraphicsComponent {
 
 		MonocleModel mesh;
 		public MonocleModel Mesh {
@@ -150,7 +168,11 @@ namespace Monocle {
 			}
 		}
 
-		public BasicModelRenderer Parent;
+		public ModelRenderer Parent;
+
+		public List<TransformVertex> Transforms = new List<TransformVertex>();
+
+		public MonocleArmature Armature;
 
 
 		private Matrix GlobalTransform() {
@@ -161,11 +183,12 @@ namespace Monocle {
 				mat = OverrideMatrix.Value;
 			}
 			else {
+				mat = Matrix.Identity;
 				mat = Matrix.CreateScale(Scale) * Matrix.CreateFromQuaternion(Rotation);
 			}
 
 			if (Parent != null) {
-				mat = Parent.GlobalTransform() * mat;
+				mat = mat * Parent.GlobalTransform();
 			}
 
 			return mat;
@@ -197,7 +220,7 @@ namespace Monocle {
 			return mat;
 		}
 
-		public BasicModelRenderer() : base(true) {
+		public ModelRenderer() : base(true) {
 
 			Rotation = Quaternion.Identity;
 			Scale = Vector3.One;
@@ -209,9 +232,15 @@ namespace Monocle {
 
 		public override void Render() {
 			base.Render();
-
-			if (Mesh == null || materials == null)
+			
+			if (Mesh == null)
 				return;
+
+			List<TransformVertex> transforms = new List<TransformVertex>(Transforms);
+
+			if (Armature != null) {
+				transforms.AddRange(Armature.Transform(mesh));
+			}
 
 			for (int i = 0; i < Mesh.indices.Length; i++) {
 				var mat = materials.Length > 0 ? ((i < materials.Length) ? materials[i] : materials[0]) : Draw.DefaultMaterial;
@@ -219,19 +248,19 @@ namespace Monocle {
 					vertices = Mesh.vertices,
 					indices = Mesh.indices[i],
 					material = mat,
+					modifiers = transforms,
 					transform = TransMatrix(),
 					RenderOrder = mat.RenderOrder??Draw.CurrentRenderOrder,
-					DepthStencilState = DepthStencilState,
 				});
 			}
 
 		}
 
-		public BasicModelRenderer SetMaterial(Material material, int index = 0) {
+		public ModelRenderer SetMaterial(Material material, int index = 0) {
 			materials[index] = material;
 			return this;
 		}
-		public BasicModelRenderer SetMaterials(params Material[] material) {
+		public ModelRenderer SetMaterials(params Material[] material) {
 			if (materials == null) {
 				materials = new Material[material.Length];
 			}
@@ -240,11 +269,11 @@ namespace Monocle {
 			}
 			return this;
 		}
-		public BasicModelRenderer CopyMaterial(Material material, int index = 0) {
+		public ModelRenderer CopyMaterial(Material material, int index = 0) {
 			materials[index] = new Material(material);
 			return this;
 		}
-		public BasicModelRenderer CopyMaterials(params Material[] material) {
+		public ModelRenderer CopyMaterials(params Material[] material) {
 			if (materials == null) {
 				materials = new Material[material.Length];
 			}
@@ -253,7 +282,7 @@ namespace Monocle {
 			}
 			return this;
 		}
-		public BasicModelRenderer SetMesh(MonocleModel mesh) {
+		public ModelRenderer SetMesh(MonocleModel mesh) {
 			this.Mesh = mesh;
 			return this;
 		}
