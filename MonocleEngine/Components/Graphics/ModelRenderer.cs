@@ -86,15 +86,27 @@ namespace Monocle {
 							param.SetValue(drawcall.transform);
 							return true;
 						default:
-							if (pData.ContainsKey(param.Name)) {
-								var data = pData[param.Name];
-								if (data is MTexture)
-									param.SetValue(data.Texture);
-								else if (data is Color)
-									param.SetValue(data.ToVector4());
-								else
-									param.SetValue(pData[param.Name]);
-								return true;
+							try {
+								if (pData.ContainsKey(param.Name)) {
+									var data = pData[param.Name];
+									if (data != null) {
+
+										if (data is MTexture)
+											param.SetValue(data.Texture);
+										else if (data is Color)
+											param.SetValue(data.ToVector4());
+										else if (param.ParameterType == EffectParameterType.Single && param.RowCount == 1 && param.ColumnCount == 1)
+											param.SetValue(Convert.ToSingle(data));
+										else if (param.ParameterType == EffectParameterType.Int32)
+											param.SetValue(Convert.ToInt32(data));
+										else
+											param.SetValue(pData[param.Name]);
+									}
+									return true;
+								}
+							}
+							catch {
+
 							}
 							return false;
 					}
