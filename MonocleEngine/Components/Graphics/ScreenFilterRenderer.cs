@@ -33,6 +33,7 @@ namespace Monocle {
 
 			var bState = device.BlendState;
 			var rState = device.RasterizerState;
+			var dsState = device.DepthStencilState;
 
 			var worldProj = Draw.WorldProjection;
 			Draw.WorldProjection = Matrix.Identity;
@@ -80,15 +81,7 @@ namespace Monocle {
 				techPass.Apply();
 
 				device.BlendState = filter.blendState??BlendState.AlphaBlend;
-				device.DepthStencilState = new DepthStencilState() {
-					StencilEnable = true,
-					StencilPass = StencilOperation.Keep,
-					StencilFail = StencilOperation.Keep,
-					StencilMask = int.MaxValue,
-					StencilWriteMask = 0,
-					ReferenceStencil = 2,
-					StencilFunction = CompareFunction.Equal,
-				};
+				//device.BlendState = BlendState.Additive;
 				device.DepthStencilState = filter.depthStencilState;
 				//
 
@@ -97,6 +90,7 @@ namespace Monocle {
 
 			device.BlendState = bState;
 			device.RasterizerState = rState;
+			device.DepthStencilState = dsState;
 			Draw.WorldProjection = worldProj;
 
 			device.SetRenderTargets(targets);

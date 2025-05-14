@@ -341,6 +341,10 @@ namespace Monocle {
 		float lastFrameRender = 0;
 		protected override void Draw(GameTime gameTime) {
 
+			while (!Monitor.TryEnter(renderLock)) {
+				Thread.Sleep(1);
+			}
+
 			Stopwatch sw = Stopwatch.StartNew();
 			Monocle.Draw.UpdatePerFrame();
 
@@ -413,6 +417,8 @@ namespace Monocle {
 			Monocle.Draw.ClearGraphics();
 			GraphicsDevice.SetRenderTarget(null);
 			GC.Collect();
+
+			Monitor.Exit(renderLock);
 		}
 
 		/// <summary>
@@ -421,6 +427,7 @@ namespace Monocle {
 		/// </summary>
 		protected virtual void RenderCore() {
 
+
 			if (scene != null)
 				scene.BeforeRender();
 
@@ -428,7 +435,6 @@ namespace Monocle {
 				scene.Render();
 				scene.AfterRender();
 			}
-
 		}
 
 		protected override void OnExiting(object sender, EventArgs args) {
@@ -446,19 +452,15 @@ namespace Monocle {
 		//	}
 		//}
 
-		public static void LockGraphicsDevice(Action onUnlocked) {
+		static object renderLock = new object();
 
-			//while (RenderingAttempt) {
-			//	Thread.Sleep(1);
-			//}
+		public static void WaitForRendering() {
 
-			//while (!Monitor.TryEnter(Instance.GraphicsDevice)) {
+			while (!Monitor.TryEnter(renderLock)) {
+				Thread.Sleep(1);
+			}
 
-			//}
-
-			onUnlocked();
-
-			//Monitor.Exit(Instance.GraphicsDevice);
+			Monitor.Exit(renderLock);
 		}
 
 		#region Scene

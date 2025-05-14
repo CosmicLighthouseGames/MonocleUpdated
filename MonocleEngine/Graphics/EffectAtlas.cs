@@ -22,9 +22,8 @@ namespace Monocle {
 
 				string local = Path.ChangeExtension(Path.GetRelativePath(path, item.Path).Replace('\\', '/'), null);
 
-				Engine.LockGraphicsDevice(() => {
-					effectAtlas.effects.Add(local, new Effect(Engine.Graphics.GraphicsDevice, item.GetBinary()));
-				});
+				effectAtlas.effects.Add(local, new Effect(Engine.Graphics.GraphicsDevice, item.GetBinary()));
+				
 			}
 
 			return effectAtlas;

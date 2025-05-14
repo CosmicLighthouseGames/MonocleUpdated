@@ -82,13 +82,12 @@ namespace Monocle
 
         public MTexture(int width, int height, Color color)
         {
-            Engine.LockGraphicsDevice(() => {
-                texture = new Texture2D(Engine.Instance.GraphicsDevice, width, height);
-                var colors = new Color[width * height];
-                for (int i = 0; i < width * height; i++)
-                    colors[i] = color;
-                texture.SetData<Color>(colors);
-            });
+            texture = new Texture2D(Engine.Instance.GraphicsDevice, width, height);
+            var colors = new Color[width * height];
+            for (int i = 0; i < width * height; i++)
+                colors[i] = color;
+            texture.SetData<Color>(colors);
+            
 
             ClipRect = new Rectangle(0, 0, width, height);
             DrawOffset = Vector2.Zero;

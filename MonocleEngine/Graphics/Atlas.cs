@@ -46,9 +46,8 @@ namespace Monocle
 						Texture2D tex = null;
 
 						try {
-							Engine.LockGraphicsDevice(() => {
-								tex = Texture2D.FromStream(Draw.GraphicsDevice, item.ContentStream);
-							});
+							tex = Texture2D.FromStream(Draw.GraphicsDevice, item.ContentStream);
+							
 
 							if (OnLoadTexture != null) {
 								tex = OnLoadTexture(item, tex);
@@ -144,9 +143,8 @@ namespace Monocle
 						filepath = filepath.Replace('\\', '/');
 						filepath = filepath.Substring(contentFolder.Length + 1);
 
-						Engine.LockGraphicsDevice(() => {
-							texture = Texture2D.FromStream(graphics, item.ContentStream);
-						});
+						texture = Texture2D.FromStream(graphics, item.ContentStream);
+						
 					}
 						break;
 					default:
