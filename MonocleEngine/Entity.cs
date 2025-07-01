@@ -81,7 +81,8 @@ namespace Monocle {
 		public string id;
 		public bool constantEntity { get; internal set; }
 		public Vector3 Position { get { return new Vector3(x, y, z); } }
-		public int x, y, z, width, height, depth;
+        public float x, y, z;
+        public int width, height, depth;
 		public Dictionary<string, object> values;
 
 		public static EntityData Default {
@@ -99,9 +100,9 @@ namespace Monocle {
 		public static EntityData FromPosition(Vector3 position) {
 			var retval = Default;
 
-			retval.x = (int)position.X;
-			retval.y = (int)position.Y;
-			retval.z = (int)position.Z;
+			retval.x = position.X;
+			retval.y = position.Y;
+			retval.z = position.Z;
 
 			return retval;
 		}

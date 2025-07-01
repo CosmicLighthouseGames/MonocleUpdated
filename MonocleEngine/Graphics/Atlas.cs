@@ -117,21 +117,43 @@ namespace Monocle
 
 			if (AssetLoader.HasContent($"{contentFolder}.bin")) {
 
-				var content = AssetLoader.GetContent($"{contentFolder}.bin");
+				var content = AssetLoader.GetZipContent($"{contentFolder}.bin");
 
-				var reader = new BinaryReader(content.ContentStream);
+				foreach (var entry in content.Entries) {
 
-				while (reader.BaseStream.Position < reader.BaseStream.Length) {
-					string key = reader.ReadString();
+					Texture2D texture;
+					string filepath;
 
-					atlas.textures.Add(key, new MTexture(TextureFromStream(reader)));
+					switch (Path.GetExtension(entry.FullName)) {
+						case ".png":
+
+							// make nice for dictionary
+							filepath = Path.ChangeExtension(entry.FullName, null);
+							filepath = filepath.Replace('\\', '/');
+
+							texture = Texture2D.FromStream(graphics, entry.Open());
+
+						break;
+						default:
+							continue;
+					}
+					if (texture == null)
+						continue;
+
+					// load
+					if (atlas.textures.ContainsKey(filepath)) {
+						atlas.textures[filepath].SetTexture(texture);
+					}
+					else {
+						atlas.textures.Add(filepath, new MTexture(texture));
+					}
 				}
 			}
 
 			foreach (var item in AssetLoader.GetContentInFolder(contentFolder)) {
 
-				Texture2D texture = null;
-				string filepath = null;
+				Texture2D texture;
+				string filepath;
 
 				switch (item.Extention) {
 					case ".png":

@@ -48,6 +48,9 @@ namespace Monocle {
 
 			foreach (var filter in Filters) {
 
+				if (!filter.Active)
+					continue;
+
 				if (filter.renderTargets != null)
 					device.SetRenderTargets(filter.renderTargets);
 
@@ -81,7 +84,6 @@ namespace Monocle {
 				techPass.Apply();
 
 				device.BlendState = filter.blendState??BlendState.AlphaBlend;
-				//device.BlendState = BlendState.Additive;
 				device.DepthStencilState = filter.depthStencilState;
 				//
 
@@ -105,6 +107,7 @@ namespace Monocle {
 		public BlendState blendState;
 		public DepthStencilState depthStencilState = DepthStencilState.None;
 		internal RenderTargetBinding[] renderTargets;
+		public bool Active = true;
 
 		public ScreenFilter SetMaterial(string name) {
 			this.material = Material.FromEffect(name);

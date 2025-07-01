@@ -11,6 +11,7 @@ using System.Threading;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Reflection.PortableExecutable;
+using System.IO.Compression;
 
 namespace MonocleCompiler {
 	
@@ -160,7 +161,7 @@ namespace MonocleCompiler {
 
 
 		public void CompileSprites() {
-
+				
 			bool dirty = false;
 
 			RawFilesPath = Path.Combine(contentPath, "Graphics");
@@ -189,6 +190,7 @@ namespace MonocleCompiler {
 			}
 
 			if (Directory.Exists(RawFilesPath)) {
+				
 				foreach (var file in Directory.EnumerateFiles(RawFilesPath, "*.png", SearchOption.AllDirectories)) {
 					string localPath = file.Remove(0, RawFilesPath.Length + 1);
 					long editTime = File.GetLastWriteTime(file).Ticks;
@@ -197,49 +199,19 @@ namespace MonocleCompiler {
 					if (dirty || !oldEditTimes.ContainsKey(localPath) || oldEditTimes[localPath] != editTime)
 						dirty = true;
 				}
+				ImageMeta meta = DefaultImageMeta;
 
-				if (dirty) {
-					WriteEditTimes();
+				foreach (var dir in Directory.EnumerateDirectories(RawFilesPath)) {
+					using FileStream stream = File.Open(Path.Combine(CompiledPath, Path.GetFileName(dir)) + ".bin", FileMode.Create);
+					using ZipArchive archive = new ZipArchive(stream, ZipArchiveMode.Create);
 
-					binaryData = new Dictionary<string, byte[]>();
+					var localMeta = File.Exists(dir + ".meta") ? ChangeMeta(File.ReadAllLines(dir + ".meta"), meta) : meta;
 
-					ImageMeta meta = DefaultImageMeta;
-
-					foreach (var dir in Directory.EnumerateDirectories(RawFilesPath)) {
-						CompileSprites(dir, meta);
-					}
-
-					Dictionary<string, BinaryWriter> filePaths = new Dictionary<string, BinaryWriter>();
-
-
-
-					foreach (var file in binaryData) {
-						string pack = file.Key.Split('\\')[0];
-						if (!filePaths.ContainsKey(pack)) {
-							filePaths[pack] = new BinaryWriter(File.Open(Path.Combine(CompiledPath, pack + ".bin"), FileMode.Create));
-						}
-						var packFile = filePaths[pack];
-
-						packFile.Write(file.Key.Remove(0, pack.Length + 1).Replace('\\', '/').Replace(".png", ""));
-						packFile.Write(file.Value);
-					}
-
-					foreach (var file in filePaths.Values) {
-						file.Close();
-						file.Dispose();
-					}
-
-					// Go through each file in Graphics, get the edit times
-					// if the edit times are exact, don't do anything
-					// foreach file
-					//		Check if it needs compiling.  
-
-					CopyFiles();
+					CompileSprites(dir, dir, archive, localMeta);
 
 				}
-				else {
-					CopyFiles();
-				}
+
+				CopyFiles();
 			}
 			currentEditTimes.Clear();
 			oldEditTimes.Clear();
@@ -477,14 +449,13 @@ namespace MonocleCompiler {
 		void CopyFiles() {
 			foreach (var file in Directory.EnumerateFiles(CompiledPath, "*.bin")) {
 				File.Copy(file, Path.Combine(DumpPath, Path.GetFileName(file)), true);
+				
 				if (isDebug)
 					File.Copy(file, Path.Combine(RawFilesPath, Path.GetFileName(file)), true);
 			}
 		}
 
-		unsafe byte[] CompileImage(string path, ImageMeta meta) {
-
-			byte[] retval;
+		unsafe uint[] CompileImage(string path, ImageMeta meta, out Size size) {
 
 			var map = (Bitmap)Image.FromFile(path);
 			switch (map.PixelFormat) {
@@ -501,70 +472,23 @@ namespace MonocleCompiler {
 
 			var ptr = (uint*)bits.Scan0;
 
-			List<uint> palette = new List<uint>() { 0 };
 			uint[] data = new uint[map.Width * map.Height];
-			var size = new Size(map.Width, map.Height);
+			var s = new Size(map.Width, map.Height);
 
 			for (int y = 0; y < map.Height; ++y) {
 				for (int x = 0; x < map.Width; ++x) {
 					var color = ptr[x + y * (bits.Stride >> 2)];
 					data[x + y * map.Width] = color;
-					if (!palette.Contains(color)) {
-						palette.Add(color);
-					}
 				}
 			}
 
-			
-			data = ModifyImage(data, ref size, meta, path)!;
 
-			if (meta.byteAmount == 1 && palette.Count <= 255) {
-				int offset = (palette.Count << 2) + 6;
-				retval = new byte[size.Width * size.Height + offset];
-
-				retval[0] = 0b_0000_0000;
-
-				retval[1] = (byte)(size.Width & 0xFF);
-				retval[2] = (byte)(size.Width >> 8);
-
-				retval[3] = (byte)(size.Height & 0xFF);
-				retval[4] = (byte)(size.Height >> 8);
-
-				retval[5] = (byte)palette.Count;
-
-				for (int i = 0; i < palette.Count << 2; i += 4) {
-					retval[i + 6] = (byte)((palette[i >> 2] >> 16) & 0xFF);
-					retval[i + 7] = (byte)((palette[i >> 2] >> 08) & 0xFF);
-					retval[i + 8] = (byte)((palette[i >> 2] >> 00) & 0xFF);
-					retval[i + 9] = (byte)((palette[i >> 2] >> 24) & 0xFF);
-				}
-
-				for (int i = 0; i < data.Length; i++) {
-					retval[i + offset] = (byte)palette.IndexOf(data[i]);
-				}
-
-			}
-			else {
-				retval = new byte[1];
-				retval[0] = 0b_0000_0001;
-				// TODO: Add good PNG compression
-			}
-
-			path = path.Remove(0, RawFilesPath.Length + 1);
-
-			path = Path.Combine(CompiledPath, Path.ChangeExtension(path, ".bin"));
-
-			if (!Directory.Exists(Path.GetDirectoryName(path)))
-				Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-
-			File.WriteAllBytes(path, retval);
-			
-
-			map.UnlockBits(bits);
+			data = ModifyImage(data, ref s, meta, path)!;
 			map.Dispose();
 
+			size = s;
 
-			return retval;
+			return data;
 		}
 
 		protected virtual uint[]? ModifyImage(uint[] imageData, ref Size size, ImageMeta meta, string path) {
@@ -611,36 +535,53 @@ namespace MonocleCompiler {
 
 			return original;
 		}
-		void CompileSprites(string path, ImageMeta meta) {
+		unsafe void CompileSprites(string path, string rawPath, ZipArchive archive, ImageMeta meta) {
 
 			foreach (var file in Directory.EnumerateFiles(path, "*.png")) {
 
 				var localMeta = File.Exists(file + ".meta") ? ChangeMeta(File.ReadAllLines(file + ".meta"), meta) : meta;
 
-				string localPath = file.Remove(0, RawFilesPath.Length + 1);
+				string localPath = file.Remove(0, rawPath.Length + 1);
 
-				byte[] data;
+				uint[] data;
 
-				if (oldEditTimes.ContainsKey(localPath) && oldEditTimes[localPath] == currentEditTimes[localPath]) {
-					using (var stream = new BinaryReader(File.Open(Path.Combine(CompiledPath, Path.ChangeExtension(localPath, ".bin")), FileMode.Open))) {
-						data = stream.ReadBytes((int)stream.BaseStream.Length);
+				data = CompileImage(file, localMeta, out Size size);
+
+				string newPath = Path.Combine(CompiledPath, "temp.png");
+
+
+				using var map = new Bitmap(size.Width, size.Height);
+
+				var bits = map.LockBits(new Rectangle(0, 0, map.Width, map.Height), ImageLockMode.WriteOnly, map.PixelFormat);
+				var ptr = (uint*)bits.Scan0;
+
+				for (int y = 0; y < map.Height; ++y) {
+					for (int x = 0; x < map.Width; ++x) {
+						ptr[x + y * (bits.Stride >> 2)] = data[x + y * map.Width];
 					}
 				}
-				else {
-					data = CompileImage(file, localMeta);
-				}
+				map.Save(newPath);
 
-				binaryData.Add(localPath, data);
+				map.Dispose();
+
+
+
+				ZipArchiveEntry entry = archive.CreateEntry(localPath);
+
+				using BinaryWriter writer = new BinaryWriter(entry.Open());
+
+				writer.Write(File.ReadAllBytes(newPath));
+
 			}
 			foreach (var dir in Directory.EnumerateDirectories(path)) {
 				var localMeta = File.Exists(dir + ".meta") ? ChangeMeta(File.ReadAllLines(dir + ".meta"), meta) : meta;
 
-				if (File.Exists(dir + ".meta") && (!oldEditTimes.ContainsKey(dir + ".meta") || (oldEditTimes[dir + ".meta"] != currentEditTimes[dir + ".meta"]))) {
-					CompileSpritesAlways(dir, localMeta);
-				}
-				else {
-					CompileSprites(dir, localMeta);
-				}
+				CompileSprites(dir, rawPath, archive, localMeta);
+				//if (File.Exists(dir + ".meta") && (!oldEditTimes.ContainsKey(dir + ".meta") || (oldEditTimes[dir + ".meta"] != currentEditTimes[dir + ".meta"]))) {
+				//	CompileSpritesAlways(dir, localMeta);
+				//}
+				//else {
+				//}
 			}
 		}
 		void CompileSpritesAlways(string path, ImageMeta meta) {
@@ -651,7 +592,7 @@ namespace MonocleCompiler {
 
 				string localPath = file.Remove(0, RawFilesPath.Length + 1);
 
-				binaryData.Add(localPath, CompileImage(file, localMeta));
+				//binaryData.Add(localPath, CompileImage(file, localMeta));
 			}
 			foreach (var dir in Directory.EnumerateDirectories(path)) {
 				var localMeta = File.Exists(dir + ".meta") ? ChangeMeta(File.ReadAllLines(dir + ".meta"), meta) : meta;

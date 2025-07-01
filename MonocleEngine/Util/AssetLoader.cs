@@ -207,6 +207,16 @@ namespace Monocle {
 
 			return null;
 		}
+		public static ZipArchive GetZipContent(string path) {
+
+			path = path.Replace('/', '\\');
+
+			if (Content.ContainsKey(path) && Content[path].Count > 0) {
+				return new ZipArchive(Content[path][0].ContentStream, ZipArchiveMode.Read);
+			}
+
+			return null;
+		}
 		public static LoadedAsset[] GetContents(string path) {
 			path = path.Replace('/', '\\');
 

@@ -577,13 +577,13 @@ namespace Monocle {
 				return;
 
 			var matrix = Matrix.Identity
+				* Matrix.CreateTranslation(new Vector3(-origin.X, -origin.Y, 0))
 				* Matrix.CreateScale(scale.X / Engine.PixelsPerUnit, scale.Y / Engine.PixelsPerUnit, 1)
-				* Matrix.CreateTranslation(new Vector3(-origin.X / 2, -origin.Y / 2, 0))
 				* Matrix.CreateFromQuaternion(rotation)
 				* Matrix.CreateTranslation(position.X, position.Y, position.Z)
 				;
 
-			Texture(tex, matrix, color, stencil, flipping);
+			Texture(tex, matrix, color, stencil, flipping, mat);
 		}
 
 		#endregion
