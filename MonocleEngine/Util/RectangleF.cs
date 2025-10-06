@@ -57,5 +57,24 @@ namespace Monocle {
 			Width += horizontalAmount * 2;
 			Height += verticalAmount * 2;
 		}
+
+		public static RectangleF operator *(float scaleFactor, RectangleF value) {
+			return new RectangleF(value.X * scaleFactor, value.Y * scaleFactor, value.Width * scaleFactor, value.Height * scaleFactor);
+		}
+		public static RectangleF operator *(RectangleF value, float scaleFactor) {
+			return new RectangleF(value.X * scaleFactor, value.Y * scaleFactor, value.Width * scaleFactor, value.Height * scaleFactor);
+		}
+		public static RectangleF operator /(RectangleF value, float divider) {
+			return new RectangleF(value.X / divider, value.Y / divider, value.Width / divider, value.Height / divider);
+		}
+		public static RectangleF operator *(Vector2 scaleFactor, RectangleF value) {
+			return new RectangleF(value.X * scaleFactor.X, value.Y * scaleFactor.Y, value.Width * scaleFactor.X, value.Height * scaleFactor.Y);
+		}
+		public static RectangleF operator *(RectangleF value, Vector2 scaleFactor) {
+			return new RectangleF(value.X * scaleFactor.X, value.Y * scaleFactor.Y, value.Width * scaleFactor.X, value.Height * scaleFactor.Y);
+		}
+		public static RectangleF operator /(RectangleF value, Vector2 divider) {
+			return new RectangleF(value.X / divider.X, value.Y / divider.Y, value.Width / divider.X, value.Height / divider.Y);
+		}
 	}
 }

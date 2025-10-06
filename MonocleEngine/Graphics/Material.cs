@@ -1,6 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -12,11 +17,111 @@ namespace Monocle {
 		public static void Initialize() {
 			var gd = Draw.GraphicsDevice;
 
+			Directory.CreateDirectory("tmp");
+
+
+			using Process cmd = new Process();
+			ProcessStartInfo info = new ProcessStartInfo();
+			info.FileName = "cmd.exe";
+			info.WorkingDirectory = Path.Combine(Directory.GetCurrentDirectory());
+			info.RedirectStandardInput = true;
+			info.RedirectStandardOutput = true;
+			info.RedirectStandardError = true;
+			info.CreateNoWindow = true;
+
+			cmd.StartInfo = info;
+			cmd.Start();
+
+			using StreamWriter compiler = cmd.StandardInput;
+
+
+			using var se = cmd.StandardError;
+			using var so = cmd.StandardOutput;
+			bool error = false;
+			Task.Factory.StartNew(() => {
+
+				while (!se.EndOfStream) {
+					var line = se.ReadLine();
+
+					if (Regex.IsMatch(line, @"effect\.fx\([\d-,]+\): error")) {
+						error = true;
+					}
+				}
+			});
+			Task.Factory.StartNew(() => {
+
+				while (!so.EndOfStream) {
+					var line = so.ReadLine();
+				}
+			});
+
+			DebugLog.Write($"Loading effects");
+
 			foreach (var content in AssetLoader.GetContentInFolder("Effects")) {
 				string localPath = content.Path.Substring(8, content.Path.IndexOf('.') - 8).Replace('\\', '/');
+				if (content.Extention == ".fx") {
 
-				effects.Add(localPath, new Effect(gd, content.GetBinary()));
+					File.Delete("tmp/compiled.cso");
+					var comp = AssetLoader.GetContent(Path.ChangeExtension(content.Path, ".cso"));
+
+					if (comp == null || comp.LastEdit < content.LastEdit) {
+
+						using (StreamReader sr = new StreamReader(content.ContentStream)) {
+							using (StreamWriter sw = new StreamWriter(File.Open("tmp/effect.fx", FileMode.Create))) {
+								sw.Write(sr.ReadToEnd());
+							}
+						}
+
+						error = false;
+						compiler.WriteLine(@$"mgfxc ""tmp/effect.fx"" ""tmp/compiled.cso""");
+
+						//var line = se.ReadLine()!;
+
+						for (int i = 0; i < 200 && !File.Exists("tmp/compiled.cso") && !error; i++) {
+							Thread.Sleep(50);
+						}
+
+						if (File.Exists("tmp/compiled.cso")) {
+
+							for (int i = 0; i < 20; i++) {
+								try {
+									effects.Add(localPath, new Effect(gd, File.ReadAllBytes("tmp/compiled.cso")));
+									File.Move("tmp/compiled.cso", $"Content/Effects/{localPath}.cso", true);
+									break;
+								}
+								catch {
+									Thread.Sleep(50);
+								}
+							}
+							
+						}
+						else {
+							ErrorLog.Write($"Error compiling {localPath}");
+						}
+					}
+
+
+				}
+				else if (content.Extention == ".cso") {
+
+
+					DebugLog.Write($"Loading effect {content.Path}");
+
+					if (!effects.ContainsKey(localPath)) {
+
+						try {
+							effects.Add(localPath, new Effect(gd, content.GetBinary()));
+						}
+						catch {
+							ErrorLog.Write($"Error loading effect: {content.Path}");
+						}
+					}
+				}
+
 			}
+
+
+			cmd.Close();
 		}
 
 		public static IEnumerable<Effect> LoadedEffects() {
@@ -59,7 +164,7 @@ namespace Monocle {
 		}
 		public Material(string name) {
 			if (!effects.ContainsKey(name))
-				throw new Exception();
+				throw new Exception($"Missing {name} Material");
 			BaseEffect = GetEffect(name);
 			Technique = BaseEffect.CurrentTechnique;
 			Color = Color.White;

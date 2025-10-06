@@ -15,10 +15,29 @@ using System.Threading;
 using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
 using System.Diagnostics;
+using System.Collections;
 
 namespace Monocle {
 
 	public class LoadedAsset {
+
+		static IEnumerable<KeyValuePair<string, string>> GetMeta(string[] data) {
+
+			foreach (var l in data) {
+				if (!l.Contains(':'))
+					continue;
+				string[] split = new string[]{
+					l.Substring(0, l.IndexOf(':')),
+					l.Substring(l.IndexOf(":") + 1)
+				};
+				if (split.Length > 0) {
+					yield return new KeyValuePair<string, string>(split[0], split[1]);
+				}
+			}
+
+			yield break;
+
+		}
 		public enum ContentType {
 			Art,
 			Effect,
@@ -53,21 +72,22 @@ namespace Monocle {
 		public readonly string Extention;
 		public readonly string LiteralPath;
 		public readonly string Path;
-		public readonly bool IsModContent;
 		public readonly long LastEdit;
 		public readonly ContentLocationType AssetType;
+		public readonly Dictionary<string, string> MetaData;
 
 		internal LoadedAsset(ZipArchiveEntry zip, string exactPath, DateTime lastEdit) {
 			zipEntry = zip;
 
 			AssetType = ContentLocationType.ZipFile;
-			IsModContent = true;
 
 			LastEdit = lastEdit.Ticks;
 
 			Extention = System.IO.Path.GetExtension(zip.FullName);
 			LiteralPath = exactPath;
 			Path = zip.FullName;
+
+			MetaData = new Dictionary<string, string>();
 		}
 		internal LoadedAsset(string exactPath, string contentPath, DateTime lastEdit) {
 
@@ -78,8 +98,18 @@ namespace Monocle {
 			Path = contentPath;
 			AssetType = ContentLocationType.Folder;
 
-			if (System.IO.Path.GetFileName(LiteralPath.Replace("\\" + Path, "")) != "Content") {
-				IsModContent = true;
+			MetaData = new Dictionary<string, string>();
+			
+			while (!string.IsNullOrWhiteSpace(contentPath)) {
+				if (File.Exists(exactPath + ".meta")) {
+					foreach (var pair in GetMeta(File.ReadAllLines(exactPath + ".meta"))) {
+						if (!MetaData.ContainsKey(pair.Key)) {
+							MetaData[pair.Key] = pair.Value;
+						}
+					}
+				}
+				exactPath = System.IO.Path.GetDirectoryName(exactPath);
+				contentPath = System.IO.Path.GetDirectoryName(contentPath);
 			}
 		}
 
@@ -224,7 +254,7 @@ namespace Monocle {
 				return Content[path].ToArray();
 			}
 
-			return null;
+			return new LoadedAsset[0];
 		}
 		public static IEnumerable<LoadedAsset> FindAssetsByRegex(string pattern) {
 			foreach (var key in Content.Keys) {

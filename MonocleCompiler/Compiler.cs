@@ -31,13 +31,13 @@ namespace MonocleCompiler {
 
 		Dictionary<string, byte[]> binaryData;
 
-		string RawFilesPath, CompiledPath, DumpPath;
+		public string RawFilesPath, CompiledPath, DumpPath;
 
 		public bool isDebug { get; private set; }
 
-		string solutionPath, projectFolder, projectName, contentPath, engineContentPath, compiledPath;
+		public string solutionPath, projectFolder, projectName, contentPath, engineContentPath, compiledPath;
 
-		Dictionary<string, string> projectPaths;
+		public Dictionary<string, string> projectPaths;
 
 		public List<string> IgnoredFolders = new List<string>();
 

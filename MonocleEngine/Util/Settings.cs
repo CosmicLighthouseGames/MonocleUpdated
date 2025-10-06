@@ -87,7 +87,13 @@ namespace Monocle {
 					else if (value.GetType() != property.PropertyType) {
 						value = reparse(property.PropertyType, value);
 					}
-					property.SetValue(null, value);
+					try {
+						if (property.CanWrite)
+							property.SetValue(null, value);
+					}
+					catch {
+						throw new ArgumentException($"Error loading {property.Name}");
+					}
 
 				}
 			}

@@ -206,7 +206,8 @@ namespace Monocle {
 
 
 		public override void HandleGraphicsReset() {
-			
+
+
 			if (windowSize) {
 				viewSize.Width =  Engine.WindowWidth;
 				viewSize.Height = Engine.WindowHeight;
@@ -220,12 +221,10 @@ namespace Monocle {
 				Viewport.Width =  Engine.WindowWidth;
 				Viewport.Height = Engine.WindowHeight;
 			}
-			else {
+			else if (RenderTargets != null) {
 
 				Viewport.Width =  RenderTargets[0].Width;
 				Viewport.Height = RenderTargets[0].Height;
-			}
-			if (bindings == null) {
 			}
 			UpdateMatrices();
 		}

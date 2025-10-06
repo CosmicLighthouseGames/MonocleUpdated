@@ -103,6 +103,8 @@ namespace Monocle
 					bufferCounter = BufferTime;
 					check = true;
 				}
+				else if (CutsceneNode?.Check??false)
+					check = true;
 			}
 			else {
 
@@ -166,6 +168,10 @@ namespace Monocle
 
 				bool nodeCheck = false;
 
+				if (consumed)
+					return false;
+
+
 				foreach (var node in Nodes)
 					if (node.Check)
 						nodeCheck = true;
@@ -174,13 +180,6 @@ namespace Monocle
 					if (CutsceneNode.Check && !nodeCheck && !consumed)
 						return true;
 				}
-				//if (wasInCutscene && !UseCutscene) {
-				//	if (!CutsceneNode.Check && nodeCheck && !consumed)
-				//		return true;
-				//}
-
-				if (consumed)
-					return false;
 
 				if (bufferCounter > 0 || Repeating)
 					return true;
@@ -881,6 +880,8 @@ namespace Monocle
 
 			public DelegateButton(Func<bool> func) {
 				this.func = func;
+				prev = func();
+				check = func();
 			}
 
 			public override bool Check => check;

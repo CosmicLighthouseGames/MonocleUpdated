@@ -8,6 +8,13 @@ using Newtonsoft.Json.Linq;
 
 namespace Monocle {
 	public class FilterCall : IDrawCall {
+		public static void ChangeUV(RectangleF coords) {
+
+			vertices[0].TextureCoordinate = new Vector2(coords.Left, coords.Bottom);
+			vertices[1].TextureCoordinate = new Vector2(coords.Left, coords.Top);
+			vertices[2].TextureCoordinate = new Vector2(coords.Right, coords.Bottom);
+			vertices[3].TextureCoordinate = new Vector2(coords.Right, coords.Top);
+		}
 		static MonocleVertex[] vertices = new MonocleVertex[4] {
 			new MonocleVertex() { Position = new Vector3(-1, -1, 0.0f), TextureCoordinate = new Vector2(0, 1), Color = Vector4.One },
 			new MonocleVertex() { Position = new Vector3(-1, 1, 0.0f), TextureCoordinate = new Vector2(0, 0), Color = Vector4.One },
@@ -31,9 +38,13 @@ namespace Monocle {
 		public void Render(GraphicsDevice device) {
 
 
+			
+			BeforeRender?.Invoke();
+
 			var bState = device.BlendState;
 			var rState = device.RasterizerState;
 			var dsState = device.DepthStencilState;
+			var viewport = device.Viewport;
 
 			var worldProj = Draw.WorldProjection;
 			Draw.WorldProjection = Matrix.Identity;
@@ -42,9 +53,10 @@ namespace Monocle {
 
 			Vertex.CurrentTechnique.Passes[0].Apply();
 			var targets = device.GetRenderTargets();
+			
 
 
-			BeforeRender?.Invoke();
+
 
 			foreach (var filter in Filters) {
 
@@ -73,6 +85,8 @@ namespace Monocle {
 									param.SetValue(data.Texture);
 								else if (data is Color)
 									param.SetValue(data.ToVector4());
+								else if (param.ParameterType == EffectParameterType.Int32)
+									param.SetValue((int)pData[param.Name]);
 								else
 									param.SetValue(pData[param.Name]);
 								return true;
@@ -87,6 +101,7 @@ namespace Monocle {
 				device.DepthStencilState = filter.depthStencilState;
 				//
 
+				device.Viewport = viewport;
 				device.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, vertices, 0, 4, indices, 0, 2);
 			}
 
@@ -96,6 +111,7 @@ namespace Monocle {
 			Draw.WorldProjection = worldProj;
 
 			device.SetRenderTargets(targets);
+			device.Viewport = viewport;
 
 			AfterRender?.Invoke();
 		}

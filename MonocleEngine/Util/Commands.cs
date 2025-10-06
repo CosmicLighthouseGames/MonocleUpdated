@@ -1017,11 +1017,13 @@ namespace Monocle {
         {
             Engine.Commands.drawCommands.Clear();
 		}
+#if !DEMO
 
-		[Command("debug", "Enables debug", false)]
+        [Command("debug", "Enables debug", false)]
 		public static void Debug(bool enabled = true) {
             Settings.Debug = enabled;
 		}
+#endif
 
 		[Command("exit", "Exits the game", false)]
         private static void Exit()
@@ -1147,7 +1149,7 @@ namespace Monocle {
             }
         }
 #endif
-        #endregion
+#endregion
 
         private struct Line
         {

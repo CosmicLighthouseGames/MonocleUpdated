@@ -236,46 +236,6 @@ namespace Monocle {
 
 		protected override void Update(GameTime gameTime) {
 
-			if (OnNextFrame != null) {
-				OnNextFrame();
-				OnNextFrame = null;
-			}
-
-			RealTimeActive += (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-			lastFrame += (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-			//if (lastFrame < 0.016f) {
-			//	Thread.Sleep(5);
-			//	return;
-			//}
-			RawDeltaTime = lastFrame;
-			TimeActive += RawDeltaTime;
-			lastFrame = 0;
-
-			//Update input
-			MInput.Update(true);
-
-#if !CONSOLE
-			if (ExitOnEscapeKeypress && MInput.Keyboard.Pressed(Microsoft.Xna.Framework.Input.Keys.Escape)) {
-				Exit();
-				return;
-			}
-#endif
-
-
-			//Debug Console
-			if (Commands.Open || Commands.TempOpen > 0)
-				Commands.UpdateOpen();
-			else if (Commands.Enabled)
-				Commands.UpdateClosed();
-
-			if (OverloadGameLoop != null) {
-				OverloadGameLoop();
-				base.Update(gameTime);
-				return;
-			}
-
 #if DEBUG
 			float tempSpeed = DebugSpeed;
 			if (SuperSpeedKey != null && MInput.Keyboard.Check(SuperSpeedKey.Value)) {
@@ -286,6 +246,50 @@ namespace Monocle {
 			if (tempSpeed >= 1 || DebugWait >= 1 || PauseKey == null || (FrameKey != null && MInput.Keyboard.Pressed(FrameKey.Value))) {
 				for (int i = 0; i < Math.Max(1, tempSpeed); i++) {
 #endif
+					if (OnNextFrame != null) {
+						OnNextFrame();
+						OnNextFrame = null;
+					}
+					if (IsFixedTimeStep) {
+						gameTime = new GameTime(gameTime.TotalGameTime, new TimeSpan(TimeSpan.TicksPerSecond / 60));
+					}
+
+					RealTimeActive += (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+					lastFrame += (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+					//if (lastFrame < 0.016f) {
+					//	Thread.Sleep(5);
+					//	return;
+					//}
+
+					RawDeltaTime = lastFrame;
+					TimeActive += RawDeltaTime;
+					lastFrame = 0;
+
+					//Update input
+					MInput.Update(true);
+
+#if !CONSOLE
+					if (ExitOnEscapeKeypress && MInput.Keyboard.Pressed(Microsoft.Xna.Framework.Input.Keys.Escape)) {
+						Exit();
+						return;
+					}
+#endif
+
+
+					//Debug Console
+					if (Commands.Open || Commands.TempOpen > 0)
+						Commands.UpdateOpen();
+					else if (Commands.Enabled)
+						Commands.UpdateClosed();
+
+					if (OverloadGameLoop != null) {
+						OverloadGameLoop();
+						base.Update(gameTime);
+						return;
+					}
+
 					//Changing scenes
 					if (scene != nextScene) {
 						var lastScene = scene;

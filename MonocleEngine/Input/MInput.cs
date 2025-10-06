@@ -11,6 +11,9 @@ namespace Monocle {
 		Switch,
 	}
 	public static class MInput {
+
+		public static object InputLock = new object();
+
 		public static KeyboardData Keyboard { get; private set; }
 		public static MouseData Mouse { get; private set; }
 		public static GamePadData[] GamePads { get; private set; }
@@ -40,28 +43,30 @@ namespace Monocle {
 		}
 
 		internal static void Update(bool updateVirtual) {
-			if (Engine.Instance.IsActive && Active) {
-				if (Engine.Commands.Open) {
-					Keyboard.UpdateNull();
-					Mouse.UpdateNull();
+			lock (InputLock) {
+				if (Engine.Instance.IsActive && Active) {
+					if (Engine.Commands.Open) {
+						Keyboard.UpdateNull();
+						Mouse.UpdateNull();
+					}
+					else {
+						Keyboard.Update();
+						Mouse.Update();
+					}
+
+					for (int i = 0; i < 4; i++)
+						GamePads[i].Update();
 				}
 				else {
-					Keyboard.Update();
-					Mouse.Update();
+					Keyboard.UpdateNull();
+					Mouse.UpdateNull();
+					for (int i = 0; i < 4; i++)
+						GamePads[i].UpdateNull();
 				}
 
-				for (int i = 0; i < 4; i++)
-					GamePads[i].Update();
+				if (updateVirtual)
+					UpdateVirtualInputs();
 			}
-			else {
-				Keyboard.UpdateNull();
-				Mouse.UpdateNull();
-				for (int i = 0; i < 4; i++)
-					GamePads[i].UpdateNull();
-			}
-
-			if (updateVirtual)
-				UpdateVirtualInputs();
 		}
 
 		public static void UpdateNull() {

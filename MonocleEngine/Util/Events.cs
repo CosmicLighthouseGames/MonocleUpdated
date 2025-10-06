@@ -47,15 +47,23 @@ namespace Monocle
 
         private void BuildEventsList()
         {
+            List<Type> processedTypes = new List<Type>();
+
             //Check Monocle for Commands
             foreach (var type in Assembly.GetCallingAssembly().GetTypes()) {
+                if (processedTypes.Contains(type))
+                    continue;
+                processedTypes.Add(type);
                 foreach (var method in type.GetMethods(BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
                     ProcessMethod(method);
             }
 
             //Check the calling assembly for Commands
             foreach (var type in Assembly.GetEntryAssembly().GetTypes()) {
-                foreach (var method in type.GetMethods(BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+				if (processedTypes.Contains(type))
+					continue;
+				processedTypes.Add(type);
+				foreach (var method in type.GetMethods(BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
                     ProcessMethod(method);
             }
 

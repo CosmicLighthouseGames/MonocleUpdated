@@ -216,8 +216,6 @@ namespace Monocle {
         public Scene Scene { get; private set; }
         public ComponentList Components { get; private set; }
 
-        public bool RunWhileFrozen { get; set; }
-
         public int RenderOrder { get; set; }
         /// <summary>
         /// A number to determine in which order entities are updated.  Bigger numbers happen later
@@ -817,9 +815,11 @@ namespace Monocle {
         /// Shortcut function for adding a Component to the Entity's Components list
         /// </summary>
         /// <param name="component">The Component to add</param>
-        public void Add(Component component)
+        public Component Add(Component component)
         {
             Components.Add(component);
+
+            return component;
         }
 
         /// <summary>

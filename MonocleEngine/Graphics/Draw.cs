@@ -465,8 +465,13 @@ namespace Monocle {
 
 			opaque.Sort();
 
+			var width = GraphicsDevice.Viewport.Width;
+
 			foreach (var draw in opaque.GetItems()) {
 				draw.Render(GraphicsDevice);
+				if (width != GraphicsDevice.Viewport.Width) {
+					//GraphicsDevice.Viewport = new Viewport(GraphicsDevice.Viewport.X, GraphicsDevice.Viewport.Y, width, GraphicsDevice.Viewport.Height);
+				}
 			}
 		}
 

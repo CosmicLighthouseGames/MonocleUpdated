@@ -1230,11 +1230,30 @@ namespace Monocle
         public static float Snap(float value, float increment)
         {
             return Calc.Round(value / increment, MidpointRounding.ToZero) * increment;
-        }
+		}
 
-        public static float Snap(float value, float increment, float offset)
+		public static float SnapIf(float value, float increment, float threshold) {
+            float snap = Snap(value, increment);
+
+            if (Math.Abs(snap - value) <= threshold) {
+                return snap;
+            }
+            return value;
+		}
+
+		public static float Snap(float value, float increment, float offset)
         {
             return ((float)Calc.Round((value - offset) / increment, MidpointRounding.ToZero) * increment) + offset;
+		}
+
+		public static float SnapIf(float value, float increment, float offset, float threshold) { 
+
+			float snap = Snap(value, increment, offset);
+
+            if (Math.Abs(snap - value) <= threshold) {
+                return snap;
+            }
+            return value;
 		}
 
 		public static Vector2 Snap(Vector2 value, float increment) {
@@ -1705,6 +1724,37 @@ namespace Monocle
 		[DebuggerHidden]
 		public static Vector2 ZZ(this Vector3 vector) {
 			return new Vector2(vector.Z, vector.Z);
+		}
+
+		[DebuggerHidden]
+		public static void XY_set(ref this Vector3 vector, Vector2 value) {
+            vector.X = value.X;
+            vector.Y = value.Y;
+		}
+		[DebuggerHidden]
+		public static void YX_set(ref this Vector3 vector, Vector2 value) {
+			vector.Y = value.X;
+			vector.X = value.Y;
+		}
+		[DebuggerHidden]
+		public static void XZ_set(ref this Vector3 vector, Vector2 value) {
+			vector.X = value.X;
+			vector.Z = value.Y;
+		}
+		[DebuggerHidden]
+		public static void ZX_set(ref this Vector3 vector, Vector2 value) {
+			vector.Z = value.X;
+			vector.X = value.Y;
+		}
+		[DebuggerHidden]
+		public static void YZ_set(ref this Vector3 vector, Vector2 value) {
+			vector.Y = value.X;
+			vector.Z = value.Y;
+		}
+		[DebuggerHidden]
+		public static void ZY_set(ref this Vector3 vector, Vector2 value) {
+			vector.Z = value.X;
+            vector.Y = value.Y;
 		}
 
 		[DebuggerHidden]
