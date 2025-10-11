@@ -2905,53 +2905,83 @@ namespace Monocle
         #region Effects
 
         public static void SetParameter(this Effect effect, string parameter, Texture value) {
-            if (effect.Parameters[parameter] != null)
-                effect.Parameters[parameter].SetValue(value);
-        }
-        public static void SetParameter(this Effect effect, string parameter, float value) {
-            if (effect.Parameters[parameter] != null)
-                effect.Parameters[parameter].SetValue(value);
+            var param = effect.Parameters[parameter];
+            if (param != null)
+				param.SetValue(value);
+		}
+		public static void SetParameter(this Effect effect, string parameter, MTexture value, SpriteEffects flip = SpriteEffects.None) {
+            if (value == null)
+                return;
+			var param = effect.Parameters[parameter];
+			if (param != null)
+				param.SetValue(value.Texture);
+			param = effect.Parameters[$"{parameter}_Clip"];
+			if (param != null) {
+                bool x = (flip & SpriteEffects.FlipHorizontally) != SpriteEffects.None;
+                bool y = (flip & SpriteEffects.FlipVertically) != SpriteEffects.None;
+				param.SetValue(new Vector4(
+                    (float)value.ClipRect.Width / value.Texture.Width * (x ? -1 : 1),
+                    (float)value.ClipRect.Height / value.Texture.Height * (y ? -1 : 1),
+                    (value.ClipRect.X + (x ? value.ClipRect.Width : 0)) / (float)value.Texture.Width,
+                    (value.ClipRect.Y + (y ? value.ClipRect.Height : 0)) / (float)value.Texture.Height
+                    ));
+			}
+		}
+		public static void SetParameter(this Effect effect, string parameter, float value) {
+			var param = effect.Parameters[parameter];
+			if (param != null)
+				param.SetValue(value);
 
-        }
+		}
         public static void SetParameter(this Effect effect, string parameter, float[] value) {
-            if (effect.Parameters[parameter] != null)
-                effect.Parameters[parameter].SetValue(value);
-        }
+			var param = effect.Parameters[parameter];
+			if (param != null)
+				param.SetValue(value);
+		}
         public static void SetParameter(this Effect effect, string parameter, Vector2 value) {
-            if (effect.Parameters[parameter] != null)
-                effect.Parameters[parameter].SetValue(value);
-        }
+			var param = effect.Parameters[parameter];
+			if (param != null)
+				param.SetValue(value);
+		}
         public static void SetParameter(this Effect effect, string parameter, Vector3 value) {
-            if (effect.Parameters[parameter] != null)
-                effect.Parameters[parameter].SetValue(value);
-        }
+			var param = effect.Parameters[parameter];
+			if (param != null)
+				param.SetValue(value);
+		}
         public static void SetParameter(this Effect effect, string parameter, Vector4 value) {
-            if (effect.Parameters[parameter] != null)
-                effect.Parameters[parameter].SetValue(value);
-        }
+			var param = effect.Parameters[parameter];
+			if (param != null)
+				param.SetValue(value);
+		}
         public static void SetParameter(this Effect effect, string parameter, Rectangle value) {
-            if (effect.Parameters[parameter] != null)
-                effect.Parameters[parameter].SetValue(new Vector4(value.X, value.Y, value.Width, value.Height));
+			var param = effect.Parameters[parameter];
+			if (param != null)
+				param.SetValue(new Vector4(value.X, value.Y, value.Width, value.Height));
         }
         public static void SetParameter(this Effect effect, string parameter, Matrix value) {
-            if (effect.Parameters[parameter] != null)
-                effect.Parameters[parameter].SetValue(value);
-        }
+			var param = effect.Parameters[parameter];
+			if (param != null)
+				param.SetValue(value);
+		}
         public static void SetParameter(this Effect effect, string parameter, Vector2[] value) {
-            if (effect.Parameters[parameter] != null)
-                effect.Parameters[parameter].SetValue(value);
-        }
+			var param = effect.Parameters[parameter];
+			if (param != null)
+				param.SetValue(value);
+		}
         public static void SetParameter(this Effect effect, string parameter, Vector3[] value) {
-            if (effect.Parameters[parameter] != null)
-                effect.Parameters[parameter].SetValue(value);
-        }
+			var param = effect.Parameters[parameter];
+			if (param != null)
+				param.SetValue(value);
+		}
         public static void SetParameter(this Effect effect, string parameter, Vector4[] value) {
-            if (effect.Parameters[parameter] != null)
-                effect.Parameters[parameter].SetValue(value);
-        }
+			var param = effect.Parameters[parameter];
+			if (param != null)
+				param.SetValue(value);
+		}
         public static void SetParameter(this Effect effect, string parameter, Color value) {
-            if (effect.Parameters[parameter] != null)
-                effect.Parameters[parameter].SetValue(new Vector4(value.R / 255f, value.G / 255f, value.B / 255f, value.A / 255f));
+			var param = effect.Parameters[parameter];
+			if (param != null)
+				param.SetValue(new Vector4(value.R / 255f, value.G / 255f, value.B / 255f, value.A / 255f));
         }
 
         public static void Copy(this DepthStencilState from, DepthStencilState to) {

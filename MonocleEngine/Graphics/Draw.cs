@@ -150,27 +150,58 @@ namespace Monocle {
 			}
 		}
 		public class SpriteDrawCall : IDrawCall {
-			const int BUFFER_SIZE = 4 * 0x2000;
-			static List<MonocleVertex[]> meshes;
-			static MonocleVertex* meshPointer;
-			static int listIndex = 0, arrayIndex = 0;
-			public static int[] indices = new int[]{
-				1, 2, 3, 2, 1, 0
-			};
 
-			public int RenderOrder { get; set; }
+			static VertexBuffer mesh;
+			static IndexBuffer indices;
+
+			public static void SetBuffers(GraphicsDevice device) {
+				device.SetVertexBuffer(mesh);
+				device.Indices = indices;
+			}
 
 			public static void Initialize() {
-				meshes = new List<MonocleVertex[]>();
-				meshes.Add(new MonocleVertex[BUFFER_SIZE]);
-				ClearGraphics();
+				mesh = new VertexBuffer(GraphicsDevice, typeof(MonocleVertex), 4, BufferUsage.WriteOnly);
+				mesh.SetData(new MonocleVertex[4] {
+					new MonocleVertex() {
+						Position = new Vector3(0, 0, 0),
+						TextureCoordinate = new Vector2(0, 1),
+						Normal = Vector3.Backward,
+						Binormal = Vector3.Up,
+						Tangent = Vector3.Left,
+						Color = Vector4.One,
+					},
+					new MonocleVertex() {
+						Position = new Vector3(1, 0, 0),
+						TextureCoordinate = new Vector2(1, 1),
+						Normal = Vector3.Backward,
+						Binormal = Vector3.Up,
+						Tangent = Vector3.Left,
+						Color = Vector4.One,
+					},
+					new MonocleVertex() {
+						Position = new Vector3(0, 1, 0),
+						TextureCoordinate = new Vector2(0, 0),
+						Normal = Vector3.Backward,
+						Binormal = Vector3.Up,
+						Tangent = Vector3.Left,
+						Color = Vector4.One,
+					},
+					new MonocleVertex() {
+						Position = new Vector3(1, 1, 0),
+						TextureCoordinate = new Vector2(1, 0),
+						Normal = Vector3.Backward,
+						Binormal = Vector3.Up,
+						Tangent = Vector3.Left,
+						Color = Vector4.One,
+					},
+				});
+				indices = new IndexBuffer(GraphicsDevice, IndexElementSize.SixteenBits, 6, BufferUsage.WriteOnly);
+				indices.SetData(new short[]{
+					1, 2, 3, 2, 1, 0
+				});
+			ClearGraphics();
 			}
 			public static void ClearGraphics() {
-				fixed (MonocleVertex* ptr = &meshes[0][0]) {
-					meshPointer = ptr;
-				}
-				listIndex = 0;
-				arrayIndex = 0;
 			}
 			public static SpriteDrawCall Draw(MTexture texture, Matrix transform, Material mat = null) {
 				var retval = AddMesh(transform, Color.White, texture.Texture, texture.ClipRect, SpriteEffects.None);
@@ -209,64 +240,29 @@ namespace Monocle {
 				return retval;
 			}
 
-			static SpriteDrawCall AddMesh(Matrix transform, Color color, Vector2 size, Vector2 uvStart, Vector2 uvSize, SpriteEffects flip) {
+			static SpriteDrawCall AddMesh(Matrix transform, Color color, Vector2 size, SpriteEffects flip) {
 
-				var mesh = meshes[listIndex];
-				var index = arrayIndex;
-
-				Vector3 normal = Vector3.TransformNormal(Vector3.Backward, transform),
-					binormal = Vector3.TransformNormal(Vector3.Left, transform),
-					tangent = Vector3.Transform(Vector3.Up, transform);
-
-				for (int i = 0; i < 4; i++) {
-					float x = (i & 1);
-					float y = (i >> 1);
-
-					bool uX = (x > 0) != ((flip & SpriteEffects.FlipHorizontally) != SpriteEffects.None);
-					bool uY = (y > 0) == ((flip & SpriteEffects.FlipVertically) != SpriteEffects.None);
-
-					x *= size.X;
-					y *= size.Y;
-					*meshPointer = new MonocleVertex() {
-						Position = Vector3.Transform(new Vector3(x, y, 0), transform),
-						TextureCoordinate = new Vector2(uvStart.X + (uX ? uvSize.X : 0), uvStart.Y + (uY ? uvSize.Y : 0)),
-						Color = color.ToVector4(),
-						Normal = normal,
-						Binormal = binormal,
-						Tangent = tangent,
-					};
-					meshPointer++;
-				}
-				arrayIndex += 4;
-
-				if (arrayIndex >= BUFFER_SIZE) {
-					listIndex++;
-					if (meshes.Count <= listIndex) {
-						meshes.Add(new MonocleVertex[BUFFER_SIZE]);
-					}
-					fixed (MonocleVertex* ptr = &meshes[listIndex][0]) {
-						meshPointer = ptr;
-					}
-				}
-				
+				transform = Matrix.CreateScale(size.X, size.Y, 1) * transform;
 				return new SpriteDrawCall() {
-					mesh = mesh,
-					start = index,
+					flip = flip,
+					color = color,
+					worldTransform = transform,
 					RenderOrder = CurrentRenderOrder
 				};
 			}
 			static SpriteDrawCall AddMesh(Matrix transform, Color color, Texture2D texture, Rectangle clipRect, SpriteEffects flip) {
 
-				return AddMesh(transform, color, new Vector2(clipRect.Width, clipRect.Height),
-					new Vector2((float)clipRect.X / texture.Width, (float)clipRect.Y / texture.Height),
-					new Vector2((float)clipRect.Width / texture.Width, (float)clipRect.Height / texture.Height), flip);
+				return AddMesh(transform, color, new Vector2(clipRect.Width, clipRect.Height), flip);
 
 			}
 
+			public int RenderOrder { get; set; }
 
 			public Material material;
 			public MTexture overrideTexture;
-			public MonocleVertex[] mesh;
+			public Matrix worldTransform = Matrix.Identity;
+			public SpriteEffects flip;
+			public Color color = Color.White;
 			public int start;
 			public DepthStencilState DepthStencilState;
 
@@ -280,37 +276,14 @@ namespace Monocle {
 				var stencil = DepthStencilState??mat.DepthStencilState??FallbackDepthState;
 				device.DepthStencilState = stencil;
 
-				var tex = overrideTexture??mat.Texture;
-				var drawcall = this;
-				var pData = mat.parameterData;
-
-				SetParameters(mat.BaseEffect, (param) => {
-					switch (param.Name) {
-						case "DiffuseColor":
-							param.SetValue(mat.Color.ToVector4());
-							return true;
-						case "Texture":
-							param.SetValue(tex.Texture);
-							return true;
-						default:
-							if (pData.ContainsKey(param.Name)) {
-								var data = pData[param.Name];
-								if (data is MTexture)
-									param.SetValue(data.Texture);
-								else if (data is Color)
-									param.SetValue(data.ToVector4());
-								else if (data is Color[])
-									param.SetValue(((Color[])data).Select((a) => { return a.ToVector4(); }).ToArray());
-								else
-									param.SetValue(pData[param.Name]);
-								return true;
-							}
-							return false;
-					}
-				});
+				mat.SetParameters(worldTransform, overrideTexture, color, flip);
+				
 
 				techPass.Apply();
-				device.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, mesh, start, 4, indices, 0, 2);
+
+				device.SetVertexBuffer(mesh);
+				device.Indices = indices;
+				device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, 2);
 
 			}
 		}
@@ -325,10 +298,10 @@ namespace Monocle {
 
 		public static event Func<EffectParameter, bool> OnParameterSet;
 
-		public static void SetParameters(Effect effect, Func<EffectParameter, bool> changeParameter) {
+		public static void SetParameters(Effect effect, Func<EffectParameter, Effect, bool> changeParameter) {
 
 			foreach (var param in effect.Parameters) {
-				if (!changeParameter(param)) {
+				if (!changeParameter(param, effect)) {
 					switch (param.Name) {
 						case "Viewport": {
 							var viewport = GraphicsDevice.Viewport;

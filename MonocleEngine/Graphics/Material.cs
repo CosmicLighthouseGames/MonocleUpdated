@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -14,11 +15,11 @@ namespace Monocle {
 
 		static Dictionary<string, Effect> effects = new Dictionary<string, Effect>();
 
+		
 		public static void Initialize() {
 			var gd = Draw.GraphicsDevice;
 
 			Directory.CreateDirectory("tmp");
-
 
 			using Process cmd = new Process();
 			ProcessStartInfo info = new ProcessStartInfo();
@@ -31,7 +32,7 @@ namespace Monocle {
 
 			cmd.StartInfo = info;
 			cmd.Start();
-
+			
 			using StreamWriter compiler = cmd.StandardInput;
 
 
@@ -268,6 +269,49 @@ namespace Monocle {
 		public Material SetRenderOrder(int? renderPass) {
 			RenderOrder = renderPass;
 			return this;
+		}
+
+		public void SetParameters(Matrix worldTransform, MTexture overrideTexture, Color? offsetColor = null, SpriteEffects flip = SpriteEffects.None) {
+
+			var tex = overrideTexture??Texture;
+			var pData = parameterData;
+
+			Draw.SetParameters(BaseEffect, (param, effect) => {
+				switch (param.Name) {
+					case "DiffuseColor":
+						if (offsetColor != null) {
+							param.SetValue(Color.ToVector4() * offsetColor.Value.ToVector4());
+						}
+						else {
+							param.SetValue(Color.ToVector4());
+						}
+						return true;
+					case "Texture":
+						effect.SetParameter(param.Name, tex, flip);
+						return true;
+					case "World":
+						param.SetValue(worldTransform);
+						return true;
+					default:
+						if (pData.ContainsKey(param.Name)) {
+							var data = pData[param.Name];
+							if (data is MTexture)
+								effect.SetParameter(param.Name, data as MTexture);
+							else if (data is Color)
+								param.SetValue(data.ToVector4());
+							else if (data is Color[])
+								param.SetValue(((Color[])data).Select((a) => { return a.ToVector4(); }).ToArray());
+							else if (param.ParameterType == EffectParameterType.Single && param.ParameterClass == EffectParameterClass.Scalar)
+								param.SetValue(Convert.ToSingle(pData[param.Name]));
+							else if (param.ParameterType == EffectParameterType.Int32 && param.ParameterClass == EffectParameterClass.Scalar)
+								param.SetValue(Convert.ToInt32(pData[param.Name]));
+							else
+								param.SetValue(pData[param.Name]);
+							return true;
+						}
+						return false;
+				}
+			});
 		}
 	}
 }

@@ -74,43 +74,7 @@ namespace Monocle {
 				var tex = mat.Texture??Draw.Pixel;
 				var pData = mat.parameterData;
 
-				Draw.SetParameters(mat.BaseEffect, (param) => {
-					switch (param.Name) {
-						case "DiffuseColor":
-							param.SetValue(mat.Color.ToVector4());
-							return true;
-						case "Texture":
-							param.SetValue(tex.Texture);
-							return true;
-						case "World":
-							param.SetValue(drawcall.transform);
-							return true;
-						default:
-							try {
-								if (pData.ContainsKey(param.Name)) {
-									var data = pData[param.Name];
-									if (data != null) {
-
-										if (data is MTexture)
-											param.SetValue(data.Texture);
-										else if (data is Color)
-											param.SetValue(data.ToVector4());
-										else if (param.ParameterType == EffectParameterType.Single && param.RowCount == 1 && param.ColumnCount == 1)
-											param.SetValue(Convert.ToSingle(data));
-										else if (param.ParameterType == EffectParameterType.Int32)
-											param.SetValue(Convert.ToInt32(data));
-										else
-											param.SetValue(pData[param.Name]);
-									}
-									return true;
-								}
-							}
-							catch {
-
-							}
-							return false;
-					}
-				});
+				mat.SetParameters(drawcall.transform, tex);
 
 				techPass.Apply();
 			}

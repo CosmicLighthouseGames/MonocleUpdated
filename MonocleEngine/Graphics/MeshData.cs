@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Reflection.Metadata.Ecma335;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -14,6 +11,63 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Monocle {
+
+	public static class MeshHeap {
+		static List<VertexBuffer> vertices;
+		static List<VertexBuffer> weights;
+		static List<IndexBuffer> indices;
+		static GraphicsDevice graphics;
+
+		public static void Initialize(GraphicsDevice device) {
+			vertices = new List<VertexBuffer>();
+			weights = new List<VertexBuffer>();
+			indices = new List<IndexBuffer>();
+			graphics = device;
+		}
+
+		static void AddVertexBuffer() {
+			vertices.Add(new VertexBuffer(graphics, typeof(MonocleVertex), 0x1000, BufferUsage.WriteOnly));
+		}
+		static void AddWeightBuffer() {
+			weights.Add(new VertexBuffer(graphics, typeof(MonocleVertexWeight), 0x1000, BufferUsage.WriteOnly));
+		}
+		static void AddIndexBuffer() {
+			indices.Add(new IndexBuffer(graphics, IndexElementSize.SixteenBits, 0x3000, BufferUsage.WriteOnly));
+		}
+
+		public static MeshPointer GetSection(int vertexCount) {
+			return new MeshPointer(graphics, vertices[0], indices[0], 0, 0, vertexCount);
+		}
+
+		public class MeshPointer {
+			GraphicsDevice gd;
+
+			public VertexBuffer VertexBuffer { get; internal set; }
+			public IndexBuffer IndexBuffer { get; internal set; }
+			public int VertexOffset { get; internal set; }
+			public int IndexOffset { get; internal set; }
+			public int PrimitiveCount { get; internal set; }
+
+			public MeshPointer(GraphicsDevice graphicsDevice, VertexBuffer vbuffer, IndexBuffer ibuffer, int voffset, int ioffset, int count) {
+				gd = graphicsDevice;
+				VertexBuffer = vbuffer;
+				IndexBuffer = ibuffer;
+				VertexOffset = voffset;
+				IndexOffset = ioffset;
+				PrimitiveCount = count;
+			}
+
+			public void SetIndex() {
+				gd.SetVertexBuffer(VertexBuffer);
+				gd.Indices = IndexBuffer;
+			}
+			public void SetIndex(VertexBuffer extra) {
+				gd.SetVertexBuffers(new VertexBufferBinding(VertexBuffer, 0), new VertexBufferBinding(extra, 0));
+				gd.Indices = IndexBuffer;
+			}
+		}
+
+	}
 
 	public class FBXNode {
 
@@ -539,15 +593,8 @@ namespace Monocle {
 
 			var objects = array["Objects"];
 
-			//Dictionary<long, (MonocleVertex[] verts, int[][] indices, int[] mapping)> meshes = new Dictionary<long, (MonocleVertex[] verts, int[][] indices, int[] mapping)>();
-
-			//Dictionary<long, MonocleBone> boneIDs = new Dictionary<long, MonocleBone>();
-			//Dictionary<long, MonocleArmature> armatureIDs = new Dictionary<long, MonocleArmature>();
 			Dictionary<long, FBXNode> nodeIDs = new Dictionary<long, FBXNode>();
 
-			//Queue<(long, Matrix)> boneTransforms = new Queue<(long, Matrix)>();
-			//Queue<string> meshNames = new Queue<string>();
-			//Queue<MonocleArmature> armatureIDQueue = new Queue<MonocleArmature>();
 
 			Dictionary<long, List<long>> parent2Child = new Dictionary<long, List<long>>();
 			Dictionary<long, List<long>> child2Parent = new Dictionary<long, List<long>>();
@@ -781,7 +828,6 @@ namespace Monocle {
 									foreach (var value in getWeights(comp, mapping, node)) {
 										retval.Add(value);
 									}
-									//getWeights(comp, mapping, node);
 								}
 							}
 						}
@@ -845,9 +891,6 @@ namespace Monocle {
 						armatures.Add(child);
 					}
 				}
-				//else if (child.name == "Deformer" && (string)child.properties[2] == "Skin") {
-				//	deformers.Add(child);
-				//}
 			}
 			foreach (var child in array["Connections"].children) {
 				long parentID = (long)child.properties[2];
@@ -915,38 +958,6 @@ namespace Monocle {
 					}
 				}
 			}
-
-			//foreach (var child in objects.children) {
-
-
-
-			//	//switch (child.name) {
-			//	//	case "Deformer": {
-
-			//	//		if (type == "Skin") {
-			//	//		}
-			//	//		else if (type == "SubDeformer" && child.HasChild("Indexes")) {
-
-			//	//		}
-			//	//		else {
-
-			//	//		}
-
-			//	//		break;
-			//	//	}
-			//	//	case "Model":
-
-			//	//		switch (type) {
-			//	//			case "Mesh":
-			//	//				break;
-			//	//			case "Null":
-			//	//				break;
-			//	//			default:
-			//	//				break;
-			//	//		}
-			//	//		break;
-			//	//}
-			//}
 
 			return retval;
 		}
@@ -1136,6 +1147,52 @@ namespace Monocle {
 		/// <returns>If not equal.</returns>
 		public static bool operator !=(MonocleVertex left, MonocleVertex right) {
 			return !(left == right);
+		}
+	}
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct MonocleVertexWeight : IVertexType {
+
+		/// <summary>
+		/// Weight
+		/// </summary>
+		public float Weight;
+
+		/// <summary>
+		/// Vertex declaration object.
+		/// </summary>
+		public static readonly VertexDeclaration VertexDeclaration;
+
+		/// <summary>
+		/// Vertex declaration.
+		/// </summary>
+		VertexDeclaration IVertexType.VertexDeclaration {
+			get {
+				return VertexDeclaration;
+			}
+		}
+
+		/// <summary>
+		/// Static constructor to init vertex declaration.
+		/// </summary>
+		static MonocleVertexWeight() {
+			VertexElement[] elements = new VertexElement[] {
+				new VertexElement(0 * 4, VertexElementFormat.Single, VertexElementUsage.BlendWeight, 0),
+			};
+			VertexDeclaration declaration = new VertexDeclaration(elements);
+			VertexDeclaration = declaration;
+		}
+
+
+		/// <summary>
+		/// Create the vertex.
+		/// </summary>
+		/// <param name="position">Vertex position.</param>
+		/// <param name="normal">Vertex normal.</param>
+		/// <param name="textureCoordinate">Texture coordinates.</param>
+		/// <param name="tangent">Vertex tangent.</param>
+		/// <param name="binormal">Vertex binormal.</param>
+		public MonocleVertexWeight(float weight) {
+			Weight = weight;
 		}
 	}
 

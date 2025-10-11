@@ -76,13 +76,13 @@ namespace Monocle {
 				var drawcall = this;
 				var pData = material.parameterData;
 
-				Draw.SetParameters(material.BaseEffect, (param) => {
+				Draw.SetParameters(material.BaseEffect, (param, effect) => {
 					switch (param.Name) {
 						default:
 							if (pData.ContainsKey(param.Name)) {
 								var data = pData[param.Name];
 								if (data is MTexture)
-									param.SetValue(data.Texture);
+									effect.SetParameter(param.Name, data as MTexture);
 								else if (data is Color)
 									param.SetValue(data.ToVector4());
 								else if (param.ParameterType == EffectParameterType.Int32)
