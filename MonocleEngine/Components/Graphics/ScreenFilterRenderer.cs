@@ -8,27 +8,76 @@ using Newtonsoft.Json.Linq;
 
 namespace Monocle {
 	public class FilterCall : IDrawCall {
-		public static void ChangeUV(RectangleF coords) {
 
-			vertices[0].TextureCoordinate = new Vector2(coords.Left, coords.Bottom);
-			vertices[1].TextureCoordinate = new Vector2(coords.Left, coords.Top);
-			vertices[2].TextureCoordinate = new Vector2(coords.Right, coords.Bottom);
-			vertices[3].TextureCoordinate = new Vector2(coords.Right, coords.Top);
+		static VertexBuffer mesh;
+		static IndexBuffer indices;
+
+		public static void SetBuffers(GraphicsDevice device) {
+			device.SetVertexBuffer(mesh);
+			device.Indices = indices;
 		}
-		static MonocleVertex[] vertices = new MonocleVertex[4] {
-			new MonocleVertex() { Position = new Vector3(-1, -1, 0.0f), TextureCoordinate = new Vector2(0, 1), Color = Vector4.One },
-			new MonocleVertex() { Position = new Vector3(-1, 1, 0.0f), TextureCoordinate = new Vector2(0, 0), Color = Vector4.One },
-			new MonocleVertex() { Position = new Vector3(1, -1, 0.0f), TextureCoordinate = new Vector2(1, 1), Color = Vector4.One },
-			new MonocleVertex() { Position = new Vector3(1, 1, 0.0f), TextureCoordinate = new Vector2(1, 0), Color = Vector4.One },
-		};
-		static short[] indices = new short[]{
-			0, 1, 2, 3, 2, 1
-		};
-		static Effect Vertex;
 
 		public static void Initialize() {
+			mesh = new VertexBuffer(Draw.GraphicsDevice, typeof(MonocleVertex), 4, BufferUsage.WriteOnly);
+			mesh.SetData(new MonocleVertex[4] {
+					new MonocleVertex() {
+						Position = new Vector3(-1, -1, 0),
+						TextureCoordinate = new Vector2(0, 1),
+						Normal = Vector3.Backward,
+						Binormal = Vector3.Up,
+						Tangent = Vector3.Left,
+						Color = Vector4.One,
+					},
+					new MonocleVertex() {
+						Position = new Vector3(1, -1, 0),
+						TextureCoordinate = new Vector2(1, 1),
+						Normal = Vector3.Backward,
+						Binormal = Vector3.Up,
+						Tangent = Vector3.Left,
+						Color = Vector4.One,
+					},
+					new MonocleVertex() {
+						Position = new Vector3(-1, 1, 0),
+						TextureCoordinate = new Vector2(0, 0),
+						Normal = Vector3.Backward,
+						Binormal = Vector3.Up,
+						Tangent = Vector3.Left,
+						Color = Vector4.One,
+					},
+					new MonocleVertex() {
+						Position = new Vector3(1, 1, 0),
+						TextureCoordinate = new Vector2(1, 0),
+						Normal = Vector3.Backward,
+						Binormal = Vector3.Up,
+						Tangent = Vector3.Left,
+						Color = Vector4.One,
+					},
+				});
+			indices = new IndexBuffer(Draw.GraphicsDevice, IndexElementSize.SixteenBits, 6, BufferUsage.WriteOnly);
+			indices.SetData(new short[]{
+				1, 2, 3, 2, 1, 0
+			});
 			Vertex = Material.GetEffect("Monocle/filter_vertex");
 		}
+
+		public static void ChangeUV(RectangleF coords) {
+
+			//vertices[0].TextureCoordinate = new Vector2(coords.Left, coords.Bottom);
+			//vertices[1].TextureCoordinate = new Vector2(coords.Left, coords.Top);
+			//vertices[2].TextureCoordinate = new Vector2(coords.Right, coords.Bottom);
+			//vertices[3].TextureCoordinate = new Vector2(coords.Right, coords.Top);
+		}
+		//static MonocleVertex[] vertices = new MonocleVertex[4] {
+		//	new MonocleVertex() { Position = new Vector3(-1, -1, 0.0f), TextureCoordinate = new Vector2(0, 1), Color = Vector4.One },
+		//	new MonocleVertex() { Position = new Vector3(-1, 1, 0.0f), TextureCoordinate = new Vector2(0, 0), Color = Vector4.One },
+		//	new MonocleVertex() { Position = new Vector3(1, -1, 0.0f), TextureCoordinate = new Vector2(1, 1), Color = Vector4.One },
+		//	new MonocleVertex() { Position = new Vector3(1, 1, 0.0f), TextureCoordinate = new Vector2(1, 0), Color = Vector4.One },
+		//};
+		//static short[] indices = new short[]{
+		//	0, 1, 2, 3, 2, 1
+		//};
+		static Effect Vertex;
+
 
 		public ScreenFilter[] Filters;
 		public Action BeforeRender, AfterRender;
@@ -51,21 +100,24 @@ namespace Monocle {
 
 			device.RasterizerState = RasterizerState.CullNone;
 
-			Vertex.CurrentTechnique.Passes[0].Apply();
 			var targets = device.GetRenderTargets();
-			
 
-
-
+			device.SetVertexBuffer(mesh);
+			device.Indices = indices;
 
 			foreach (var filter in Filters) {
+
+				device.Reset();
 
 				if (!filter.Active)
 					continue;
 
-				if (filter.renderTargets != null)
-					device.SetRenderTargets(filter.renderTargets);
-
+				if (filter.renderTargets != null) {
+					var rendertargets = device.GetRenderTargets();
+					if (rendertargets.Length != filter.renderTargets.Length || Enumerable.SequenceEqual(rendertargets, filter.renderTargets)) {
+						device.SetRenderTargets(filter.renderTargets);
+					}
+				}
 
 				var material = filter.material;
 				var tech = material.Technique;
@@ -95,15 +147,17 @@ namespace Monocle {
 					}
 				});
 
+				Vertex.CurrentTechnique.Passes[0].Apply();
 				techPass.Apply();
 
 				device.BlendState = filter.blendState??BlendState.AlphaBlend;
 				device.DepthStencilState = filter.depthStencilState;
-				//
 
 				device.Viewport = viewport;
-				device.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, vertices, 0, 4, indices, 0, 2);
+				device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, 2);
 			}
+
+			device.Reset();
 
 			device.BlendState = bState;
 			device.RasterizerState = rState;
@@ -121,7 +175,13 @@ namespace Monocle {
 		public string Name => material.Name;
 		public Material material;
 		public BlendState blendState;
-		public DepthStencilState depthStencilState = DepthStencilState.None;
+		public DepthStencilState depthStencilState = new DepthStencilState(){
+			StencilMask = 0,
+			Name = "NoneMonocle",
+			DepthBufferEnable = false,
+			DepthBufferWriteEnable = false,
+			StencilEnable = false,
+		};
 		internal RenderTargetBinding[] renderTargets;
 		public bool Active = true;
 

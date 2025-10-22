@@ -197,11 +197,13 @@ namespace Monocle {
 				});
 				indices = new IndexBuffer(GraphicsDevice, IndexElementSize.SixteenBits, 6, BufferUsage.WriteOnly);
 				indices.SetData(new short[]{
-					1, 2, 3, 2, 1, 0
+					1,
+					2,
+					3,
+					2,
+					1,
+					0
 				});
-			ClearGraphics();
-			}
-			public static void ClearGraphics() {
 			}
 			public static SpriteDrawCall Draw(MTexture texture, Matrix transform, Material mat = null) {
 				var retval = AddMesh(transform, Color.White, texture.Texture, texture.ClipRect, SpriteEffects.None);
@@ -453,8 +455,6 @@ namespace Monocle {
 			ClearGraphics(new Vector2(x, y));
 		}
 		public static void ClearGraphics(Vector2? size = null) {
-
-			SpriteDrawCall.ClearGraphics();
 
 			Vector2 winSize = size??new Vector2(Engine.WindowWidth, Engine.WindowHeight);
 

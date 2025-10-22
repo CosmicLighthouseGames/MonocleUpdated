@@ -239,7 +239,7 @@ namespace Monocle
 					var texture = GetAtlasSubtextureFromAtlasAt(key, index);
 					if (texture != null)
 						list.Add(texture);
-					else
+					else if (index > 0)
 						break;
 					index++;
 				}

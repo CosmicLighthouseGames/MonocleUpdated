@@ -3045,6 +3045,7 @@ namespace Monocle
             st.StencilEnable = true;
             st.ReferenceStencil = value;
             st.StencilMask = mask;
+            st.StencilWriteMask = 0;
             st.DepthBufferEnable = false;
             if (ifEqual) {
                 st.StencilFunction = CompareFunction.Equal;
