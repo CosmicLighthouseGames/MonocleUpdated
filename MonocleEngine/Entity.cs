@@ -172,7 +172,7 @@ namespace Monocle {
 
 		public T[] GetArray<T>(string value) {
 			if (!values.ContainsKey(value))
-				return null;
+				return new T[0];
 
             if (values[value] is JArray ar) {
                 return ar.ToObject<T[]>();

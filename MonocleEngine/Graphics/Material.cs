@@ -189,7 +189,18 @@ namespace Monocle {
 		public EffectTechnique Technique { get; private set; }
 
 		public Color Color;
-		public MTexture Texture;
+		public MTexture Texture {
+			get {
+				if (TextureImage != null)
+					return TextureImage.Texture;
+				return _tex;
+			}
+			set {
+				_tex = value;
+			}
+		}
+		MTexture _tex;
+		public Image TextureImage;
 		public DepthStencilState DepthStencilState;
 
 		public int? Stencil {
@@ -254,6 +265,10 @@ namespace Monocle {
 		}
 		public Material SetTexture(MTexture texture) {
 			Texture = texture;
+			return this;
+		}
+		public Material SetTexture(Image image) {
+			TextureImage = image;
 			return this;
 		}
 		public Material SetColor(Color color) {

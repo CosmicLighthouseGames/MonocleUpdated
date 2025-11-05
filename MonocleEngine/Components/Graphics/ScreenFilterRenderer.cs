@@ -105,9 +105,10 @@ namespace Monocle {
 			device.SetVertexBuffer(mesh);
 			device.Indices = indices;
 
+			device.Reset();
+
 			foreach (var filter in Filters) {
 
-				device.Reset();
 
 				if (!filter.Active)
 					continue;
@@ -155,9 +156,10 @@ namespace Monocle {
 
 				device.Viewport = viewport;
 				device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, 2);
+
+				device.Reset();
 			}
 
-			device.Reset();
 
 			device.BlendState = bState;
 			device.RasterizerState = rState;

@@ -2,6 +2,8 @@
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
+using Steamworks;
+using System.Linq;
 
 namespace Monocle {
 
@@ -9,6 +11,12 @@ namespace Monocle {
 		Xbox,
 		PlayStation,
 		Switch,
+	}
+	public static class SteamworksGamePad {
+		
+		public static void Init() {
+
+		}
 	}
 	public static class MInput {
 
@@ -25,8 +33,22 @@ namespace Monocle {
 		public static bool Active = true;
 		public static bool Disabled = false;
 
+		static Dictionary<string, InputActionSetHandle_t> ActionSets;
+		static List<string> ToActivate;
+
+		static InputHandle_t[] SteamControllers;
+
+		public static int SteamControllerCount { get; private set; }
+
 		internal static void Initialize() {
 			Controller = ControllerType.Xbox;
+
+			if (!SteamInput.Init(true)) {
+				throw new Exception("How did you do that?");
+			}
+			SteamControllers = new InputHandle_t[Constants.STEAM_INPUT_MAX_COUNT];
+			ActionSets = new Dictionary<string, InputActionSetHandle_t>();
+			ToActivate = new List<string>();
 
 			//Init devices
 			Keyboard = new KeyboardData();
@@ -44,6 +66,21 @@ namespace Monocle {
 
 		internal static void Update(bool updateVirtual) {
 			lock (InputLock) {
+				SteamControllerCount = SteamInput.GetConnectedControllers(SteamControllers);
+
+				if (SteamControllerCount > 0) {
+
+					for (int i = ToActivate.Count - 1; i >= 0; i--) {
+						var igc = SteamInput.GetActionSetHandle(ToActivate[i]);
+						if (igc != default) {
+							ActionSets.Add(ToActivate[i], igc);
+							ToActivate.RemoveAt(i);
+						}
+					}
+				}
+
+				SteamInput.RunFrame();
+
 				if (Engine.Instance.IsActive && Active) {
 					if (Engine.Commands.Open) {
 						Keyboard.UpdateNull();
@@ -69,6 +106,30 @@ namespace Monocle {
 			}
 		}
 
+		public static void InitializeActionSet(string name) {
+			if (!ActionSets.ContainsKey(name) && !ToActivate.Contains(name)) {
+				ToActivate.Add(name);
+			}
+		}
+		public static void ActivateActionSet(string name) {
+			if (ActionSets.ContainsKey(name)) {
+				for (int i = 0; i < SteamControllers.Length; i++) {
+					SteamInput.ActivateActionSet(SteamControllers[i], ActionSets[name]);
+				}
+			}
+		}
+		public static bool GetDigitalData(int index, string name) {
+
+			if (ActionSets.ContainsKey(name)) {
+				return SteamInput.GetDigitalActionData(GetSteamController(index), SteamInput.GetDigitalActionHandle(name)).bState > 0;
+
+				for (int i = 0; i < SteamControllers.Length; i++) {
+					SteamInput.ActivateActionSet(SteamControllers[i], ActionSets[name]);
+				}
+			}
+			return false;
+		}
+
 		public static void UpdateNull() {
 			Keyboard.UpdateNull();
 			Mouse.UpdateNull();
@@ -81,6 +142,10 @@ namespace Monocle {
 		private static void UpdateVirtualInputs() {
 			foreach (var virtualInput in VirtualInputs)
 				virtualInput.Update();
+		}
+
+		public static InputHandle_t GetSteamController(int index) {
+			return SteamControllers[index];
 		}
 
 		#region Keyboard
@@ -344,7 +409,7 @@ namespace Monocle {
 
 			public void Update() {
 				PreviousState = CurrentState;
-				CurrentState = Microsoft.Xna.Framework.Input.GamePad.GetState(PlayerIndex);
+				CurrentState = GamePad.GetState(PlayerIndex);
 				Attached = CurrentState.IsConnected;
 
 				if (rumbleTime > 0) {
@@ -357,7 +422,7 @@ namespace Monocle {
 			public void UpdateNull() {
 				PreviousState = CurrentState;
 				CurrentState = new GamePadState();
-				Attached = Microsoft.Xna.Framework.Input.GamePad.GetState(PlayerIndex).IsConnected;
+				Attached = GamePad.GetState(PlayerIndex).IsConnected;
 
 				if (rumbleTime > 0)
 					rumbleTime -= Engine.DeltaTime;

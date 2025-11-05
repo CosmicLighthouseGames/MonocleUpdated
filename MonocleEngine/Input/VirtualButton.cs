@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework.Input;
+using Steamworks;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -32,6 +33,7 @@ namespace Monocle
 	{
 		public List<Node> Nodes;
 		public Node CutsceneNode;
+		public SteamNode SteamAPINode;
 		public bool UseCutscene;
 		public float BufferTime;
 		public bool Repeating { get; private set; }
@@ -95,6 +97,7 @@ namespace Monocle
 
 			bool check = false;
 			CutsceneNode?.Update();
+			SteamAPINode?.Update();
 
 
 			if (UseCutscene) {
@@ -108,6 +111,12 @@ namespace Monocle
 			}
 			else {
 
+				if (SteamAPINode?.Pressed??false) {
+					bufferCounter = BufferTime;
+					check = true;
+				}
+				else if (SteamAPINode?.Check??false)
+					check = true;
 				foreach (var node in Nodes) {
 					node.Update();
 					if (node.Pressed) {
@@ -151,10 +160,14 @@ namespace Monocle
 
 				if (UseCutscene)
 					return CutsceneNode.Check;
-				else
-					foreach (var node in Nodes)
-						if (node.Check)
-							return true;
+				else {
+					if (SteamAPINode != null && SteamAPINode.Connected && SteamAPINode.Check)
+						return true;
+					else
+						foreach (var node in Nodes)
+							if (node.Check)
+								return true;
+				}
 				return false;
 			}
 		}
@@ -186,10 +199,14 @@ namespace Monocle
 
 				if (UseCutscene)
 					return CutsceneNode.Pressed;
-				else
-					foreach (var node in Nodes)
-						if (node.Pressed)
-							return true;
+				else {
+					if (SteamAPINode != null && SteamAPINode.Connected && SteamAPINode.Pressed)
+						return true;
+					else
+						foreach (var node in Nodes)
+							if (node.Pressed)
+								return true;
+				}
 				return false;
 			}
 		}
@@ -218,10 +235,14 @@ namespace Monocle
 
 				if (UseCutscene)
 					return CutsceneNode.Released;
-				else
-					foreach (var node in Nodes)
-						if (node.Released)
-							return true;
+				else {
+					if (SteamAPINode != null && SteamAPINode.Connected && SteamAPINode.Released)
+						return true;
+					else
+						foreach (var node in Nodes)
+							if (node.Released)
+								return true;
+				}
 				return false;
 			}
 		}
@@ -277,6 +298,86 @@ namespace Monocle
 			public override bool Released
 			{
 				get { return MInput.Keyboard.Released(Key); }
+			}
+		}
+
+		public class SteamNode : Node {
+			int index;
+			string action;
+			public string SteamAction {
+				get => action;
+				set {
+					action = value;
+					var change = SteamInput.GetDigitalActionHandle(value);
+					if (change != default) {
+						handle = change;
+					}
+				}
+			}
+			public int ControllerIndex {
+				get { return index; }
+				set {
+					var change = GetSteamController(index);
+					index = value;
+					controllerHandle = change;
+				}
+			}
+
+			public bool Connected {
+				get {
+					if (handle == default)
+						return false;
+					if (controllerHandle == default || handle == default) {
+						return false;
+					}
+					
+
+					return SteamInput.GetDigitalActionData(controllerHandle, handle).bActive > 0;
+				}
+			}
+
+			bool currentState, previousState;
+			InputHandle_t controllerHandle;
+			InputDigitalActionHandle_t handle;
+
+			public SteamNode(string steamAction, int controllerIndex) {
+				SteamAction = steamAction;
+				ControllerIndex = controllerIndex;
+			}
+			public override void Update() {
+				base.Update();
+
+				if (controllerHandle == default) {
+					ControllerIndex = ControllerIndex;
+				}
+				if (handle == default) {
+					SteamAction = SteamAction;
+				}
+
+				previousState = currentState;
+
+				if (controllerHandle != default && handle != default) {
+					var value = SteamInput.GetDigitalActionData(controllerHandle, handle);
+					currentState = value.bState > 0;
+				}
+			}
+
+			public override bool Check {
+				get {
+					return currentState;
+				}
+			}
+
+			public override bool Pressed {
+				get {
+					return currentState && !previousState;
+				}
+			}
+
+			public override bool Released {
+				get {
+					return !currentState && previousState;
+				}
 			}
 		}
 

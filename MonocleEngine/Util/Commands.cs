@@ -746,8 +746,8 @@ namespace Monocle {
 				string middle = currentText.Substring(left, right - left);
 				string end = currentText.Substring(right, currentText.Length - right);
 
-                float startLen = Draw.DefaultFont.MeasurePartialString(">" + currentText, left).X;
-				float middleLen = Draw.DefaultFont.MeasurePartialString(">" + currentText, right).X;
+                float startLen = Draw.DefaultFont.MeasurePartialString(">" + currentText, left + 1).X;
+				float middleLen = Draw.DefaultFont.MeasurePartialString(">" + currentText, right + 1).X;
 
 				Draw.Rect(1f + startLen, 0.5f, middleLen - startLen, fontHeight, Color.White);
 
@@ -759,7 +759,7 @@ namespace Monocle {
             else {
 				Draw.DefaultFont.Draw(">" + currentText, new Vector2(1, .75f), Vector2.Zero, Vector2.One, Color.White);
 				if (underscore) {
-                    float offset = Draw.DefaultFont.MeasurePartialString($">{currentText} ", highlightStart).X;
+                    float offset = Draw.DefaultFont.MeasurePartialString($">{currentText} ", highlightStart + 1).X;
 					Draw.DefaultFont.Draw("|", new Vector2(1 + offset, .75f), Vector2.Zero, Vector2.One, Color.White);
 				}
 			}

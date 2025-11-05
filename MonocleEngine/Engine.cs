@@ -135,14 +135,14 @@ namespace Monocle {
 			Window.ClientSizeChanged += OnClientSizeChanged;
 
 			if (fullscreen) {
+				Graphics.IsFullScreen = true;
 				Graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
 				Graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
-				Graphics.IsFullScreen = true;
 			}
 			else {
+				Graphics.IsFullScreen = false;
 				Graphics.PreferredBackBufferWidth = windowWidth;
 				Graphics.PreferredBackBufferHeight = windowHeight;
-				Graphics.IsFullScreen = false;
 			}
 #endif
 
@@ -210,8 +210,14 @@ namespace Monocle {
 			Tracker.Initialize();
 			AssetLoader.Initialize();
 
-			Graphics.PreferredBackBufferWidth = initializedSize.X;
-			Graphics.PreferredBackBufferHeight = initializedSize.Y;
+			if (Graphics.IsFullScreen) {
+				Graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
+				Graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
+			}
+			else {
+				Graphics.PreferredBackBufferWidth = initializedSize.X;
+				Graphics.PreferredBackBufferHeight = initializedSize.Y;
+			}
 			Graphics.ApplyChanges();
 
 			UpdateView();
@@ -347,6 +353,11 @@ namespace Monocle {
 
 			while (!Monitor.TryEnter(renderLock)) {
 				Thread.Sleep(1);
+			}
+
+			if (Graphics.IsFullScreen) {
+				//Graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
+				//Graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
 			}
 
 			Stopwatch sw = Stopwatch.StartNew();
@@ -521,7 +532,6 @@ namespace Monocle {
 			resizing = true;
 			Graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
 			Graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
-			Graphics.ApplyChanges();
 			Graphics.IsFullScreen = true;
 			Graphics.ApplyChanges();
 			resizing = false;

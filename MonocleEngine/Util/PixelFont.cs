@@ -155,7 +155,7 @@ namespace Monocle
 			var size = new Vector2(0, LineHeight);
 			var currentLineWidth = 0f;
 
-			for (var i = 0; i < Math.Min(length + 1, text.Length); i++) {
+			for (var i = 0; i < Math.Min(length, text.Length); i++) {
 				if (text[i] == '\n') {
 					size.Y += LineHeight;
 					if (currentLineWidth > size.X)
