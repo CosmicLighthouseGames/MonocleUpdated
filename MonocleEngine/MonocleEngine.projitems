@@ -11,7 +11,6 @@
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)Components\Component.cs" />
     <Compile Include="..\MonocleUpdated\MonocleEngine\Components\Graphics\ModelRenderer.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)components\graphics\DynamicModelRenderer.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Graphics\GraphicsComponent.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Graphics\Image.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Graphics\ParticleEmitter.cs" />
@@ -43,11 +42,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)Graphics\EffectAtlas.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Graphics\Material.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Graphics\MeshData.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Graphics\ModelAtlas.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Graphics\MTexture.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)graphics\ScreenFilter.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Graphics\SplitTexture.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Graphics\SpriteBank.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Graphics\SpriteData.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Graphics\Tileset.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Input\MInput.cs" />
@@ -77,11 +73,9 @@
     <Compile Include="$(MSBuildThisFileDirectory)Util\CheatListener.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\ChoiceSet.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\Chooser.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)util\LDtkLevel.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\RectangleF.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\Commands.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\Ease.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Util\EntityData.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\ErrorLog.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\Events.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\MethodHandle.cs" />
@@ -91,7 +85,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Util\RuntimeSaveData.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\SaveLoad.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\Settings.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Util\SimpleCurve.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\SpecEntity.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\Tiler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\Tracker.cs" />

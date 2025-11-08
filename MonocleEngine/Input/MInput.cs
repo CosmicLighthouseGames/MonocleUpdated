@@ -66,6 +66,8 @@ namespace Monocle {
 
 		internal static void Update(bool updateVirtual) {
 			lock (InputLock) {
+				SteamInput.RunFrame();
+
 				SteamControllerCount = SteamInput.GetConnectedControllers(SteamControllers);
 
 				if (SteamControllerCount > 0) {
@@ -79,7 +81,6 @@ namespace Monocle {
 					}
 				}
 
-				SteamInput.RunFrame();
 
 				if (Engine.Instance.IsActive && Active) {
 					if (Engine.Commands.Open) {

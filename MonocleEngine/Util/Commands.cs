@@ -16,6 +16,8 @@ namespace Monocle {
         private const float REPEAT_EVERY = 1 / 30f;
         private const float OPACITY = .8f;
 
+        public static bool AllowDebugCommand = true, AllowExitCommand = true;
+
         public bool Enabled = true;
         public bool Open;
 
@@ -611,7 +613,9 @@ namespace Monocle {
 									tabIndex--;
 									if (tabIndex < 0)
 										tabIndex = sorted.Count - 1;
-									if (!commands[sorted[tabIndex]].DebugOnly && sorted[tabIndex] != "debug")
+                                    if (sorted[tabIndex] == "debug" && !AllowDebugCommand) { }
+									else if (sorted[tabIndex] == "exit" && !AllowExitCommand) { }
+									else if (!commands[sorted[tabIndex]].DebugOnly && sorted[tabIndex] != "debug")
 										foundCommand = true;
 
 								}
@@ -640,7 +644,9 @@ namespace Monocle {
                                     tabIndex++;
                                     if (tabIndex >= sorted.Count)
                                         tabIndex = 0;
-                                    if (!commands[sorted[tabIndex]].DebugOnly && sorted[tabIndex] != "debug")
+									if (sorted[tabIndex] == "debug" && !AllowDebugCommand) { }
+									else if (sorted[tabIndex] == "exit" && !AllowExitCommand) { }
+									else if (!commands[sorted[tabIndex]].DebugOnly && sorted[tabIndex] != "debug")
                                         foundCommand = true;
                                     
                                 }
@@ -703,9 +709,10 @@ namespace Monocle {
 
         private void FindFirstTab()
         {
-            for (int i = 0; i < sorted.Count; i++)
-            {
-                if ((tabSearch == "" || sorted[i].IndexOf(tabSearch) == 0) && (Settings.Debug || (!commands[sorted[i]].DebugOnly && sorted[i] != "debug")))
+            for (int i = 0; i < sorted.Count; i++) {
+				if (sorted[i] == "debug" && !AllowDebugCommand) { }
+				else if (sorted[i] == "exit" && !AllowExitCommand) { }
+				else if ((tabSearch == "" || sorted[i].IndexOf(tabSearch) == 0) &&  (Settings.Debug || (!commands[sorted[i]].DebugOnly && sorted[i] != "debug")))
                 {
                     tabIndex = i;
                     break;
@@ -784,9 +791,14 @@ namespace Monocle {
 
         #region Execute
 
-        public void ExecuteCommand(string command, string[] args)
-        {
-            if (commands.ContainsKey(command) && (Settings.Debug || !commands[command].DebugOnly))
+        public void ExecuteCommand(string command, string[] args) {
+			if (command == "debug" && !AllowDebugCommand) {
+				Log("Command '" + command + "' not found! Type 'help' for list of commands", Color.Yellow);
+			}
+			else if (command == "exit" && !AllowExitCommand) {
+				Log("Command '" + command + "' not found! Type 'help' for list of commands", Color.Yellow);
+			}
+			else if (commands.ContainsKey(command) && (Settings.Debug || !commands[command].DebugOnly))
                 commands[command].Action(args);
             else
                 Log("Command '" + command + "' not found! Type 'help' for list of commands", Color.Yellow);
@@ -1017,21 +1029,19 @@ namespace Monocle {
         {
             Engine.Commands.drawCommands.Clear();
 		}
-#if !DEMO
 
         [Command("debug", "Enables debug", false)]
 		public static void Debug(bool enabled = true) {
             Settings.Debug = enabled;
 		}
-#endif
 
 		[Command("exit", "Exits the game", false)]
         private static void Exit()
         {
             Engine.Instance.Exit();
-        }
+		}
 
-        [Command("vsync", "Enables or disables vertical sync", false)]
+		[Command("vsync", "Enables or disables vertical sync", false)]
         private static void Vsync(bool enabled = true)
         {
             Engine.Graphics.SynchronizeWithVerticalRetrace = enabled;
