@@ -260,6 +260,18 @@ namespace MonocleCompiler {
 			foreach (var file in GetFiles()) {
 				string localPath = file.Item2.Remove(0, file.Item1.Length + 1);
 				long editTime = File.GetLastWriteTime(file.Item2).Ticks;
+				string dir = Path.GetDirectoryName(file.Item2)!;
+
+				foreach (var line in File.ReadAllLines(file.Item2)) {
+					var reg = Regex.Match(line, "#include \"(.+?)\"");
+					if (reg.Success) {
+						string combined = Path.Combine(dir, reg.Groups[1].Value);
+						if (File.Exists(combined))
+							editTime = Math.Max(editTime, File.GetLastWriteTime(combined).Ticks);
+						else
+							throw new FileNotFoundException();
+					}
+				}
 				currentEditTimes.Add(localPath, editTime);
 
 				if (!oldEditTimes.ContainsKey(localPath) || oldEditTimes[localPath] != editTime)

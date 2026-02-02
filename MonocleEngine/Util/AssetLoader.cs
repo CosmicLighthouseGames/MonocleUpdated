@@ -287,6 +287,10 @@ namespace Monocle {
 		public static string GetText(string path) {
 			return GetContent(path).GetText();
 		}
+		[DebuggerHidden]
+		public static T GetJson<T>(string path) {
+			return JsonConvert.DeserializeObject<T>(GetContent(path).GetText());
+		}
 
 		public static string GetLiteralPath(string assetPath) {
 

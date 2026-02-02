@@ -13,9 +13,21 @@ using Microsoft.Xna.Framework.Graphics;
 namespace Monocle {
 	public class Material {
 
-		static Dictionary<string, Effect> effects = new Dictionary<string, Effect>();
+		static Dictionary<string, (Effect effect, EffectTechnique technique)> LoadedTechniques = new Dictionary<string, (Effect, EffectTechnique)>();
 
-		
+
+		static void AddEffect(Effect effect, string localPath) {
+
+			bool addedDefault = false;
+			foreach (var tech in effect.Techniques) {
+				if (!addedDefault) {
+					LoadedTechniques.Add($"{localPath}", (effect, tech));
+					addedDefault = true;
+				}
+				LoadedTechniques.Add($"{localPath}.{tech.Name}", (effect, tech));
+			}
+		}
+
 		public static void Initialize() {
 			var gd = Draw.GraphicsDevice;
 
@@ -58,6 +70,7 @@ namespace Monocle {
 
 			DebugLog.Write($"Loading effects");
 
+
 			foreach (var content in AssetLoader.GetContentInFolder("Effects")) {
 				string localPath = content.Path.Substring(8, content.Path.IndexOf('.') - 8).Replace('\\', '/');
 				if (content.Extention == ".fx") {
@@ -86,7 +99,8 @@ namespace Monocle {
 
 							for (int i = 0; i < 20; i++) {
 								try {
-									effects.Add(localPath, new Effect(gd, File.ReadAllBytes("tmp/compiled.cso")));
+									var effect = new Effect(gd, File.ReadAllBytes("tmp/compiled.cso"));
+									AddEffect(effect, localPath);
 									File.Move("tmp/compiled.cso", $"Content/Effects/{localPath}.cso", true);
 									break;
 								}
@@ -104,14 +118,13 @@ namespace Monocle {
 
 				}
 				else if (content.Extention == ".cso") {
-
-
 					DebugLog.Write($"Loading effect {content.Path}");
 
-					if (!effects.ContainsKey(localPath)) {
+					if (!LoadedTechniques.ContainsKey(localPath)) {
 
 						try {
-							effects.Add(localPath, new Effect(gd, content.GetBinary()));
+							var effect = new Effect(gd, content.GetBinary());
+							AddEffect(effect, localPath);
 						}
 						catch {
 							ErrorLog.Write($"Error loading effect: {content.Path}");
@@ -125,11 +138,17 @@ namespace Monocle {
 			cmd.Close();
 		}
 
-		public static IEnumerable<Effect> LoadedEffects() {
-			return effects.Values;
+		public static IEnumerable<EffectTechnique> LoadedEffects() {
+			foreach (var technique in LoadedTechniques) {
+				yield return technique.Value.technique;
+			}
 		}
 		public static Effect GetEffect(string name) {
-			if (effects.ContainsKey(name)) { return effects[name]; }
+			if (LoadedTechniques.ContainsKey(name)) { return LoadedTechniques[name].effect; }
+			return null;
+		}
+		public static EffectTechnique GetTechnique(string name) {
+			if (LoadedTechniques.ContainsKey(name)) { return LoadedTechniques[name].technique; }
 			return null;
 		}
 
@@ -158,26 +177,25 @@ namespace Monocle {
 		}
 
 		public Material() {
-			BaseEffect = Draw.DefaultEffect;
-			Technique = BaseEffect.CurrentTechnique;
+			SetTechnique("Default");
 			Color = Color.White;
 			Name = "Default Material";
 		}
 		public Material(string name) {
-			if (!effects.ContainsKey(name))
+			if (!LoadedTechniques.ContainsKey(name))
 				throw new Exception($"Missing {name} Material");
-			BaseEffect = GetEffect(name);
-			Technique = BaseEffect.CurrentTechnique;
+			SetTechnique(name);
+			//TechniqueID = name;
 			Color = Color.White;
 			Name = name;
 		}
 		public Material(Material other) {
-			BaseEffect = other.BaseEffect;
-			Technique = other.Technique;
+			//TechniqueID = other.TechniqueID;
 			Color = other.Color;
 			Name = other.Name;
 			Texture = other.Texture;
 			DepthStencilState = other.DepthStencilState;
+			RenderOrder = other.RenderOrder;
 			foreach (var param in other.parameterData) {
 				parameterData[param.Key] = param.Value;
 			}
@@ -186,7 +204,8 @@ namespace Monocle {
 		public string Name { get; private set; }
 
 		public Effect BaseEffect { get; private set; }
-		public EffectTechnique Technique { get; private set; }
+
+		List<(int, EffectTechnique)> techniques = new List<(int, EffectTechnique)>();
 
 		public Color Color;
 		public MTexture Texture {
@@ -251,11 +270,37 @@ namespace Monocle {
 
 		public Dictionary<string, dynamic> parameterData = new Dictionary<string, dynamic>();
 
+		public EffectTechnique GetTechnique(int pass) {
+
+			return techniques[0].Item2;
+		}
+
 		public Material SetTechnique(string technique) {
-			var t = BaseEffect.Techniques[technique];
-			if (t != null) {
-				Technique = t;
+			techniques.Clear();
+
+			if (LoadedTechniques.ContainsKey(technique)) {
+				var lt = LoadedTechniques[technique];
+				BaseEffect = lt.effect;
+				techniques.Add((0, lt.technique));
 			}
+			return this;
+		}
+		public Material SetTechniques(string effect, params (int, string)[] techs) {
+			techniques.Clear();
+
+			if (LoadedTechniques.ContainsKey(effect)) {
+				var lt = LoadedTechniques[effect];
+				BaseEffect = lt.effect;
+
+				for (int i = 0; i < techs.Length; i++) {
+					string key = $"{effect}.{techs[i].Item2}";
+
+					if (LoadedTechniques.ContainsKey(key)) {
+						techniques.Add((techs[i].Item1, LoadedTechniques[key].technique));
+					}
+				}
+			}
+
 			return this;
 		}
 
@@ -295,7 +340,7 @@ namespace Monocle {
 				switch (param.Name) {
 					case "DiffuseColor":
 						if (offsetColor != null) {
-							param.SetValue(Color.ToVector4() * offsetColor.Value.ToVector4());
+							param.SetValue(offsetColor.Value.ToVector4());
 						}
 						else {
 							param.SetValue(Color.ToVector4());

@@ -23,10 +23,6 @@
       "RelativeMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|solutionrelative:monocleengine\\util\\camera.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|d:\\willt\\documents\\source\\monocleupdated\\monocleengine\\graphics\\modelatlas.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|solutionrelative:monocleengine\\graphics\\modelatlas.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|d:\\willt\\documents\\source\\monocleupdated\\monocleengine\\graphics\\meshdata.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{51489FE8-C301-4073-A4E1-0FFB9DCB6467}|MonocleTest\\MonocleTest.csproj|solutionrelative:monocleengine\\graphics\\meshdata.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -72,6 +68,10 @@
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Trigger.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleEngine\\Graphics\\ModelAtlas.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:MonocleEngine\\Graphics\\ModelAtlas.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -85,7 +85,7 @@
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 6,
               "Title": "Draw.cs",
               "DocumentMoniker": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleEngine\\Graphics\\Draw.cs",
               "RelativeDocumentMoniker": "MonocleEngine\\Graphics\\Draw.cs",
@@ -98,7 +98,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 11,
               "Title": "Cylinder.cs",
               "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Cylinder.cs",
               "RelativeDocumentMoniker": "..\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Cylinder.cs",
@@ -110,7 +110,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 12,
               "Title": "Grid3D.cs",
               "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Grid3D.cs",
               "RelativeDocumentMoniker": "..\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Grid3D.cs",
@@ -122,7 +122,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 13,
               "Title": "Hitbox3D.cs",
               "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Hitbox3D.cs",
               "RelativeDocumentMoniker": "..\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Hitbox3D.cs",
@@ -134,7 +134,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 15,
+              "DocumentIndex": 14,
               "Title": "Collider.cs",
               "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Collider.cs",
               "RelativeDocumentMoniker": "..\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Collider.cs",
@@ -146,7 +146,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 16,
+              "DocumentIndex": 15,
               "Title": "Actor.cs",
               "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Actor.cs",
               "RelativeDocumentMoniker": "..\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Actor.cs",
@@ -181,7 +181,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 19,
               "Title": "ModelAtlas.cs",
               "DocumentMoniker": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleEngine\\Graphics\\ModelAtlas.cs",
               "RelativeDocumentMoniker": "MonocleEngine\\Graphics\\ModelAtlas.cs",
@@ -193,7 +193,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 5,
               "Title": "MeshData.cs",
               "DocumentMoniker": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleEngine\\Graphics\\MeshData.cs",
               "RelativeDocumentMoniker": "MonocleEngine\\Graphics\\MeshData.cs",
@@ -205,7 +205,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 17,
+              "DocumentIndex": 16,
               "Title": "ModelRenderer.cs",
               "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Graphics\\ModelRenderer.cs",
               "RelativeDocumentMoniker": "..\\IsaMonocle\\MonocleEngine\\Components\\Graphics\\ModelRenderer.cs",
@@ -223,14 +223,14 @@
               "RelativeDocumentMoniker": "MonocleCompiler\\Compiler.cs",
               "ToolTip": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleCompiler\\Compiler.cs",
               "RelativeToolTip": "MonocleCompiler\\Compiler.cs",
-              "ViewState": "AQIAAJYBAAAAAAAAAAD4v7MBAAAGAAAA",
+              "ViewState": "AgIAAHgBAAAAAAAAAAAtwLMBAAAEAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2024-03-01T21:30:54.013Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 18,
+              "DocumentIndex": 17,
               "Title": "Collide.cs",
               "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Collide.cs",
               "RelativeDocumentMoniker": "..\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Collide.cs",
@@ -242,7 +242,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 10,
               "Title": "Solid.cs",
               "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Solid.cs",
               "RelativeDocumentMoniker": "..\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Solid.cs",
@@ -254,7 +254,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 19,
+              "DocumentIndex": 18,
               "Title": "Trigger.cs",
               "DocumentMoniker": "D:\\WillT\\Documents\\source\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Trigger.cs",
               "RelativeDocumentMoniker": "..\\IsaMonocle\\MonocleEngine\\Components\\Colliders\\Trigger.cs",
@@ -278,7 +278,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 9,
               "Title": "Material.cs",
               "DocumentMoniker": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleEngine\\Graphics\\Material.cs",
               "RelativeDocumentMoniker": "MonocleEngine\\Graphics\\Material.cs",
@@ -290,7 +290,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 7,
               "Title": "Image.cs",
               "DocumentMoniker": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleEngine\\Components\\Graphics\\Image.cs",
               "RelativeDocumentMoniker": "MonocleEngine\\Components\\Graphics\\Image.cs",
@@ -314,7 +314,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 8,
               "Title": "Engine.cs",
               "DocumentMoniker": "D:\\WillT\\Documents\\source\\MonocleUpdated\\MonocleEngine\\Engine.cs",
               "RelativeDocumentMoniker": "MonocleEngine\\Engine.cs",

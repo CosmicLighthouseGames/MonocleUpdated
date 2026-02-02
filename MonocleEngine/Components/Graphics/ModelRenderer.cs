@@ -9,7 +9,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Monocle {
 	public delegate void TransformVertex(int index, ref MonocleVertex vertex);
-	public unsafe class ModelRenderCall : IDrawCall {
+	public unsafe class VertexRenderCall : IDrawCall {
 		static MonocleVertex[] buffer = new MonocleVertex[0x2000];
 
 		public Material material;
@@ -65,7 +65,7 @@ namespace Monocle {
 				}
 				mat = newMat;
 
-				var tech = mat.Technique;
+				var tech = mat.GetTechnique(RenderOrder);
 				var techPass = tech.Passes[0];
 
 				var stencil = DepthStencilState??mat.DepthStencilState??Draw.FallbackDepthState;
@@ -91,7 +91,59 @@ namespace Monocle {
 
 		}
 	}
+	public class ModelRenderCall : IDrawCall {
 
+		public Material material;
+		public int vertexCount;
+		public MonocleModelPart mesh;
+		public Matrix transform;
+		public DepthStencilState DepthStencilState;
+
+
+		public int RenderOrder { get; set; }
+
+		public void Render(GraphicsDevice device) {
+
+			if (mesh == null)
+				return;
+
+			Material mat = null;
+			var drawcall = this;
+
+			void SetMaterial(Material newMat) {
+				if (mat == newMat) {
+					return;
+				}
+				mat = newMat;
+
+				var tech = mat.GetTechnique(RenderOrder);
+				var techPass = tech.Passes[0];
+
+				var stencil = DepthStencilState??mat.DepthStencilState??Draw.FallbackDepthState;
+				device.DepthStencilState = stencil;
+
+				var tex = mat.Texture??Draw.Pixel;
+				var pData = mat.parameterData;
+
+				mat.SetParameters(drawcall.transform, tex);
+
+				techPass.Apply();
+			}
+
+			Material newMat;
+			if (Draw.OverridingMaterial != null) {
+				newMat = Draw.OverridingMaterial;
+			}
+			else {
+				newMat = material;
+			}
+			SetMaterial(newMat);
+
+			mesh.MeshData.SetIndex();
+			mesh.MeshData.RenderTriangleList();
+		}
+	}
+	[Tracked(true)]
 	public class ModelRenderer : GraphicsComponent {
 
 		MonocleModel mesh;
@@ -99,6 +151,11 @@ namespace Monocle {
 			get => mesh;
 
 			set {
+				if (Entity != null && Entity.Scene != null) {
+					mesh?.Removed();
+					value?.Added();
+				}
+
 				mesh = value;
 				if (mesh != null) {
 					Material[] mats = new Material[mesh.MaterialCount];
@@ -202,6 +259,30 @@ namespace Monocle {
 			Scale = Vector3.One;
 		}
 
+		public override void EntityAdded(Scene scene) {
+			base.EntityAdded(scene);
+			mesh?.Added();
+		}
+		public override void EntityRemoved(Scene scene) {
+			base.EntityRemoved(scene);
+			mesh?.Removed();
+		}
+		public override void Added(Entity entity) {
+			if (entity.Scene != null) {
+				mesh?.Added();
+			}
+			base.Added(entity);
+		}
+		public override void Removed(Entity entity) {
+			if (entity.Scene != null) {
+				mesh?.Removed();
+			}
+			base.Removed(entity);
+		}
+		public override void SceneEnd(Scene scene) {
+			mesh?.Removed();
+			base.SceneEnd(scene);
+		}
 		public override void Update() {
 			base.Update();
 		}
@@ -212,19 +293,14 @@ namespace Monocle {
 			if (Mesh == null)
 				return;
 
-			List<TransformVertex> transforms = new List<TransformVertex>(Transforms);
+			for (int i = 0; i < mesh.parts.Length; i++) {
+				if (mesh.parts[i].MeshData.PrimitiveCount == 0)
+					continue;
 
-			if (Armature != null) {
-				transforms.AddRange(Armature.Transform(mesh));
-			}
-
-			for (int i = 0; i < Mesh.indices.Length; i++) {
-				var mat = materials.Length > 0 ? ((i < materials.Length) ? materials[i] : materials[0]) : Draw.DefaultMaterial;
+				var mat = materials.Length > 0 ? ((mesh.parts[i].MaterialIndex < materials.Length) ? materials[mesh.parts[i].MaterialIndex] : materials[0]) : Draw.DefaultMaterial;
 				Draw.CustomDrawCall(new ModelRenderCall() {
-					vertices = Mesh.vertices,
-					indices = Mesh.indices[i],
+					mesh = mesh.parts[i],
 					material = mat,
-					modifiers = transforms,
 					transform = TransMatrix(),
 					RenderOrder = mat.RenderOrder??Draw.CurrentRenderOrder,
 				});

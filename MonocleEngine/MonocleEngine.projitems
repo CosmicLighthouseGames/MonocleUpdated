@@ -10,6 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)Components\Component.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Components\Graphics\PrepRenderPass.cs" />
     <Compile Include="..\MonocleUpdated\MonocleEngine\Components\Graphics\ModelRenderer.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Graphics\GraphicsComponent.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Graphics\Image.cs" />
@@ -91,10 +92,9 @@
     <Compile Include="$(MSBuildThisFileDirectory)Util\VirtualMap.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="$(MSBuildThisFileDirectory)Content\Effects\Monocle\model_basic.fx" />
-    <None Include="$(MSBuildThisFileDirectory)Content\Effects\Monocle\sprite_basic.fx" />
-    <None Include="$(MSBuildThisFileDirectory)Content\Effects\Monocle\sprite_test.fx" />
-    <None Include="$(MSBuildThisFileDirectory)Content\Effects\Monocle\sprite_transform.fx" />
+    <None Include="$(MSBuildThisFileDirectory)Content\Effects\Monocle\default_material.fx" />
+    <None Include="$(MSBuildThisFileDirectory)Content\Effects\Monocle\filter_header.fxh" />
+    <None Include="$(MSBuildThisFileDirectory)Content\Effects\Monocle\filter_vertex.fx" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="$(MSBuildThisFileDirectory)Content\Graphics\Monocle\small_font.png" />

@@ -33,7 +33,9 @@ namespace Monocle
 	{
 		public List<Node> Nodes;
 		public Node CutsceneNode;
+#if STEAM
 		public SteamNode SteamAPINode;
+#endif
 		public bool UseCutscene;
 		public float BufferTime;
 		public bool Repeating { get; private set; }
@@ -97,7 +99,9 @@ namespace Monocle
 
 			bool check = false;
 			CutsceneNode?.Update();
+#if STEAM
 			SteamAPINode?.Update();
+#endif
 
 
 			if (UseCutscene) {
@@ -111,12 +115,14 @@ namespace Monocle
 			}
 			else {
 
+#if STEAM
 				if (SteamAPINode?.Pressed??false) {
 					bufferCounter = BufferTime;
 					check = true;
 				}
 				else if (SteamAPINode?.Check??false)
 					check = true;
+#endif
 				foreach (var node in Nodes) {
 					node.Update();
 					if (node.Pressed) {
@@ -161,9 +167,11 @@ namespace Monocle
 				if (UseCutscene)
 					return CutsceneNode.Check;
 				else {
+#if STEAM
 					if (SteamAPINode != null && SteamAPINode.Connected && SteamAPINode.Check)
 						return true;
 					else
+#endif
 						foreach (var node in Nodes)
 							if (node.Check)
 								return true;
@@ -200,9 +208,11 @@ namespace Monocle
 				if (UseCutscene)
 					return CutsceneNode.Pressed;
 				else {
+#if STEAM
 					if (SteamAPINode != null && SteamAPINode.Connected && SteamAPINode.Pressed)
 						return true;
 					else
+#endif
 						foreach (var node in Nodes)
 							if (node.Pressed)
 								return true;
@@ -236,9 +246,11 @@ namespace Monocle
 				if (UseCutscene)
 					return CutsceneNode.Released;
 				else {
+#if STEAM
 					if (SteamAPINode != null && SteamAPINode.Connected && SteamAPINode.Released)
 						return true;
 					else
+#endif
 						foreach (var node in Nodes)
 							if (node.Released)
 								return true;
@@ -301,6 +313,7 @@ namespace Monocle
 			}
 		}
 
+#if STEAM
 		public class SteamNode : Node {
 			int index;
 			string action;
@@ -380,6 +393,7 @@ namespace Monocle
 				}
 			}
 		}
+#endif
 
 		public class PadButton : Node
 		{

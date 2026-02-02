@@ -339,6 +339,8 @@ namespace Monocle
         public static Random Random = new Random();
         private static Stack<Random> randomStack = new Stack<Random>();
 
+        public static int RandomCount => randomStack.Count;
+
         public static void PushRandom(int newSeed)
         {
             randomStack.Push(Calc.Random);
@@ -441,6 +443,7 @@ namespace Monocle
         /// <param name="min"></param>
         /// <param name="max"></param>
         /// <returns></returns>
+        [DebuggerHidden]
         public static int Range(this Random random, int min, int max)
         {
             return min + random.Next(max - min);
@@ -2925,6 +2928,14 @@ namespace Monocle
                     (value.ClipRect.X + (x ? value.ClipRect.Width : 0)) / (float)value.Texture.Width,
                     (value.ClipRect.Y + (y ? value.ClipRect.Height : 0)) / (float)value.Texture.Height
                     ));
+			}
+			param = effect.Parameters[$"{parameter}_Size"];
+			if (param != null) {
+				bool x = (flip & SpriteEffects.FlipHorizontally) != SpriteEffects.None;
+				bool y = (flip & SpriteEffects.FlipVertically) != SpriteEffects.None;
+				param.SetValue(new Vector2(
+					(float)value.ClipRect.Width,
+					(float)value.ClipRect.Height));
 			}
 		}
 		public static void SetParameter(this Effect effect, string parameter, float value) {

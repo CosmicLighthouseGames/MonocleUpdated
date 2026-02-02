@@ -12,6 +12,11 @@ using System.Threading;
 
 
 namespace Monocle {
+	public enum ScreenMode {
+		Window,
+		FullScreenWindowed,
+		FullScreen
+	}
 	public class Engine : Game {
 		public string Title;
 		public Version Version;
@@ -60,12 +65,16 @@ namespace Monocle {
 		public static float RawDeltaTime { get; private set; }
 		public static float TimeActive { get; private set; }
 		public static float RealTimeActive { get; private set; }
+		public static ScreenMode ScreenMode {
+			get => screenMode;
+		}
 		public static float TimeRate = 1f;
 		public static float FreezeTimer;
 		public static int FPS;
 		static int FPS_Value;
 		private TimeSpan counterElapsed = TimeSpan.Zero;
 		private int fpsCounter = 0;
+		static ScreenMode screenMode;
 
 #if DEBUG
 		public static Keys? PauseKey, FrameKey, SuperSpeedKey;
@@ -104,7 +113,7 @@ namespace Monocle {
 
 		public static float UpdateFrameData;
 
-		public Engine(float width, float height, int windowWidth, int windowHeight, string windowTitle, bool fullscreen) {
+		public Engine(float width, float height, int windowWidth, int windowHeight, string windowTitle, ScreenMode screenMode) {
 			Instance = this;
 
 			base.IsFixedTimeStep = true;
@@ -134,16 +143,17 @@ namespace Monocle {
 			Window.AllowUserResizing = true;
 			Window.ClientSizeChanged += OnClientSizeChanged;
 
-			if (fullscreen) {
-				Graphics.IsFullScreen = true;
-				Graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
-				Graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
-			}
-			else {
-				Graphics.IsFullScreen = false;
-				Graphics.PreferredBackBufferWidth = windowWidth;
-				Graphics.PreferredBackBufferHeight = windowHeight;
-			}
+			Engine.screenMode = screenMode;
+			//if (screenMode) {
+			//	Graphics.IsFullScreen = true;
+			//	Graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
+			//	Graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
+			//}
+			//else {
+			//	Graphics.IsFullScreen = false;
+			//	Graphics.PreferredBackBufferWidth = windowWidth;
+			//	Graphics.PreferredBackBufferHeight = windowHeight;
+			//}
 #endif
 
 			Content.RootDirectory = @"Content";
@@ -210,17 +220,27 @@ namespace Monocle {
 			Tracker.Initialize();
 			AssetLoader.Initialize();
 
-			if (Graphics.IsFullScreen) {
-				Graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
-				Graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
-			}
-			else {
-				Graphics.PreferredBackBufferWidth = initializedSize.X;
-				Graphics.PreferredBackBufferHeight = initializedSize.Y;
+			switch (screenMode) {
+				case ScreenMode.Window:
+					Graphics.PreferredBackBufferWidth = initializedSize.X;
+					Graphics.PreferredBackBufferHeight = initializedSize.Y;
+
+					Graphics.IsFullScreen = false;
+					break;
+				case ScreenMode.FullScreen:
+				case ScreenMode.FullScreenWindowed:
+					Graphics.HardwareModeSwitch = (screenMode == ScreenMode.FullScreen);
+
+					Graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
+					Graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
+
+					Graphics.IsFullScreen = true;
+					break;
 			}
 			Graphics.ApplyChanges();
 
 			UpdateView();
+
 
 			base.Initialize();
 
@@ -229,6 +249,7 @@ namespace Monocle {
 			Commands = new Commands();
 			Events = new Events();
 			CoroutineList = new CoroutineHolder();
+
 		}
 
 		protected override void LoadContent() {
@@ -351,89 +372,110 @@ namespace Monocle {
 		float lastFrameRender = 0;
 		protected override void Draw(GameTime gameTime) {
 
+			if (false) {
+				GraphicsDevice.Clear(Color.Black);
+				SuppressDraw();
+				return;
+			}
+				
+			int waitTime = 0;
 			while (!Monitor.TryEnter(renderLock)) {
 				Thread.Sleep(1);
 			}
+			//GC.TryStartNoGCRegion(0x1000000);
 
-			if (Graphics.IsFullScreen) {
-				//Graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
-				//Graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
-			}
+			try {
+				Stopwatch sw = Stopwatch.StartNew();
+				Monocle.Draw.UpdatePerFrame();
 
-			Stopwatch sw = Stopwatch.StartNew();
-			Monocle.Draw.UpdatePerFrame();
+				RenderCore();
 
-			RenderCore();
+				sw.Stop();
 
-			sw.Stop();
+				lastFrameRender = MathHelper.Lerp(lastFrameRender, (float)sw.Elapsed.TotalMilliseconds, 0.01f);
 
-			lastFrameRender = MathHelper.Lerp(lastFrameRender, (float)sw.Elapsed.TotalMilliseconds, 0.01f);
+				base.Draw(gameTime);
+				if (Commands.Open || Commands.TempOpen > 0)
+					Commands.Render();
 
-			base.Draw(gameTime);
-			if (Commands.Open || Commands.TempOpen > 0)
-				Commands.Render();
+				//Frame counter
+				fpsCounter++;
+				counterElapsed += gameTime.ElapsedGameTime;
+				if (counterElapsed >= TimeSpan.FromSeconds(1)) {
 
-			//Frame counter
-			fpsCounter++;
-			counterElapsed += gameTime.ElapsedGameTime;
-			if (counterElapsed >= TimeSpan.FromSeconds(1)) {
+					Window.Title = Title;
 
-				Window.Title = Title;
+					FPS = fpsCounter;
+					fpsCounter = 0;
+					counterElapsed -= TimeSpan.FromSeconds(1);
+				}
+				if (ShowFPS) {
+					string name = FPS.ToString() + " fps";
 
-				FPS = fpsCounter;
-				fpsCounter = 0;
-				counterElapsed -= TimeSpan.FromSeconds(1);
-			}
-			if (ShowFPS) {
-				string name = FPS.ToString() + " fps";
+					Color color = Color.LightGreen;
 
-				Color color = Color.LightGreen;
+					if (FPS < 59) {
+						color = Color.Red;
+					}
 
-				if (FPS < 59) {
-					color = Color.Red;
+					float w = WindowWidth / PixelsPerUnit,
+					h = WindowHeight / PixelsPerUnit;
+
+					Monocle.Draw.ClearGraphics(w, h);
+
+					Monocle.Draw.FallbackDepthState = DepthStencilState.None;
+					Monocle.Draw.GraphicsDevice.RasterizerState = RasterizerState.CullNone;
+
+					Vector2 size = Monocle.Draw.DefaultFont.MeasureString(name);
+					float y = h - (size.Y + 0.1f);
+
+					Monocle.Draw.Rect(w - size.X - 0.4f, y, size.X + 0.4f, size.Y + 0.1f, Color.Black);
+					Monocle.Draw.DefaultFont.Draw(name, new Vector3(w - size.X - 0.1f, y - 0.05f, 0), color);
+
+
+					name = "(" + (1000 / lastFrameRender).ToString("F1") + " FPS)";
+					size = Monocle.Draw.DefaultFont.MeasureString(name);
+					y -= (size.Y + 0.1f);
+					Monocle.Draw.Rect(w - size.X - 0.4f, y, size.X + 0.4f, size.Y + 0.1f, Color.Black);
+					Monocle.Draw.DefaultFont.Draw(name, new Vector3(w - size.X - 0.1f, y, 0), color);
+
+					name = (GC.GetTotalMemory(false) / 1048576f).ToString("F") + " MB";
+					size = Monocle.Draw.DefaultFont.MeasureString(name);
+					y -= (size.Y + 0.1f);
+					Monocle.Draw.Rect(w - size.X - 0.4f, y, size.X + 0.4f, size.Y + 0.1f, Color.Black);
+					Monocle.Draw.DefaultFont.Draw(name, new Vector3(w - size.X - 0.1f, y, 0), color);
+
+
+					Monocle.Draw.GraphicsDevice.RasterizerState = RasterizerState.CullNone;
+					Monocle.Draw.GraphicsDevice.DepthStencilState = DepthStencilState.None;
+					Monocle.Draw.RenderPass();
+					Monocle.Draw.ClearGraphics();
+					//
+					//Window.Title = Title + " " + fpsCounter.ToString() + " fps - " + (GC.GetTotalMemory(false) / 1048576f).ToString("F") + " MB";
 				}
 
-				float w = WindowWidth / PixelsPerUnit,
-				h = WindowHeight / PixelsPerUnit;
-
-				Monocle.Draw.ClearGraphics(w, h);
-
-				Monocle.Draw.FallbackDepthState = DepthStencilState.None;
-				Monocle.Draw.GraphicsDevice.RasterizerState = RasterizerState.CullNone;
-
-				Vector2 size = Monocle.Draw.DefaultFont.MeasureString(name);
-				float y = h - (size.Y + 0.1f);
-
-				Monocle.Draw.Rect(w - size.X - 0.4f, y, size.X + 0.4f, size.Y + 0.1f, Color.Black);
-				Monocle.Draw.DefaultFont.Draw(name, new Vector3(w - size.X - 0.1f, y - 0.05f, 0), color);
-
-
-				name = "(" + (1000 / lastFrameRender).ToString("F1") + " FPS)";
-				size = Monocle.Draw.DefaultFont.MeasureString(name);
-				y -= (size.Y + 0.1f);
-				Monocle.Draw.Rect(w - size.X - 0.4f, y, size.X + 0.4f, size.Y + 0.1f, Color.Black);
-				Monocle.Draw.DefaultFont.Draw(name, new Vector3(w - size.X - 0.1f, y, 0), color);
-
-				name = (GC.GetTotalMemory(false) / 1048576f).ToString("F") + " MB";
-				size = Monocle.Draw.DefaultFont.MeasureString(name);
-				y -= (size.Y + 0.1f);
-				Monocle.Draw.Rect(w - size.X - 0.4f, y, size.X + 0.4f, size.Y + 0.1f, Color.Black);
-				Monocle.Draw.DefaultFont.Draw(name, new Vector3(w - size.X - 0.1f, y, 0), color);
-
-
-				Monocle.Draw.GraphicsDevice.RasterizerState = RasterizerState.CullNone;
-				Monocle.Draw.GraphicsDevice.DepthStencilState = DepthStencilState.None;
-				Monocle.Draw.RenderPass();
 				Monocle.Draw.ClearGraphics();
-				//
-				//Window.Title = Title + " " + fpsCounter.ToString() + " fps - " + (GC.GetTotalMemory(false) / 1048576f).ToString("F") + " MB";
+				GraphicsDevice.SetRenderTarget(null);
+
+
+			}
+			catch {
+
 			}
 
-			Monocle.Draw.ClearGraphics();
-			GraphicsDevice.SetRenderTarget(null);
-			GC.Collect();
+			
+
+			try {
+				//GC.EndNoGCRegion();
+				//GC.Collect();
+			}
+			catch {
+
+			}
+
 
 			Monitor.Exit(renderLock);
+
 		}
 
 		/// <summary>
@@ -442,7 +484,6 @@ namespace Monocle {
 		/// </summary>
 		protected virtual void RenderCore() {
 
-
 			if (scene != null)
 				scene.BeforeRender();
 
@@ -450,6 +491,7 @@ namespace Monocle {
 				scene.Render();
 				scene.AfterRender();
 			}
+
 		}
 
 		protected override void OnExiting(object sender, EventArgs args) {
@@ -467,15 +509,27 @@ namespace Monocle {
 		//	}
 		//}
 
+		static bool StopRendering;
 		static object renderLock = new object();
 
 		public static void WaitForRendering() {
 
-			while (!Monitor.TryEnter(renderLock)) {
-				Thread.Sleep(1);
-			}
+			//while (!Monitor.TryEnter(renderLock)) {
+			//	Thread.Sleep(1);
+			//}
+			//Monitor.Exit(renderLock);
+		}
+		public static void LockRendering() {
 
-			Monitor.Exit(renderLock);
+			//while (!Monitor.TryEnter(renderLock)) {
+			//	Thread.Sleep(1);
+			//}
+		}
+		public static void UnlockRendering() {
+			//Monitor.Exit(renderLock);
+		}
+		public static void PauseRendering(bool paused) {
+			StopRendering = paused;
 		}
 
 		#region Scene
@@ -514,27 +568,39 @@ namespace Monocle {
 		public static float Scaling { get; private set; }
 		public static float InvertScaling { get; private set; }
 
-		public static void SetWindowed(int width, int height) {
+
+		public static void SetScreenMode(ScreenMode mode, int width = -1, int height = -1) {
 #if !CONSOLE
-			if (width > 0 && height > 0) {
+			screenMode = mode;
+			if (screenMode == ScreenMode.Window) {
+
+				if (width < 0 || height < 0) {
+					width = Instance.initializedSize.X;
+					height = Instance.initializedSize.X;
+				}
+
+				if (width > 0 && height > 0) {
+					resizing = true;
+					Graphics.PreferredBackBufferWidth = width;
+					Graphics.PreferredBackBufferHeight = height;
+					Graphics.IsFullScreen = false;
+					Graphics.ApplyChanges();
+					resizing = false;
+				}
+
+			}
+			else {
+
 				resizing = true;
-				Graphics.PreferredBackBufferWidth = width;
-				Graphics.PreferredBackBufferHeight = height;
-				Graphics.IsFullScreen = false;
+
+				Graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
+				Graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
+				Graphics.HardwareModeSwitch = (screenMode == ScreenMode.FullScreen);
+				Graphics.IsFullScreen = true;
 				Graphics.ApplyChanges();
+				
 				resizing = false;
 			}
-#endif
-		}
-
-		public static void SetFullscreen() {
-#if !CONSOLE
-			resizing = true;
-			Graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
-			Graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
-			Graphics.IsFullScreen = true;
-			Graphics.ApplyChanges();
-			resizing = false;
 #endif
 		}
 

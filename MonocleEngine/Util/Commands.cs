@@ -1112,15 +1112,15 @@ namespace Monocle {
         }
 
         [Command("fullscreen", "Switches to fullscreen mode", false)]
-        private static void Fullscreen()
+        private static void Fullscreen(bool windowed = true)
         {
-            Engine.SetFullscreen();
+            Engine.SetScreenMode(windowed ? ScreenMode.FullScreenWindowed : ScreenMode.FullScreen);
         }
 
         [Command("window", "Switches to window mode", false)]
         private static void Window(int scale = 1)
         {
-            Engine.SetWindowed((int)(Engine.UnitWidth * scale), (int)(Engine.UnitHeight * scale));
+			Engine.SetScreenMode(ScreenMode.Window, (int)(Engine.UnitWidth * scale), (int)(Engine.UnitHeight * scale));
         }
 
         [Command("help", "Shows usage help for a given command", false)]

@@ -9,7 +9,7 @@ namespace Monocle {
 
 		Sprite[] textures;
 
-		public new Vector3 RenderPosition {
+		public Vector3 RenderPosition {
 			get {
 				if (Entity != null)
 					return Entity.Position + pos;

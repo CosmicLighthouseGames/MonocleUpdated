@@ -13,6 +13,15 @@ namespace Monocle {
 
 		void Render(GraphicsDevice device);
 	}
+	public class PriorityDrawCall : IDrawCall {
+		public int RenderOrder { get; set; }
+
+		public Action OnRender;
+
+		public void Render(GraphicsDevice device) {
+			OnRender?.Invoke();
+		}
+	}
 	public unsafe static class Draw {
 
 		/// <summary>
@@ -134,7 +143,7 @@ namespace Monocle {
 
 			public IEnumerable<IDrawCall> GetItems() {
 
-				foreach (var item in callList.OrderBy((a) => a.RenderOrder)) {
+				foreach (var item in callList.OrderBy((a) => a.RenderOrder * 2 + (a is PriorityDrawCall ? 0 : 1))) {
 					yield return item;
 				}
 
@@ -143,25 +152,22 @@ namespace Monocle {
 			}
 
 			public void Sort() {
-				//if (dirty) {
-				//	Settle();
-				//}
 
 			}
 		}
 		public class SpriteDrawCall : IDrawCall {
 
-			static VertexBuffer mesh;
-			static IndexBuffer indices;
+			static MeshPointer mesh;
 
-			public static void SetBuffers(GraphicsDevice device) {
-				device.SetVertexBuffer(mesh);
-				device.Indices = indices;
+			public static void SetBuffers() {
+				mesh.SetIndex();
+			}
+			public static void RenderSprite() {
+				mesh.RenderTriangleList();
 			}
 
 			public static void Initialize() {
-				mesh = new VertexBuffer(GraphicsDevice, typeof(MonocleVertex), 4, BufferUsage.WriteOnly);
-				mesh.SetData(new MonocleVertex[4] {
+				mesh = MeshHeap.CreateSection(new MonocleVertex[] {
 					new MonocleVertex() {
 						Position = new Vector3(0, 0, 0),
 						TextureCoordinate = new Vector2(0, 1),
@@ -193,17 +199,17 @@ namespace Monocle {
 						Binormal = Vector3.Up,
 						Tangent = Vector3.Left,
 						Color = Vector4.One,
-					},
-				});
-				indices = new IndexBuffer(GraphicsDevice, IndexElementSize.SixteenBits, 6, BufferUsage.WriteOnly);
-				indices.SetData(new short[]{
+					}
+				},
+				new short[]{
+					0,
+					2,
+					1,
 					1,
 					2,
 					3,
-					2,
-					1,
-					0
 				});
+
 			}
 			public static SpriteDrawCall Draw(MTexture texture, Matrix transform, Material mat = null) {
 				var retval = AddMesh(transform, Color.White, texture.Texture, texture.ClipRect, SpriteEffects.None);
@@ -265,14 +271,13 @@ namespace Monocle {
 			public Matrix worldTransform = Matrix.Identity;
 			public SpriteEffects flip;
 			public Color color = Color.White;
-			public int start;
 			public DepthStencilState DepthStencilState;
 
 			public void Render(GraphicsDevice device) {
 
 				var mat = OverridingMaterial??material;
 
-				var tech = mat.Technique;
+				var tech = mat.GetTechnique(RenderOrder);
 				var techPass = tech.Passes[0];
 
 				var stencil = DepthStencilState??mat.DepthStencilState??FallbackDepthState;
@@ -283,9 +288,12 @@ namespace Monocle {
 
 				techPass.Apply();
 
-				device.SetVertexBuffer(mesh);
-				device.Indices = indices;
-				device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, 2);
+				mesh.SetIndex();
+				mesh.RenderTriangleList();
+
+				//device.SetVertexBuffer(mesh);	
+				//device.Indices = indices;
+				//device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, 2);
 
 			}
 		}
@@ -323,51 +331,94 @@ namespace Monocle {
 							param.SetValue(Vector3.Transform(Vector3.Forward, Camera.Main.Rotation));
 							break;
 						default:
-							if (OnParameterSet?.Invoke(param)??false)
-								continue;
+							try {
+								if (OnParameterSet?.Invoke(param)??false)
+									continue;
 
-							switch (param.ParameterType) {
-								case EffectParameterType.Bool:
-									param.SetValue(false);
-									break;
-								case EffectParameterType.Int32:
-									if (param.ParameterClass == EffectParameterClass.Scalar) {
+								if (param.Annotations["defaultvalue"] != null) {
+									var defval = param.Annotations["defaultvalue"];
 
-									}
-									param.SetValue(0);
-									break;
-								case EffectParameterType.Single:
-									if (param.ParameterClass == EffectParameterClass.Scalar) {
-
-									}
-									if (param.ParameterClass == EffectParameterClass.Matrix) {
-										param.SetValue(Matrix.Identity);
-									}
-									else if (param.ParameterClass == EffectParameterClass.Vector) {
-										switch (param.ColumnCount) {
-											case 4:
-												if (param.Elements.Count > 1) {
-													param.SetValue(new Vector4[param.Elements.Count]);
+									switch (param.ParameterType) {
+										case EffectParameterType.Bool:
+											param.SetValue(false);
+											break;
+										case EffectParameterType.Int32:
+											param.SetValue(0);
+											break;
+										case EffectParameterType.Single:
+											if (param.ParameterClass == EffectParameterClass.Matrix) {
+												param.SetValue(Matrix.Identity);
+											}
+											else if (param.ParameterClass == EffectParameterClass.Vector) {
+												switch (param.ColumnCount) {
+													case 4:
+														if (param.Elements.Count > 1) {
+															param.SetValue(new Vector4[param.Elements.Count]);
+														}
+														else {
+															param.SetValue(Vector4.Zero);
+														}
+														break;
+													default:
+														param.SetValue(0.0f);
+														break;
 												}
-												else {
-													param.SetValue(Vector4.Zero);
-												}
-												break;
-											default:
+											}
+											else {
 												param.SetValue(0.0f);
-												break;
-										}
+											}
+											break;
+										case EffectParameterType.Texture2D:
+											param.SetValue((Texture2D)null);
+											break;
+										case EffectParameterType.Texture3D:
+											param.SetValue((Texture3D)null);
+											break;
 									}
-									else {
-										param.SetValue(0.0f);
+								}
+								else {
+									switch (param.ParameterType) {
+										case EffectParameterType.Bool:
+											param.SetValue(false);
+											break;
+										case EffectParameterType.Int32:
+											param.SetValue(0);
+											break;
+										case EffectParameterType.Single:
+											if (param.ParameterClass == EffectParameterClass.Matrix) {
+												param.SetValue(Matrix.Identity);
+											}
+											else if (param.ParameterClass == EffectParameterClass.Vector) {
+												switch (param.ColumnCount) {
+													case 4:
+														if (param.Elements.Count > 1) {
+															param.SetValue(new Vector4[param.Elements.Count]);
+														}
+														else {
+															param.SetValue(Vector4.Zero);
+														}
+														break;
+													default:
+														param.SetValue(0.0f);
+														break;
+												}
+											}
+											else {
+												param.SetValue(0.0f);
+											}
+											break;
+										case EffectParameterType.Texture2D:
+											param.SetValue((Texture2D)null);
+											break;
+										case EffectParameterType.Texture3D:
+											param.SetValue((Texture3D)null);
+											break;
 									}
-									break;
-								case EffectParameterType.Texture2D:
-									param.SetValue((Texture2D)null);
-									break;
-								case EffectParameterType.Texture3D:
-									param.SetValue((Texture3D)null);
-									break;
+								}
+
+							}
+							catch {
+
 							}
 							break;
 					}
@@ -384,6 +435,9 @@ namespace Monocle {
 		internal static void Initialize(GraphicsDevice graphicsDevice) {
 			GraphicsDevice = graphicsDevice;
 			Material.Initialize();
+
+			MeshHeap.Initialize(GraphicsDevice);
+
 			SpriteDrawCall.Initialize();
 
 			DefaultDepthState = new DepthStencilState();
@@ -422,7 +476,6 @@ namespace Monocle {
 			stencilRead.DepthBufferEnable = false;
 
 			Draw.SetDefaultEffect("Monocle/default_material");
-			FilterCall.Initialize();
 		}
 
 		public static void UseDebugPixelTexture() {
@@ -603,6 +656,9 @@ namespace Monocle {
 		}
 		public static void Rect(Vector2 pos, Vector2 size, Color color) {
 			Rect(pos.X, pos.Y, size.X, size.Y, color);
+		}
+		public static void Rect(Vector3 pos, Vector2 size, Color color) {
+			Rect(pos.X, pos.Y, pos.Z, size.X, size.Y, color);
 		}
 		public static void Rect(Rectangle rect, Color color) {
 			Rect(rect.X, rect.Y, rect.Width, rect.Height, color);

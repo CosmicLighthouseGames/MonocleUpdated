@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Newtonsoft.Json.Linq;
@@ -9,74 +10,9 @@ using Newtonsoft.Json.Linq;
 namespace Monocle {
 	public class FilterCall : IDrawCall {
 
-		static VertexBuffer mesh;
-		static IndexBuffer indices;
-
-		public static void SetBuffers(GraphicsDevice device) {
-			device.SetVertexBuffer(mesh);
-			device.Indices = indices;
-		}
-
-		public static void Initialize() {
-			mesh = new VertexBuffer(Draw.GraphicsDevice, typeof(MonocleVertex), 4, BufferUsage.WriteOnly);
-			mesh.SetData(new MonocleVertex[4] {
-					new MonocleVertex() {
-						Position = new Vector3(-1, -1, 0),
-						TextureCoordinate = new Vector2(0, 1),
-						Normal = Vector3.Backward,
-						Binormal = Vector3.Up,
-						Tangent = Vector3.Left,
-						Color = Vector4.One,
-					},
-					new MonocleVertex() {
-						Position = new Vector3(1, -1, 0),
-						TextureCoordinate = new Vector2(1, 1),
-						Normal = Vector3.Backward,
-						Binormal = Vector3.Up,
-						Tangent = Vector3.Left,
-						Color = Vector4.One,
-					},
-					new MonocleVertex() {
-						Position = new Vector3(-1, 1, 0),
-						TextureCoordinate = new Vector2(0, 0),
-						Normal = Vector3.Backward,
-						Binormal = Vector3.Up,
-						Tangent = Vector3.Left,
-						Color = Vector4.One,
-					},
-					new MonocleVertex() {
-						Position = new Vector3(1, 1, 0),
-						TextureCoordinate = new Vector2(1, 0),
-						Normal = Vector3.Backward,
-						Binormal = Vector3.Up,
-						Tangent = Vector3.Left,
-						Color = Vector4.One,
-					},
-				});
-			indices = new IndexBuffer(Draw.GraphicsDevice, IndexElementSize.SixteenBits, 6, BufferUsage.WriteOnly);
-			indices.SetData(new short[]{
-				1, 2, 3, 2, 1, 0
-			});
-			Vertex = Material.GetEffect("Monocle/filter_vertex");
-		}
 
 		public static void ChangeUV(RectangleF coords) {
-
-			//vertices[0].TextureCoordinate = new Vector2(coords.Left, coords.Bottom);
-			//vertices[1].TextureCoordinate = new Vector2(coords.Left, coords.Top);
-			//vertices[2].TextureCoordinate = new Vector2(coords.Right, coords.Bottom);
-			//vertices[3].TextureCoordinate = new Vector2(coords.Right, coords.Top);
 		}
-		//static MonocleVertex[] vertices = new MonocleVertex[4] {
-		//	new MonocleVertex() { Position = new Vector3(-1, -1, 0.0f), TextureCoordinate = new Vector2(0, 1), Color = Vector4.One },
-		//	new MonocleVertex() { Position = new Vector3(-1, 1, 0.0f), TextureCoordinate = new Vector2(0, 0), Color = Vector4.One },
-		//	new MonocleVertex() { Position = new Vector3(1, -1, 0.0f), TextureCoordinate = new Vector2(1, 1), Color = Vector4.One },
-		//	new MonocleVertex() { Position = new Vector3(1, 1, 0.0f), TextureCoordinate = new Vector2(1, 0), Color = Vector4.One },
-		//};
-		//static short[] indices = new short[]{
-		//	0, 1, 2, 3, 2, 1
-		//};
-		static Effect Vertex;
 
 
 		public ScreenFilter[] Filters;
@@ -86,8 +22,6 @@ namespace Monocle {
 
 		public void Render(GraphicsDevice device) {
 
-
-			
 			BeforeRender?.Invoke();
 
 			var bState = device.BlendState;
@@ -102,16 +36,12 @@ namespace Monocle {
 
 			var targets = device.GetRenderTargets();
 
-			device.SetVertexBuffer(mesh);
-			device.Indices = indices;
-
-			device.Reset();
+			Draw.SpriteDrawCall.SetBuffers();
 
 			foreach (var filter in Filters) {
-
-
 				if (!filter.Active)
 					continue;
+
 
 				if (filter.renderTargets != null) {
 					var rendertargets = device.GetRenderTargets();
@@ -121,8 +51,7 @@ namespace Monocle {
 				}
 
 				var material = filter.material;
-				var tech = material.Technique;
-				var techPass = tech.Passes[0];
+				var tech = material.GetTechnique(RenderOrder);
 
 
 				var tex = material.Texture??Draw.Pixel;
@@ -148,16 +77,16 @@ namespace Monocle {
 					}
 				});
 
-				Vertex.CurrentTechnique.Passes[0].Apply();
-				techPass.Apply();
 
 				device.BlendState = filter.blendState??BlendState.AlphaBlend;
 				device.DepthStencilState = filter.depthStencilState;
 
 				device.Viewport = viewport;
-				device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, 2);
 
-				device.Reset();
+				foreach (var pass in tech.Passes) {
+					pass.Apply();
+					Draw.SpriteDrawCall.RenderSprite();
+				}
 			}
 
 

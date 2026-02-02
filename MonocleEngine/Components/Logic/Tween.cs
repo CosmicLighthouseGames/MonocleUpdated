@@ -26,15 +26,12 @@ namespace Monocle
 
         #region Static
 
-        private static Stack<Tween> cached = new Stack<Tween>();
-
         public static Tween Create(TweenMode mode, Ease.Easer easer = null, float duration = 1f, bool start = false)
         {
             Tween tween;
-            if (cached.Count == 0)
-                tween = new Tween();
-            else
-                tween = cached.Pop();
+
+            tween = new Tween();
+
             tween.OnUpdate = tween.OnComplete = tween.OnStart = null;
 
             tween.Init(mode, easer, duration, start);
@@ -93,7 +90,6 @@ namespace Monocle
         public override void Removed(Entity entity)
         {
             base.Removed(entity);
-            cached.Push(this);
         }
 
         public override void Update()

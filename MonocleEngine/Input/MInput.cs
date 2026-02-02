@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using Steamworks;
 using System.Linq;
+using System.Diagnostics;
 
 namespace Monocle {
 
@@ -11,12 +12,6 @@ namespace Monocle {
 		Xbox,
 		PlayStation,
 		Switch,
-	}
-	public static class SteamworksGamePad {
-		
-		public static void Init() {
-
-		}
 	}
 	public static class MInput {
 
@@ -28,6 +23,9 @@ namespace Monocle {
 
 		internal static List<VirtualInput> VirtualInputs;
 
+#if STEAM
+		public static string ActionSet { get; private set; }
+#endif
 		public static ControllerType Controller { get; private set; }
 
 		public static bool Active = true;
@@ -43,9 +41,12 @@ namespace Monocle {
 		internal static void Initialize() {
 			Controller = ControllerType.Xbox;
 
+#if STEAM
 			if (!SteamInput.Init(true)) {
 				throw new Exception("How did you do that?");
 			}
+#endif
+
 			SteamControllers = new InputHandle_t[Constants.STEAM_INPUT_MAX_COUNT];
 			ActionSets = new Dictionary<string, InputActionSetHandle_t>();
 			ToActivate = new List<string>();
@@ -66,6 +67,7 @@ namespace Monocle {
 
 		internal static void Update(bool updateVirtual) {
 			lock (InputLock) {
+#if STEAM
 				SteamInput.RunFrame();
 
 				SteamControllerCount = SteamInput.GetConnectedControllers(SteamControllers);
@@ -80,7 +82,7 @@ namespace Monocle {
 						}
 					}
 				}
-
+#endif
 
 				if (Engine.Instance.IsActive && Active) {
 					if (Engine.Commands.Open) {
@@ -108,19 +110,33 @@ namespace Monocle {
 		}
 
 		public static void InitializeActionSet(string name) {
+#if STEAM
 			if (!ActionSets.ContainsKey(name) && !ToActivate.Contains(name)) {
 				ToActivate.Add(name);
 			}
+#endif
 		}
+#if STEAM
+		public static InputActionSetHandle_t GetActionSet(string name) {
+			if (ActionSets.ContainsKey(name)) {
+				return SteamInput.GetActionSetHandle(name);
+			}
+			return default;
+		}
+#endif
 		public static void ActivateActionSet(string name) {
+#if STEAM
 			if (ActionSets.ContainsKey(name)) {
 				for (int i = 0; i < SteamControllers.Length; i++) {
 					SteamInput.ActivateActionSet(SteamControllers[i], ActionSets[name]);
+					ActionSet = name;
 				}
 			}
+#endif
 		}
 		public static bool GetDigitalData(int index, string name) {
 
+#if STEAM
 			if (ActionSets.ContainsKey(name)) {
 				return SteamInput.GetDigitalActionData(GetSteamController(index), SteamInput.GetDigitalActionHandle(name)).bState > 0;
 
@@ -129,7 +145,37 @@ namespace Monocle {
 				}
 			}
 			return false;
+#else
+			return false;
+#endif
 		}
+
+#if STEAM
+		public static EInputActionOrigin[] GetActions(string actionSet, string input) {
+			EInputActionOrigin[] origins = new EInputActionOrigin[8];
+
+			if (SteamControllerCount == 0 || input == null)
+				return origins;
+
+			var set = GetActionSet(actionSet);
+			if (set != default) {
+				var ah = SteamInput.GetDigitalActionHandle(input);
+
+
+				if (set != default && ah != default) {
+					SteamInput.GetDigitalActionOrigins(GetSteamController(0), set, ah, origins);
+				}
+			}
+			return origins;
+		}
+#endif
+
+#if STEAM
+		public static InputHandle_t GetSteamController(int index) {
+			return SteamControllers[index];
+		}
+#endif
+
 
 		public static void UpdateNull() {
 			Keyboard.UpdateNull();
@@ -145,9 +191,6 @@ namespace Monocle {
 				virtualInput.Update();
 		}
 
-		public static InputHandle_t GetSteamController(int index) {
-			return SteamControllers[index];
-		}
 
 		#region Keyboard
 
@@ -172,6 +215,7 @@ namespace Monocle {
 
 			#region Basic Checks
 
+			[DebuggerHidden]
 			public bool Check(Keys key) {
 				if (Disabled)
 					return false;

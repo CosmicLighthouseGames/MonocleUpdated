@@ -36,8 +36,13 @@ namespace Monocle
                         foreach (var ent in Engine.NextScene.Tracker.Entities[ev.Item2]) {
                             ev.Item1.Invoke(ent, null);
                         }
-                    }
-                }
+					}
+					if (Engine.NextScene.Tracker.Components.ContainsKey(ev.Item2)) {
+						foreach (var ent in Engine.NextScene.Tracker.Components[ev.Item2]) {
+							ev.Item1.Invoke(ent, null);
+						}
+					}
+				}
 			}
 		}
 

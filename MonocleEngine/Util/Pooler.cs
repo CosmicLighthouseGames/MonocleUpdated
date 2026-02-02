@@ -8,10 +8,13 @@ namespace Monocle
 {
     public class Pooler
     {
+        Scene poolerScene;
         internal Dictionary<Type, Queue<Entity>> Pools { get; private set; }
 
         public Pooler()
         {
+            poolerScene = new Scene();
+
             Pools = new Dictionary<Type, Queue<Entity>>();
 
             foreach (var type in Assembly.GetEntryAssembly().GetTypes())
@@ -36,15 +39,20 @@ namespace Monocle
             var queue = Pools[typeof(T)];
             if (queue.Count == 0)
                 return new T();
-            else
-                return queue.Dequeue() as T;
+            else {
+                T val = queue.Dequeue() as T;
+				poolerScene.Remove(val);
+				return val;
+            }
         }
 
         internal void EntityRemoved(Entity entity)
         {
             var type = entity.GetType();
-            if (Pools.ContainsKey(type))
+            if (Pools.ContainsKey(type)) {
                 Pools[type].Enqueue(entity);
+                poolerScene.Add(entity);
+            }
         }
 
         public void Log()
