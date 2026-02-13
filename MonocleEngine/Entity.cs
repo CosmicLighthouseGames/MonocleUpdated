@@ -180,7 +180,7 @@ namespace Monocle {
             else if (values[value] is T[])
                 return (T[])values[value];
 
-            return null;
+            return new T[0];
 		}
 
 		#endregion

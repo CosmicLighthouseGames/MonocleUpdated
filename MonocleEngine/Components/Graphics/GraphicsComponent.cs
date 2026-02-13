@@ -36,8 +36,13 @@ namespace Monocle
 
 		}
 
-		public void SetStencilWrite(int stencil) {
+		public void SetStencilWrite(int stencil, DepthStencilState copyFrom = null) {
             CheckNull();
+
+            if (copyFrom != null) {
+
+				DepthStencilState.ReadFrom(copyFrom);
+			}
 
             DepthStencilState.StencilEnable = true;
 			DepthStencilState.StencilWriteMask = int.MaxValue;

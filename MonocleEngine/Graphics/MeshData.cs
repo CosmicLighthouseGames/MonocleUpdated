@@ -158,19 +158,21 @@ namespace Monocle {
 			weights = new List<(DynamicVertexBuffer, GenericHeap)>();
 			indices = new List<(DynamicIndexBuffer, GenericHeap)>();
 			AddVertexBuffer();
-			AddWeightBuffer();
 			AddIndexBuffer();
 
 		}
 
 		static void AddVertexBuffer() {
-			vertices.Add((new DynamicVertexBuffer(graphics, typeof(MonocleVertex), 0x2000, BufferUsage.WriteOnly), new GenericHeap(0x2000)));
+			Engine.WaitForRendering();
+			vertices.Add((new DynamicVertexBuffer(graphics, typeof(MonocleVertex), 0x20000, BufferUsage.WriteOnly), new GenericHeap(0x20000)));
 		}
 		static void AddWeightBuffer() {
-			weights.Add((new DynamicVertexBuffer(graphics, typeof(MonocleVertexWeight), 0x2000, BufferUsage.WriteOnly), new GenericHeap(0x2000)));
+			Engine.WaitForRendering();
+			weights.Add((new DynamicVertexBuffer(graphics, typeof(MonocleVertexWeight), 0x20000, BufferUsage.WriteOnly), new GenericHeap(0x20000)));
 		}
 		static void AddIndexBuffer() {
-			indices.Add((new DynamicIndexBuffer(graphics, IndexElementSize.SixteenBits, 0xC000, BufferUsage.WriteOnly), new GenericHeap(0xC000)));
+			Engine.WaitForRendering();
+			indices.Add((new DynamicIndexBuffer(graphics, IndexElementSize.SixteenBits, 0xC0000, BufferUsage.WriteOnly), new GenericHeap(0xC0000)));
 		}
 
 		static (VertexBuffer, int) GetVBuffer(MonocleVertex[] data) {
@@ -295,6 +297,8 @@ namespace Monocle {
 			gd.Indices = IndexBuffer;
 		}
 		public void RenderTriangleList() {
+			if (PrimitiveCount <= 0)
+				return;
 			gd.DrawIndexedPrimitives(PrimitiveType.TriangleList, VertexOffset, IndexOffset, PrimitiveCount);
 		}
 

@@ -4,7 +4,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Collections.Specialized;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace Monocle {
 	public interface IDrawCall {
@@ -13,7 +15,7 @@ namespace Monocle {
 
 		void Render(GraphicsDevice device);
 	}
-	public class PriorityDrawCall : IDrawCall {
+	public struct PriorityDrawCall : IDrawCall {
 		public int RenderOrder { get; set; }
 
 		public Action OnRender;
@@ -64,12 +66,16 @@ namespace Monocle {
 		public static Effect DefaultEffect {
 			get => effect;
 		}
-		static Material material;
-		public static Material DefaultMaterial => material;
+		static Material defaultMaterial;
+		public static Material DefaultMaterial => defaultMaterial;
 
 		public static void SetDefaultEffect(string name) {
 			effect = Material.GetEffect(name);
-			material = new Material(name);
+			defaultMaterial = Material.FromEffect(name);
+		}
+		public static void SetDefaultEffect(Material material) {
+			effect = material.BaseEffect;
+			defaultMaterial = material;
 		}
 
 		public static Material OverridingMaterial;
@@ -102,60 +108,44 @@ namespace Monocle {
 
 		class DrawCallList {
 
-			private List<IDrawCall> callList;
+			private PriorityQueue<IDrawCall, (int, int)> callLists;
 
-			bool dirty = false;
-
-			private int count;
-
-			public int Count => count;
+			int renderQueue = 1;
 
 			public DrawCallList() {
-				callList = new List<IDrawCall>();
-			}
-
-			/// <summary>
-			/// Add index value from the beginning.  If the last index is the same, return
-			/// Set X to the smallest value
-			/// Do a binary search for the last value of X and increment index up 1 to find the start of the next value clump
-			/// </summary>
-			private void Settle() {
-
-				//callList.Sort((a, b) => { return a.RenderOrder.CompareTo(b.RenderOrder); });
-
-				dirty = false;
+				var compare = Comparer<(int, int)>.Create(
+					((int pass, int order) a, (int pass, int order) b) => {
+					if (a.pass == b.pass)
+						return a.order.CompareTo(b.order);
+					return a.pass.CompareTo(b.pass);
+				});
+				callLists = new PriorityQueue<IDrawCall, (int, int)>(compare);
 			}
 
 			public void Add(IDrawCall call) {
 
-				dirty = true;
+				callLists.Enqueue(call, (call.RenderOrder, (call is PriorityDrawCall ? 0 : renderQueue++)));
 
-				callList.Add(call);
-
-				count++;
-			}
-			public void Clear() {
-				callList.Clear();
-				dirty = false;
-
-				count = 0;
 			}
 
 			public IEnumerable<IDrawCall> GetItems() {
 
-				foreach (var item in callList.OrderBy((a) => a.RenderOrder * 2 + (a is PriorityDrawCall ? 0 : 1))) {
-					yield return item;
-				}
+				CurrentDrawCalls += callLists.Count;
 
+				renderQueue = 1;
+
+				while (callLists.Count > 0) {
+					var queued = callLists.Dequeue();
+
+
+					yield return queued;
+				}
 				yield break;
 
 			}
 
-			public void Sort() {
-
-			}
 		}
-		public class SpriteDrawCall : IDrawCall {
+		public struct SpriteDrawCall : IDrawCall {
 
 			static MeshPointer mesh;
 
@@ -229,7 +219,7 @@ namespace Monocle {
 			}
 			public static SpriteDrawCall Draw(MTexture texture, Matrix transform, Color color, SpriteEffects flip, DepthStencilState? stencil = null, Material mat = null) {
 				if (texture == null)
-					return null;
+					return default;
 				var retval = AddMesh(transform, color, texture.Texture, texture.ClipRect, flip);
 
 				retval.material = mat??DefaultMaterial;
@@ -270,10 +260,23 @@ namespace Monocle {
 			public MTexture overrideTexture;
 			public Matrix worldTransform = Matrix.Identity;
 			public SpriteEffects flip;
-			public Color color = Color.White;
+			public Color color;
 			public DepthStencilState DepthStencilState;
 
+			public SpriteDrawCall() {
+				this.material = null;
+				this.overrideTexture = null;
+				worldTransform = Matrix.Identity;
+				flip = SpriteEffects.None;
+				color = Color.White;
+				DepthStencilState = null;
+				RenderOrder = 0;
+			}
+
 			public void Render(GraphicsDevice device) {
+
+				if (overrideTexture == null)
+					return;
 
 				var mat = OverridingMaterial??material;
 
@@ -291,9 +294,6 @@ namespace Monocle {
 				mesh.SetIndex();
 				mesh.RenderTriangleList();
 
-				//device.SetVertexBuffer(mesh);	
-				//device.Indices = indices;
-				//device.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, 2);
 
 			}
 		}
@@ -301,6 +301,9 @@ namespace Monocle {
 
 
 		private static DrawCallList opaque;
+
+		public static int PreviousDrawCalls;
+		static int CurrentDrawCalls;
 
 		private static DrawCallList[] drawStack = new DrawCallList[10];
 		private static Matrix[] matrixStack = new Matrix[10];
@@ -332,88 +335,45 @@ namespace Monocle {
 							break;
 						default:
 							try {
-								if (OnParameterSet?.Invoke(param)??false)
+								if (OnParameterSet != null && OnParameterSet.Invoke(param))
 									continue;
 
-								if (param.Annotations["defaultvalue"] != null) {
-									var defval = param.Annotations["defaultvalue"];
-
-									switch (param.ParameterType) {
-										case EffectParameterType.Bool:
-											param.SetValue(false);
-											break;
-										case EffectParameterType.Int32:
-											param.SetValue(0);
-											break;
-										case EffectParameterType.Single:
-											if (param.ParameterClass == EffectParameterClass.Matrix) {
-												param.SetValue(Matrix.Identity);
+								switch (param.ParameterType) {
+									case EffectParameterType.Bool:
+										param.SetValue(false);
+										break;
+									case EffectParameterType.Int32:
+										param.SetValue(0);
+										break;
+									case EffectParameterType.Single:
+										if (param.ParameterClass == EffectParameterClass.Matrix) {
+											param.SetValue(Matrix.Identity);
+										}
+										else if (param.ParameterClass == EffectParameterClass.Vector) {
+											switch (param.ColumnCount) {
+												case 4:
+													if (param.Elements.Count > 1) {
+														param.SetValue(new Vector4[param.Elements.Count]);
+													}
+													else {
+														param.SetValue(Vector4.Zero);
+													}
+													break;
+												default:
+													param.SetValue(0.0f);
+													break;
 											}
-											else if (param.ParameterClass == EffectParameterClass.Vector) {
-												switch (param.ColumnCount) {
-													case 4:
-														if (param.Elements.Count > 1) {
-															param.SetValue(new Vector4[param.Elements.Count]);
-														}
-														else {
-															param.SetValue(Vector4.Zero);
-														}
-														break;
-													default:
-														param.SetValue(0.0f);
-														break;
-												}
-											}
-											else {
-												param.SetValue(0.0f);
-											}
-											break;
-										case EffectParameterType.Texture2D:
-											param.SetValue((Texture2D)null);
-											break;
-										case EffectParameterType.Texture3D:
-											param.SetValue((Texture3D)null);
-											break;
-									}
-								}
-								else {
-									switch (param.ParameterType) {
-										case EffectParameterType.Bool:
-											param.SetValue(false);
-											break;
-										case EffectParameterType.Int32:
-											param.SetValue(0);
-											break;
-										case EffectParameterType.Single:
-											if (param.ParameterClass == EffectParameterClass.Matrix) {
-												param.SetValue(Matrix.Identity);
-											}
-											else if (param.ParameterClass == EffectParameterClass.Vector) {
-												switch (param.ColumnCount) {
-													case 4:
-														if (param.Elements.Count > 1) {
-															param.SetValue(new Vector4[param.Elements.Count]);
-														}
-														else {
-															param.SetValue(Vector4.Zero);
-														}
-														break;
-													default:
-														param.SetValue(0.0f);
-														break;
-												}
-											}
-											else {
-												param.SetValue(0.0f);
-											}
-											break;
-										case EffectParameterType.Texture2D:
-											param.SetValue((Texture2D)null);
-											break;
-										case EffectParameterType.Texture3D:
-											param.SetValue((Texture3D)null);
-											break;
-									}
+										}
+										else {
+											param.SetValue(0.0f);
+										}
+										break;
+									case EffectParameterType.Texture2D:
+										param.SetValue((Texture2D)null);
+										break;
+									case EffectParameterType.Texture3D:
+										param.SetValue((Texture3D)null);
+										break;
 								}
 
 							}
@@ -429,6 +389,9 @@ namespace Monocle {
 		internal static void UpdatePerFrame() {
 
 			Depth = 0;
+			PreviousDrawCalls = CurrentDrawCalls;
+			CurrentDrawCalls = 0;
+			
 
 			// Just in case we need to update things before rendering
 		}
@@ -490,9 +453,6 @@ namespace Monocle {
 
 		public static void RenderPass() {
 
-
-			opaque.Sort();
-
 			var width = GraphicsDevice.Viewport.Width;
 
 			foreach (var draw in opaque.GetItems()) {
@@ -511,7 +471,6 @@ namespace Monocle {
 
 			Vector2 winSize = size??new Vector2(Engine.WindowWidth, Engine.WindowHeight);
 
-			opaque.Clear();
 			WorldProjection = 
 				Matrix.CreateScale(2.0f / winSize.X, 2.0f / winSize.Y, -0.01f) *
 				Matrix.CreateTranslation(-1f, -1f, 0.5f);
@@ -525,7 +484,6 @@ namespace Monocle {
 			opaque = drawStack[stackIndex];
 			WorldProjection = Matrix.Identity;
 
-			opaque.Clear();
 		}
 		public static void PopDrawStack() {
 			if (stackIndex == 0)

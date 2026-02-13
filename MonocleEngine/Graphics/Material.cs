@@ -172,24 +172,30 @@ namespace Monocle {
 			};
 		}
 
-		public static Material FromEffect(string name) {
-			return new Material(name);
+		public static Material FromEffect(string effect) {
+			return new Material(effect);
+		}
+		public static Material FromEffects(string effect, params (int, string)[] data) {
+			return new Material().SetTechniques(effect, data);
 		}
 
-		public Material() {
+		Material() {
 			SetTechnique("Default");
 			Color = Color.White;
 			Name = "Default Material";
 		}
-		public Material(string name) {
+		Material(string name) {
 			if (!LoadedTechniques.ContainsKey(name))
 				throw new Exception($"Missing {name} Material");
 			SetTechnique(name);
-			//TechniqueID = name;
 			Color = Color.White;
 			Name = name;
 		}
 		public Material(Material other) {
+			foreach (var item in other.techniques) {
+				techniques.Add((item.Item1, item.Item2));
+			}
+			BaseEffect = other.BaseEffect;
 			//TechniqueID = other.TechniqueID;
 			Color = other.Color;
 			Name = other.Name;
@@ -272,23 +278,48 @@ namespace Monocle {
 
 		public EffectTechnique GetTechnique(int pass) {
 
+			for (int i = techniques.Count - 1; i >= 0; i--) {
+				if (techniques[i].Item1 <= pass)
+					return techniques[i].Item2;
+			}
+
 			return techniques[0].Item2;
 		}
 
-		public Material SetTechnique(string technique) {
-			techniques.Clear();
+		public bool HasTechnique(string technique) {
 
-			if (LoadedTechniques.ContainsKey(technique)) {
+			foreach (var item in techniques) {
+				if (item.Item2.Name == technique) return true;
+			}
+			return false;
+		}
+		public Material SetTechnique(string technique) {
+
+			if (technique == "Default") {
+				techniques.Clear();
+
+				BaseEffect = Draw.DefaultEffect;
+				techniques.Add((0, BaseEffect.CurrentTechnique));
+			}
+			else if (LoadedTechniques.ContainsKey(technique)) {
+				techniques.Clear();
+
 				var lt = LoadedTechniques[technique];
 				BaseEffect = lt.effect;
 				techniques.Add((0, lt.technique));
 			}
+			else if (BaseEffect != null && BaseEffect.Techniques[technique] != null) {
+				techniques.Clear();
+
+				techniques.Add((0, BaseEffect.Techniques[technique]));
+			}
 			return this;
 		}
 		public Material SetTechniques(string effect, params (int, string)[] techs) {
-			techniques.Clear();
 
 			if (LoadedTechniques.ContainsKey(effect)) {
+				techniques.Clear();
+
 				var lt = LoadedTechniques[effect];
 				BaseEffect = lt.effect;
 
@@ -298,13 +329,19 @@ namespace Monocle {
 					if (LoadedTechniques.ContainsKey(key)) {
 						techniques.Add((techs[i].Item1, LoadedTechniques[key].technique));
 					}
+					else {
+						techniques.Add((techs[i].Item1, BaseEffect.CurrentTechnique));
+					}
 				}
+
+				techniques.Sort((a, b) => a.Item1.CompareTo(b.Item1));
 			}
+			
 
 			return this;
 		}
 
-		public Material SetParameter(string name, object value) {
+		public Material		SetParameter(string name, object value) {
 			parameterData[name] = value;
 			return this;
 		}
@@ -353,7 +390,7 @@ namespace Monocle {
 						param.SetValue(worldTransform);
 						return true;
 					default:
-						if (pData.ContainsKey(param.Name)) {
+						if (pData.ContainsKey(param.Name) && pData[param.Name] != null) {
 							var data = pData[param.Name];
 							if (data is MTexture)
 								effect.SetParameter(param.Name, data as MTexture);

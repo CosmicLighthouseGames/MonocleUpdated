@@ -9,7 +9,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Monocle {
 	public delegate void TransformVertex(int index, ref MonocleVertex vertex);
-	public unsafe class VertexRenderCall : IDrawCall {
+	public unsafe struct VertexRenderCall : IDrawCall {
 		static MonocleVertex[] buffer = new MonocleVertex[0x2000];
 
 		public Material material;
@@ -59,6 +59,9 @@ namespace Monocle {
 			Material mat = null;
 			var drawcall = this;
 
+			var RenderOrder = this.RenderOrder;
+			var DepthStencilState = this.DepthStencilState;
+
 			void SetMaterial(Material newMat) {
 				if (mat == newMat) {
 					return;
@@ -91,7 +94,7 @@ namespace Monocle {
 
 		}
 	}
-	public class ModelRenderCall : IDrawCall {
+	public struct ModelRenderCall : IDrawCall {
 
 		public Material material;
 		public int vertexCount;
@@ -109,6 +112,9 @@ namespace Monocle {
 
 			Material mat = null;
 			var drawcall = this;
+
+			var RenderOrder = this.RenderOrder;
+			var DepthStencilState = this.DepthStencilState;
 
 			void SetMaterial(Material newMat) {
 				if (mat == newMat) {

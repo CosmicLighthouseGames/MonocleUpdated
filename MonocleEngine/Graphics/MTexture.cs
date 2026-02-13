@@ -26,7 +26,7 @@ namespace Monocle
             this.texture = texture;
             AtlasPath = null;
 			ClipRect = new Rectangle(0, 0, this.Texture.Width, this.Texture.Height);
-            DrawOffset = Vector2.Zero;
+			DrawOffset = Vector2.Zero;
             Width = ClipRect.Width;
             Height = ClipRect.Height;
             SetUtil();
@@ -104,6 +104,7 @@ namespace Monocle
             RightUV = ClipRect.Right / (float)Texture.Width;
             TopUV = ClipRect.Top / (float)Texture.Height;
             BottomUV = ClipRect.Bottom / (float)Texture.Height;
+            UVRect = new RectangleF(LeftUV, TopUV, ClipRect.Width / (float)Texture.Width, ClipRect.Height / (float)Texture.Height);
         }
 
         public void Unload()
@@ -155,9 +156,10 @@ namespace Monocle
 
         Texture2D texture;
 
-        
+
         public Rectangle ClipRect { get; private set; }
-        public string AtlasPath { get; private set; }
+		public RectangleF UVRect { get; private set; }
+		public string AtlasPath { get; private set; }
         public Vector2 DrawOffset { get; private set; }
         public int Width { get; private set; }
         public int Height { get; private set; }

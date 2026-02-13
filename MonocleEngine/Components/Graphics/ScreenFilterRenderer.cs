@@ -8,7 +8,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Newtonsoft.Json.Linq;
 
 namespace Monocle {
-	public class FilterCall : IDrawCall {
+	public struct FilterCall : IDrawCall {
 
 
 		public static void ChangeUV(RectangleF coords) {
@@ -36,19 +36,11 @@ namespace Monocle {
 
 			var targets = device.GetRenderTargets();
 
-			Draw.SpriteDrawCall.SetBuffers();
-
 			foreach (var filter in Filters) {
 				if (!filter.Active)
 					continue;
 
 
-				if (filter.renderTargets != null) {
-					var rendertargets = device.GetRenderTargets();
-					if (rendertargets.Length != filter.renderTargets.Length || Enumerable.SequenceEqual(rendertargets, filter.renderTargets)) {
-						device.SetRenderTargets(filter.renderTargets);
-					}
-				}
 
 				var material = filter.material;
 				var tech = material.GetTechnique(RenderOrder);
@@ -77,14 +69,24 @@ namespace Monocle {
 					}
 				});
 
-
-				device.BlendState = filter.blendState??BlendState.AlphaBlend;
-				device.DepthStencilState = filter.depthStencilState;
-
-				device.Viewport = viewport;
-
 				foreach (var pass in tech.Passes) {
 					pass.Apply();
+
+					if (filter.renderTargets != null) {
+						device.SetRenderTarget(null);
+						var rendertargets = device.GetRenderTargets();
+						if (rendertargets.Length != filter.renderTargets.Length || Enumerable.SequenceEqual(rendertargets, filter.renderTargets)) {
+							device.SetRenderTargets(filter.renderTargets);
+						}
+					}
+					else {
+						throw new Exception();
+					}
+					device.Viewport = viewport;
+					device.BlendState = filter.blendState??BlendState.AlphaBlend;
+					device.DepthStencilState = filter.depthStencilState;
+					Draw.SpriteDrawCall.SetBuffers();
+
 					Draw.SpriteDrawCall.RenderSprite();
 				}
 			}
@@ -103,7 +105,7 @@ namespace Monocle {
 
 	}
 	public class ScreenFilter {
-		public string Name => material.Name;
+		public string Name { get; set; }
 		public Material material;
 		public BlendState blendState;
 		public DepthStencilState depthStencilState = new DepthStencilState(){
@@ -116,8 +118,12 @@ namespace Monocle {
 		internal RenderTargetBinding[] renderTargets;
 		public bool Active = true;
 
+		public ScreenFilter() {
+			Name = "Default";
+		}
+
 		public ScreenFilter SetMaterial(string name) {
-			this.material = Material.FromEffect(name);
+			material = Material.FromEffect(name);
 			return this;
 		}
 		public ScreenFilter SetMaterial(Material material) {

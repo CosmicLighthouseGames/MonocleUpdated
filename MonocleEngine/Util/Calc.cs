@@ -12,6 +12,7 @@ using System.Text;
 using System.Xml;
 using System.Xml.Serialization;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json.Linq;
 
 
 namespace Monocle
@@ -502,6 +503,23 @@ namespace Monocle
 
 		#endregion
 
+		#region Distribution
+
+		public static float Distribution(this Random random, float center, float deviation, float clamp = float.PositiveInfinity) {
+
+            double a = 1 - random.NextDouble();
+            double b = 1 - random.NextDouble();
+            double rsn = Math.Sqrt(-2.0 * Math.Log(a)) * Math.Sin(2.0 * Math.PI * b) * deviation;
+
+            if (clamp < float.PositiveInfinity) {
+                rsn = Math.Clamp(rsn, -clamp, clamp);
+            }
+
+            return (float)(center + rsn);
+        }
+
+		#endregion
+
 		public static int Facing(this Random random)
         {
             return (random.NextFloat() < 0.5f ? -1 : 1);
@@ -786,14 +804,20 @@ namespace Monocle
         }
 
         public static T[] GetArray<T>(this Dictionary<string, object> dict, string value) {
-            if (!dict.ContainsKey(value) || (!(dict[value] is T[])))
-                return null;
+			if (!dict.ContainsKey(value))
+				return new T[0];
+
+			if (dict[value] is JArray ar) {
+				return ar.ToObject<T[]>();
+			}
+			else if (dict[value] is T[])
+				return (T[])dict[value];
 
             //if (dict[value] is JArray ar) {
             //    return ar.ToObject<T[]>();
             //}
             //else
-                return (T[])dict[value];
+            return new T[0];
         }
 
         #endregion
@@ -2915,28 +2939,37 @@ namespace Monocle
 		public static void SetParameter(this Effect effect, string parameter, MTexture value, SpriteEffects flip = SpriteEffects.None) {
             if (value == null)
                 return;
-			var param = effect.Parameters[parameter];
-			if (param != null)
-				param.SetValue(value.Texture);
-			param = effect.Parameters[$"{parameter}_Clip"];
-			if (param != null) {
-                bool x = (flip & SpriteEffects.FlipHorizontally) != SpriteEffects.None;
-                bool y = (flip & SpriteEffects.FlipVertically) != SpriteEffects.None;
-				param.SetValue(new Vector4(
-                    (float)value.ClipRect.Width / value.Texture.Width * (x ? -1 : 1),
-                    (float)value.ClipRect.Height / value.Texture.Height * (y ? -1 : 1),
-                    (value.ClipRect.X + (x ? value.ClipRect.Width : 0)) / (float)value.Texture.Width,
-                    (value.ClipRect.Y + (y ? value.ClipRect.Height : 0)) / (float)value.Texture.Height
-                    ));
-			}
-			param = effect.Parameters[$"{parameter}_Size"];
-			if (param != null) {
-				bool x = (flip & SpriteEffects.FlipHorizontally) != SpriteEffects.None;
-				bool y = (flip & SpriteEffects.FlipVertically) != SpriteEffects.None;
-				param.SetValue(new Vector2(
-					(float)value.ClipRect.Width,
-					(float)value.ClipRect.Height));
-			}
+            string clipName = $"{parameter}_Clip";
+            string sizeName = $"{parameter}_Size";
+
+			foreach (var param in effect.Parameters) {
+                if (param.Name == parameter) {
+
+					param.SetValue(value.Texture);
+				}
+				else if (param.Name == clipName) {
+
+                    bool x = (flip & SpriteEffects.FlipHorizontally) != SpriteEffects.None;
+                    bool y = (flip & SpriteEffects.FlipVertically) != SpriteEffects.None;
+                    var uvrect = value.UVRect;
+
+                    param.SetValue(new Vector4(
+                                    uvrect.Width * (x ? -1 : 1),
+                                    uvrect.Height * (y ? -1 : 1),
+                                    uvrect.X + (x ? uvrect.Width : 0),
+                                    uvrect.Y + (y ? uvrect.Height : 0)
+                                    ));
+				}
+				else if (param.Name == sizeName) {
+
+					bool x = (flip & SpriteEffects.FlipHorizontally) != SpriteEffects.None;
+					bool y = (flip & SpriteEffects.FlipVertically) != SpriteEffects.None;
+					param.SetValue(new Vector2(
+						(float)value.ClipRect.Width,
+						(float)value.ClipRect.Height));
+				}
+            }
+			//var param = effect.Parameters[parameter];
 		}
 		public static void SetParameter(this Effect effect, string parameter, float value) {
 			var param = effect.Parameters[parameter];
@@ -3047,9 +3080,9 @@ namespace Monocle
                 return new Color(a.ToVector3() * b.ToVector3());
 		}
 
-        public static DepthStencilState CreateFilterStencil(int mask, int value, bool ifEqual) {
+        public static DepthStencilState CreateFilterStencil(int mask, int value, bool ifEqual, DepthStencilState original) {
             var st = new DepthStencilState();
-            st.ReadFrom(DepthStencilState.None);
+            st.ReadFrom(original);
 
             st.Name = "FilterStencil";
 
