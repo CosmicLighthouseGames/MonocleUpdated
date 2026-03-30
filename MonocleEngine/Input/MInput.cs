@@ -111,9 +111,7 @@ namespace Monocle {
 
 		public static void InitializeActionSet(string name) {
 #if STEAM
-			if (!ActionSets.ContainsKey(name) && !ToActivate.Contains(name)) {
-				ToActivate.Add(name);
-			}
+			ToActivate.Add(name);
 #endif
 		}
 #if STEAM

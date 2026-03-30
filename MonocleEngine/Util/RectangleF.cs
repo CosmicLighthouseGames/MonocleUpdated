@@ -51,11 +51,29 @@ namespace Monocle {
 			Width += amount * 2;
 			Height += amount * 2;
 		}
+		public RectangleF Inflated(float amount) {
+			var retval = this;
+			retval.X -= amount;
+			retval.Y -= amount;
+			retval.Width += amount * 2;
+			retval.Height += amount * 2;
+
+			return retval;
+		}
 		public void Inflate(float horizontalAmount, float verticalAmount) {
 			X -= horizontalAmount;
 			Y -= verticalAmount;
 			Width += horizontalAmount * 2;
 			Height += verticalAmount * 2;
+		}
+		public RectangleF Inflated(float horizontalAmount, float verticalAmount) {
+			var retval = this;
+			retval.X -= horizontalAmount;
+			retval.Y -= verticalAmount;
+			retval.Width += horizontalAmount * 2;
+			retval.Height += verticalAmount * 2;
+
+			return retval;
 		}
 
 		public static RectangleF operator *(float scaleFactor, RectangleF value) {

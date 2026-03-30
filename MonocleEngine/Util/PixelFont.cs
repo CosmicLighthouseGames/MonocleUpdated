@@ -293,14 +293,14 @@ namespace Monocle
 								Monocle.Draw.Texture(c.Texture, pos + back + right * stroke + up * (edgeDepth + stroke), Vector2.Zero, scale, rotation, strokeColor, mat);
 							}
 							else {
-								//Monocle.Draw.Texture(c.Texture, pos + back + (-right - up) * stroke, Vector2.Zero, scale, rotation, strokeColor, mat);
+								Monocle.Draw.Texture(c.Texture, pos + back + (-right - up) * stroke, Vector2.Zero, scale, rotation, strokeColor, mat);
 								Monocle.Draw.Texture(c.Texture, pos + back + (-up) * stroke, Vector2.Zero, scale, rotation, strokeColor, mat);
-								//Monocle.Draw.Texture(c.Texture, pos + back + (right - up) * stroke, Vector2.Zero, scale, rotation, strokeColor, mat);
+								Monocle.Draw.Texture(c.Texture, pos + back + (right - up) * stroke, Vector2.Zero, scale, rotation, strokeColor, mat);
 								Monocle.Draw.Texture(c.Texture, pos + back + (-right) * stroke, Vector2.Zero, scale, rotation, strokeColor, mat);
 								Monocle.Draw.Texture(c.Texture, pos + back + (right) * stroke, Vector2.Zero, scale, rotation, strokeColor, mat);
-								//Monocle.Draw.Texture(c.Texture, pos + back + (-right + up) * stroke, Vector2.Zero, scale, rotation, strokeColor, mat);
+								Monocle.Draw.Texture(c.Texture, pos + back + (-right + up) * stroke, Vector2.Zero, scale, rotation, strokeColor, mat);
 								Monocle.Draw.Texture(c.Texture, pos + back + (up) * stroke, Vector2.Zero, scale, rotation, strokeColor, mat);
-								//Monocle.Draw.Texture(c.Texture, pos + back + (right + up) * stroke, Vector2.Zero, scale, rotation, strokeColor, mat);
+								Monocle.Draw.Texture(c.Texture, pos + back + (right + up) * stroke, Vector2.Zero, scale, rotation, strokeColor, mat);
 							}
 						}
 						else {

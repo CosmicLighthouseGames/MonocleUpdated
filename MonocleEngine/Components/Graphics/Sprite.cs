@@ -528,6 +528,9 @@ namespace Monocle
 		#endregion
 
 
+		public IEnumerable<string> GetAnimations() {
+			return animations.Keys;
+		}
 		public void LogAnimations()
 		{
 			StringBuilder str = new StringBuilder();

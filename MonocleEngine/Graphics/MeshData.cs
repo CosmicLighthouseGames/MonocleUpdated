@@ -38,6 +38,14 @@ namespace Monocle {
 		public int MaxSize { get; private set; }
 		public List<HeapRange> ranges, gaps;
 
+		public int GetUsedSpace() {
+			int l = 0;
+			foreach (var r in ranges) {
+				l += r.Length;
+			}
+			return l;
+		}
+
 		public GenericHeap(int maxLength) {
 			MaxSize = maxLength;
 			ranges = new List<HeapRange>();
@@ -150,6 +158,19 @@ namespace Monocle {
 		static List<(DynamicVertexBuffer buffer, GenericHeap heap)> weights;
 		static List<(DynamicIndexBuffer buffer, GenericHeap heap)> indices;
 		static GraphicsDevice graphics;
+
+		public static int DataUsed {
+			get {
+				int l = 0;
+				foreach (var buffer in vertices) {
+					l += buffer.heap.GetUsedSpace();
+				}
+				foreach (var buffer in indices) {
+					l += buffer.heap.GetUsedSpace();
+				}
+				return l;
+			}
+		}
 
 		public static void Initialize(GraphicsDevice device) {
 			graphics = device;

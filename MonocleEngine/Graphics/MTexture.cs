@@ -119,7 +119,8 @@ namespace Monocle
                 return new MTexture(this, x, y, width, height);
             else
             {
-                applyTo.Parent = this;
+                if (applyTo != this)
+                    applyTo.Parent = this;
                 applyTo.AtlasPath = null;
 
                 applyTo.ClipRect = GetRelativeRect(x, y, width, height);
@@ -130,9 +131,18 @@ namespace Monocle
 
                 return applyTo;
             }
-        }
+		}
+		public void SetSubtexture(int x, int y, int width, int height) {
 
-        [DebuggerHidden]
+
+            ClipRect = new Rectangle(x, y, width, height);
+			DrawOffset = new Vector2(x, y);
+			Width = width;
+			Height = height;
+			SetUtil();
+		}
+
+		[DebuggerHidden]
         public MTexture GetSubtexture(Rectangle rect)
         {
             return new MTexture(this, rect);
@@ -151,7 +161,7 @@ namespace Monocle
         #region Properties
 
 
-        public Texture2D Texture { get { return Parent == null ? texture : Parent.Texture; } }
+        public Texture2D Texture { get { return Parent == null || Parent == this ? texture : Parent.Texture; } }
         public MTexture Parent { get; private set; }
 
         Texture2D texture;

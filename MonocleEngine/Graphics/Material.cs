@@ -51,22 +51,22 @@ namespace Monocle {
 			using var se = cmd.StandardError;
 			using var so = cmd.StandardOutput;
 			bool error = false;
-			Task.Factory.StartNew(() => {
+			//Task.Factory.StartNew(() => {
 
-				while (!se.EndOfStream) {
-					var line = se.ReadLine();
+			//	while (!se.EndOfStream) {
+			//		var line = se.ReadLine();
 
-					if (Regex.IsMatch(line, @"effect\.fx\([\d-,]+\): error")) {
-						error = true;
-					}
-				}
-			});
-			Task.Factory.StartNew(() => {
+			//		if (Regex.IsMatch(line, @"effect\.fx\([\d-,]+\): error")) {
+			//			error = true;
+			//		}
+			//	}
+			//});
+			//Task.Factory.StartNew(() => {
 
-				while (!so.EndOfStream) {
-					var line = so.ReadLine();
-				}
-			});
+			//	while (!so.EndOfStream) {
+			//		var line = so.ReadLine();
+			//	}
+			//});
 
 			DebugLog.Write($"Loading effects");
 

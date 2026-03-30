@@ -1671,7 +1671,10 @@ namespace Monocle
             float miniA = (float)Math.Cos(thetaD) * miniD;
 
             return new Vector2((float)Math.Cos(thetaA) * miniA, (float)Math.Sin(thetaA) * miniA);
-        }
+		}
+		public static Vector2 ProjectPlane(Vector2 vector, Vector2 planeNormal) {
+			return (vector + Vector2.Reflect(vector, Vector2.Normalize(planeNormal))) / 2;
+		}
 
 		#endregion
 

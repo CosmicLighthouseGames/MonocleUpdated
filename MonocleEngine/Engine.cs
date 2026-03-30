@@ -377,89 +377,87 @@ namespace Monocle {
 				SuppressDraw();
 				return;
 			}
-				
-			int waitTime = 0;
-			while (!Monitor.TryEnter(renderLock)) {
-				Thread.Sleep(1);
-			}
-			//GC.TryStartNoGCRegion(0x1000000);
+			try {
 
-			Stopwatch sw = Stopwatch.StartNew();
-			Monocle.Draw.UpdatePerFrame();
-
-			RenderCore();
-
-			sw.Stop();
-
-			lastFrameRender = MathHelper.Lerp(lastFrameRender, (float)sw.Elapsed.TotalMilliseconds, 0.01f);
-
-			base.Draw(gameTime);
-			if (Commands.Open || Commands.TempOpen > 0)
-				Commands.Render();
-
-			//Frame counter
-			fpsCounter++;
-			counterElapsed += gameTime.ElapsedGameTime;
-			if (counterElapsed >= TimeSpan.FromSeconds(1)) {
-
-				Window.Title = Title;
-
-				FPS = fpsCounter;
-				fpsCounter = 0;
-				counterElapsed -= TimeSpan.FromSeconds(1);
-			}
-			if (ShowFPS) {
-				string name = FPS.ToString() + " fps";
-
-				Color color = Color.LightGreen;
-
-				if (FPS < 59) {
-					color = Color.Red;
+				int waitTime = 0;
+				while (!Monitor.TryEnter(renderLock)) {
+					Thread.Sleep(1);
 				}
+				//GC.TryStartNoGCRegion(0x1000000);
 
-				float w = WindowWidth / PixelsPerUnit,
+				Stopwatch sw = Stopwatch.StartNew();
+				Monocle.Draw.UpdatePerFrame();
+
+				RenderCore();
+
+				sw.Stop();
+
+				lastFrameRender = MathHelper.Lerp(lastFrameRender, (float)sw.Elapsed.TotalMilliseconds, 0.01f);
+
+				base.Draw(gameTime);
+				if (Commands.Open || Commands.TempOpen > 0)
+					Commands.Render();
+
+				//Frame counter
+				fpsCounter++;
+				counterElapsed += gameTime.ElapsedGameTime;
+				if (counterElapsed >= TimeSpan.FromSeconds(1)) {
+
+					Window.Title = Title;
+
+					FPS = fpsCounter;
+					fpsCounter = 0;
+					counterElapsed -= TimeSpan.FromSeconds(1);
+				}
+				if (ShowFPS) {
+					string name = FPS.ToString() + " fps";
+
+					Color color = Color.LightGreen;
+
+					if (FPS < 59) {
+						color = Color.Red;
+					}
+
+					float w = WindowWidth / PixelsPerUnit,
 				h = WindowHeight / PixelsPerUnit;
 
-				Monocle.Draw.ClearGraphics(w, h);
+					Monocle.Draw.ClearGraphics(w, h);
 
-				Monocle.Draw.FallbackDepthState = DepthStencilState.None;
-				Monocle.Draw.GraphicsDevice.RasterizerState = RasterizerState.CullNone;
+					Monocle.Draw.FallbackDepthState = DepthStencilState.None;
+					Monocle.Draw.GraphicsDevice.RasterizerState = RasterizerState.CullNone;
 
-				Vector2 size = Monocle.Draw.DefaultFont.MeasureString(name);
-				float y = h - (size.Y + 0.1f);
+					Vector2 size = Monocle.Draw.DefaultFont.MeasureString(name);
+					float y = h - (size.Y + 0.1f);
 
-				Monocle.Draw.Rect(w - size.X - 0.4f, y, size.X + 0.4f, size.Y + 0.1f, Color.Black);
-				Monocle.Draw.DefaultFont.Draw(name, new Vector3(w - size.X - 0.1f, y - 0.05f, 0), color);
-
-
-				name = "(" + (1000 / lastFrameRender).ToString("F1") + " FPS)";
-				size = Monocle.Draw.DefaultFont.MeasureString(name);
-				y -= (size.Y + 0.1f);
-				Monocle.Draw.Rect(w - size.X - 0.4f, y, size.X + 0.4f, size.Y + 0.1f, Color.Black);
-				Monocle.Draw.DefaultFont.Draw(name, new Vector3(w - size.X - 0.1f, y, 0), color);
-
-				name = (GC.GetTotalMemory(false) / 1048576f).ToString("F") + " MB";
-				size = Monocle.Draw.DefaultFont.MeasureString(name);
-				y -= (size.Y + 0.1f);
-				Monocle.Draw.Rect(w - size.X - 0.4f, y, size.X + 0.4f, size.Y + 0.1f, Color.Black);
-				Monocle.Draw.DefaultFont.Draw(name, new Vector3(w - size.X - 0.1f, y, 0), color);
+					Monocle.Draw.Rect(w - size.X - 0.4f, y, size.X + 0.4f, size.Y + 0.1f, Color.Black);
+					Monocle.Draw.DefaultFont.Draw(name, new Vector3(w - size.X - 0.1f, y - 0.05f, 0), color);
 
 
-				Monocle.Draw.GraphicsDevice.RasterizerState = RasterizerState.CullNone;
-				Monocle.Draw.GraphicsDevice.DepthStencilState = DepthStencilState.None;
-				Monocle.Draw.RenderPass();
-				Monocle.Draw.ClearGraphics();
-				//
-				//Window.Title = Title + " " + fpsCounter.ToString() + " fps - " + (GC.GetTotalMemory(false) / 1048576f).ToString("F") + " MB";
-			}
+					name = "(" + (1000 / lastFrameRender).ToString("F1") + " FPS)";
+					size = Monocle.Draw.DefaultFont.MeasureString(name);
+					y -= (size.Y + 0.1f);
+					Monocle.Draw.Rect(w - size.X - 0.4f, y, size.X + 0.4f, size.Y + 0.1f, Color.Black);
+					Monocle.Draw.DefaultFont.Draw(name, new Vector3(w - size.X - 0.1f, y, 0), color);
+
+					name = (GC.GetTotalMemory(false) / 1048576f).ToString("F") + " MB";
+					size = Monocle.Draw.DefaultFont.MeasureString(name);
+					y -= (size.Y + 0.1f);
+					Monocle.Draw.Rect(w - size.X - 0.4f, y, size.X + 0.4f, size.Y + 0.1f, Color.Black);
+					Monocle.Draw.DefaultFont.Draw(name, new Vector3(w - size.X - 0.1f, y, 0), color);
+
+
+					Monocle.Draw.GraphicsDevice.RasterizerState = RasterizerState.CullNone;
+					Monocle.Draw.GraphicsDevice.DepthStencilState = DepthStencilState.None;
+					Monocle.Draw.RenderPass();
+					Monocle.Draw.ClearGraphics();
+					//
+					//Window.Title = Title + " " + fpsCounter.ToString() + " fps - " + (GC.GetTotalMemory(false) / 1048576f).ToString("F") + " MB";
+				}
 
 
 
-			
 
-			try {
-				//GC.EndNoGCRegion();
-				//GC.Collect();
+
 			}
 			catch {
 
