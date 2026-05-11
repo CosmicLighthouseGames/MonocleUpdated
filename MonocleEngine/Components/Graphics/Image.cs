@@ -74,7 +74,18 @@ namespace Monocle
 
 				float ppu = PixelsPerUnit??Engine.PixelsPerUnit;
 
-				Rectangle clip = new Rectangle(0, 0, 0, center.Y);
+                if (size.X < center.Left + Texture.Width - center.Right || size.Y < center.Top + Texture.Height - center.Bottom)
+                {
+                    float min = Math.Min((float)size.X / (center.Left + Texture.Width - center.Right), (float)size.Y / (center.Top + Texture.Height - center.Bottom));
+
+                    int top = (int)(center.Top * min);
+                    int left = (int)(center.Left * min);
+
+                    center = new Rectangle(left, top, Texture.Width - (left + (int)((Texture.Width - center.Right) * min)), Texture.Height - (top + (int)((Texture.Height - center.Bottom) * min)));
+
+                }
+
+                Rectangle clip = new Rectangle(0, 0, 0, center.Y);
 				Vector3 pos = position;
 				pos.Y += (size.Y - center.Y - 1) / ppu;
 				Vector2 scale = new Vector2(1, 1);
@@ -86,7 +97,7 @@ namespace Monocle
 							pos.Y = position.Y + (Texture.Height - center.Bottom + 0) / ppu;
 							clip.Y = center.Y;
 							clip.Height = center.Height;
-							scale.Y = (size.Y - Texture.Height) / center.Height;
+							scale.Y = (size.Y - Texture.Height) / (float)center.Height;
 							break;
 						case 2:
 							pos.Y = position.Y;
@@ -103,10 +114,10 @@ namespace Monocle
 								clip.Width = center.X;
 								break;
 							case 1:
-								pos.X += center.X / ppu;
-								clip.X = center.X;
+                                pos.X = position.X + (Texture.Height - center.Right + 0) / ppu;
+                                clip.X = center.X;
 								clip.Width = center.Width;
-								scale.X = (size.X - Texture.Width) / center.Width;
+								scale.X = (size.X - Texture.Width) / (float)center.Width;
 								break;
 							case 2:
 								pos.X = (position.X + offsets.X) - center.Right / ppu;

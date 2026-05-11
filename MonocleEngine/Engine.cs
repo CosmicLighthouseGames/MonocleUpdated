@@ -377,7 +377,9 @@ namespace Monocle {
 				SuppressDraw();
 				return;
 			}
+#if !DEBUG
 			try {
+#endif
 
 				int waitTime = 0;
 				while (!Monitor.TryEnter(renderLock)) {
@@ -453,15 +455,12 @@ namespace Monocle {
 					//
 					//Window.Title = Title + " " + fpsCounter.ToString() + " fps - " + (GC.GetTotalMemory(false) / 1048576f).ToString("F") + " MB";
 				}
-
-
-
-
-
+#if !DEBUG
 			}
 			catch {
 
 			}
+#endif
 
 			Monocle.Draw.ClearGraphics();
 			GraphicsDevice.SetRenderTarget(null);
@@ -511,15 +510,6 @@ namespace Monocle {
 				Thread.Sleep(1);
 			}
 			Monitor.Exit(renderLock);
-		}
-		public static void LockRendering() {
-
-			//while (!Monitor.TryEnter(renderLock)) {
-			//	Thread.Sleep(1);
-			//}
-		}
-		public static void UnlockRendering() {
-			//Monitor.Exit(renderLock);
 		}
 		public static void PauseRendering(bool paused) {
 			StopRendering = paused;

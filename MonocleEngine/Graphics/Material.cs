@@ -389,7 +389,7 @@ namespace Monocle {
 					case "World":
 						param.SetValue(worldTransform);
 						return true;
-					default:
+                    default:
 						if (pData.ContainsKey(param.Name) && pData[param.Name] != null) {
 							var data = pData[param.Name];
 							if (data is MTexture)

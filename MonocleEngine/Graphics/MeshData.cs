@@ -1,15 +1,21 @@
-﻿using System;
+﻿using FMOD;
+using Isometric_Game;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Steamworks;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
+using YamlDotNet.Core.Events;
 
 namespace Monocle {
 
@@ -179,9 +185,16 @@ namespace Monocle {
 			weights = new List<(DynamicVertexBuffer, GenericHeap)>();
 			indices = new List<(DynamicIndexBuffer, GenericHeap)>();
 			AddVertexBuffer();
-			AddIndexBuffer();
+			AddWeightBuffer();
+            AddIndexBuffer();
+            AddVertexBuffer();
+            AddWeightBuffer();
+            AddIndexBuffer();
+            AddVertexBuffer();
+            AddWeightBuffer();
+            AddIndexBuffer();
 
-		}
+        }
 
 		static void AddVertexBuffer() {
 			Engine.WaitForRendering();
@@ -201,6 +214,7 @@ namespace Monocle {
 			for (int i = 0; i < vertices.Count; i++) {
 				if (vertices[i].heap.HasSpace(data.Length)) {
 					index = i;
+					break;
 				}
 			}
 			if (index == vertices.Count)
@@ -210,12 +224,33 @@ namespace Monocle {
 			buffer.Item1.SetData(buffer.Item2 * MonocleVertex.VertexDeclaration.VertexStride, data, 0, data.Length, MonocleVertex.VertexDeclaration.VertexStride);
 
 			return buffer;
-		}
-		static (IndexBuffer, int) GetIBuffer(short[] inds, int offset) {
+        }
+        static VertexBuffer GetWeightBuffer(MonocleVertexWeight[] data)
+        {
+            int index = weights.Count;
+            for (int i = 0; i < weights.Count; i++)
+            {
+                if (weights[i].heap.HasSpace(data.Length))
+                {
+                    index = i;
+					break;
+                }
+            }
+            if (index == weights.Count)
+                AddWeightBuffer();
+
+			int size = weights[index].heap.AddRange(data.Length);
+            var buffer = weights[index].buffer;
+            buffer.SetData(size * MonocleVertexWeight.VertexDeclaration.VertexStride, data, 0, data.Length, MonocleVertexWeight.VertexDeclaration.VertexStride);
+
+            return buffer;
+        }
+        static (IndexBuffer, int) GetIBuffer(short[] inds, int offset) {
 			int index = indices.Count;
 			for (int i = 0; i < indices.Count; i++) {
 				if (indices[i].heap.HasSpace(inds.Length)) {
 					index = i;
+					break;
 				}
 			}
 			if (index == indices.Count)
@@ -231,25 +266,21 @@ namespace Monocle {
 
 		public static MeshPointer CreateSection(MonocleVertex[] verts, short[] inds) {
 
-			Engine.LockRendering();
 
 			try {
 				var vb = GetVBuffer(verts);
 				var ib = GetIBuffer(inds, vb.Item2);
 
-				Engine.UnlockRendering();
 
 				return new MeshPointer(graphics, vb.Item1, ib.Item1, vb.Item2, ib.Item2, inds.Length / 3);
 
 			}
 			catch {
-				Engine.UnlockRendering();
 				return null;
 			}
 		}
 		public static MeshPointer[] CreateSections(MonocleVertex[] verts, short[][] inds) {
 
-			Engine.LockRendering();
 
 			try {
 				MeshPointer[] pointers = new MeshPointer[inds.Length];
@@ -263,16 +294,24 @@ namespace Monocle {
 
 				}
 
-				Engine.UnlockRendering();
-
 				return pointers;
 			}
 			catch {
-				Engine.UnlockRendering();
 				return null;
 			}
-		}
-		internal static void DisposePointer(MeshPointer pointer) {
+        }
+        public static VertexBuffer CreateWeight(MonocleVertexWeight[] weights)
+        {
+            try
+            {
+                return GetWeightBuffer(weights);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+        internal static void DisposePointer(MeshPointer pointer) {
 			foreach (var b in vertices) {
 				if (pointer.VertexBuffer == b.buffer) {
 					b.heap.RemoveRange(pointer.VertexOffset);
@@ -314,14 +353,29 @@ namespace Monocle {
 			gd.Indices = IndexBuffer;
 		}
 		public void SetIndex(VertexBuffer extra) {
+			if (extra == null)
+			{
+				SetIndex();
+				return;
+
+            }
 			gd.SetVertexBuffers(new VertexBufferBinding(VertexBuffer, 0), new VertexBufferBinding(extra, 0));
 			gd.Indices = IndexBuffer;
-		}
-		public void RenderTriangleList() {
+        }
+        public void RenderList()
+        {
+            if (PrimitiveCount <= 0)
+                return;
+
+            gd.DrawIndexedPrimitives(PrimitiveType.TriangleList, VertexOffset, IndexOffset, PrimitiveCount);
+        }
+        public void Render() {
 			if (PrimitiveCount <= 0)
 				return;
-			gd.DrawIndexedPrimitives(PrimitiveType.TriangleList, VertexOffset, IndexOffset, PrimitiveCount);
-		}
+
+            SetIndex();
+			RenderList();
+        }
 
 		public void Dispose() {
 			MeshHeap.DisposePointer(this);
@@ -902,13 +956,96 @@ namespace Monocle {
 			CalculateTangent(vertices, newInds.ToArray());
 		}
 
+		struct VertexData
+		{
+			public MonocleVertex vertex;
+			public int VertexIndex;
+			public string WeightA, WeightB, WeightC, WeightD;
+		}
+		struct BonePairs
+		{
+			public string A, B, C, D;
+
+			public static BonePairs Get(Dictionary<string, float> dict)
+			{
+				var values = dict.OrderBy((a) => { return -a.Value; }).ToArray();
+
+				string[] names = new string[4];
+				Array.Copy(values.Select((a) => a.Key).ToArray(), names, Math.Min(values.Length, 4));
+				names = names.OrderBy(x => x == null).ThenBy(x => x).ToArray();
+
+				var val = new BonePairs();
+
+				val.A = names[0];
+				val.B = names[1];
+				val.C = names[2];
+				val.D = names[3];
+
+				return val;
+			}
+            public static BonePairs Get(VertexData data)
+            {
+                var val = new BonePairs();
+
+                val.A = data.WeightA;
+                val.B = data.WeightB;
+                val.C = data.WeightC;
+                val.D = data.WeightD;
+
+                return val;
+            }
+        }
+
+		internal static FBXScene Test()
+		{
+			FBXScene retval = new FBXScene();
+
+
+			var armature = new MonocleArmature();
+			var boneTop = new MonocleBone("Top");
+			var boneBottom = new MonocleBone("Bottom");
+			//boneBottom.AddChild(boneTop);
+
+			armature.AddBone(boneTop);
+			armature.AddBone(boneBottom);
+
+			retval.armatures["Armature"] = armature;
+
+			VertexData[] data = new VertexData[]
+			{
+				new VertexData() {vertex = new MonocleVertex(){Position = new Vector3(-1, -1, 0), Color = Vector4.One} },
+                new VertexData() {vertex = new MonocleVertex(){Position = new Vector3(-1,  1, 0), Color = Vector4.One} },
+                new VertexData() {vertex = new MonocleVertex(){Position = new Vector3( 1,  1, 0), Color = Vector4.One} },
+                new VertexData() {vertex = new MonocleVertex(){Position = new Vector3( 1, -1, 0), Color = Vector4.One} },
+            };
+
+			short[] indices = new short[]
+			{
+				0, 1, 2,
+				0, 2, 3,
+			};
+
+			MonocleVertexWeight[] weigh = new MonocleVertexWeight[]
+			{
+                new MonocleVertexWeight() { Weight0 = 0, Weight1 = 0, Weight2 = 0, Weight3 = 1},
+            };
+
+			var pointers = MeshHeap.CreateSection(data.Select(x => x.vertex).ToArray(), indices);
+			var weights = MeshHeap.CreateWeight(weigh);
+
+			MonocleModelPart part = new MonocleModelPart(pointers, weights, "Top", "Bottom", null, null);
+
+			retval.parts.Add("Tester", new MonocleModelPart[][]
+			{
+				new MonocleModelPart[]{ part }
+			});
+
+			return retval;
+        }
 		public static FBXScene Import(LoadedAsset content) {
 
 			FBXScene retval = new FBXScene();
 
-			retval.meshes = new Dictionary<string, (MonocleVertex[], short[][])>();
-			retval.armatures = new Dictionary<string, MonocleArmature>();
-			retval.weights = new Dictionary<string, Dictionary<string, float[]>>();
 
 			var array = FBXNode.GetFBX(content);
 
@@ -995,7 +1132,7 @@ namespace Monocle {
 
 			List<FBXNode> meshes = new List<FBXNode>();
 			List<FBXNode> armatures = new List<FBXNode>();
-			IEnumerable<(string, float[])> getWeights(List<MonocleVertex> comp, int[] mapping, FBXNode parentNode) {
+			IEnumerable<(string, float[])> getWeights(int vertLength, FBXNode parentNode) {
 
 
 				if (!parent2Child.ContainsKey((long)parentNode.properties[0]))
@@ -1005,30 +1142,29 @@ namespace Monocle {
 					var node = nodeIDs[val];
 
 					if (node.name == "Model" || node.properties[2] as string == "LimbNode") {
-						foreach (var weight in getWeights(comp, mapping, node)) {
+						foreach (var weight in getWeights(vertLength, node)) {
 							yield return weight;
 						}
 					}
 					if (node.name != "Deformer" || node.properties[2] as string != "Cluster")
 						continue;
 
+					if (node["Indexes"] == null)
+						continue;
 
 
 					var indices = node["Indexes"].properties[0] as int[];
 					var weights = node["Weights"].properties[0] as double[];
 
-					float[] values = new float[comp.Count];
+					float[] values = new float[vertLength];
 
-					for (int i = 0; i < values.Length; i++) {
-						values[i] = 0;
-						int index = Array.IndexOf(indices, mapping[i]);
-						if (index >= 0) {
-							values[i] = (float)weights[index];
-						}
+					for (int i = 0; i < indices.Length; i++)
+                    {
+						values[indices[i]] = (float)weights[i];
 					}
 
 					yield return ((node.properties[1] as string).Split("\0\u0001")[0], values);
-					foreach (var weight in getWeights(comp, mapping, node)) {
+					foreach (var weight in getWeights(vertLength, node)) {
 						yield return weight;
 					}
 
@@ -1105,129 +1241,214 @@ namespace Monocle {
 
 						break;
 					}
-					case "Geometry": {
+					case "Geometry":
+						{
 
-						var dArray = child["Vertices"].properties[0] as double[];
-						Vector3[] verts = new Vector3[dArray.Length / 3];
-						for (int i = 0; i < dArray.Length; i += 3) {
-							verts[i / 3] = new Vector3((float)dArray[i], (float)dArray[i + 2], -(float)dArray[i + 1]);
-						}
-
-						List<Vector3> normals = new List<Vector3>();
-
-						pvi = child["PolygonVertexIndex"].properties[0] as int[];
-
-						MonocleVertex[] data = new MonocleVertex[pvi.Length];
-
-						// Triangulating faces
-						List<int> faceCount = new List<int>();
-						int c = 0;
-						for (int i = 0; i < data.Length; i++) {
-							c++;
-							int index = pvi[i];
-							if (index < 0) {
-								index = ~index;
-								faceCount.Add(c);
-								c = 0;
+							var dArray = child["Vertices"].properties[0] as double[];
+							VertexData[] verts = new VertexData[dArray.Length / 3];
+							for (int i = 0; i < dArray.Length; i += 3)
+							{
+								verts[i / 3].vertex.Position = new Vector3((float)dArray[i], (float)dArray[i + 2], -(float)dArray[i + 1]);
+								verts[i / 3].VertexIndex = i / 3;
 							}
-							data[i].Position = verts[index];
-						}
 
-						// Other properties
-						int idx = 0;
-						if (child[$"LayerElementColor"] == null) {
+                            Dictionary<string, float[]> weights = new Dictionary<string, float[]>();
+                            if (parent2Child.ContainsKey(uuid))
+                            {
+                                foreach (var val in parent2Child[uuid])
+                                {
+                                    var node = nodeIDs[val];
+                                    if (node.name == "Deformer" && node.properties[2] as string == "Skin")
+                                    {
+                                        foreach (var value in getWeights(verts.Length, node))
+                                        {
+                                            weights.Add(value.Item1, value.Item2);
 
-							for (int i = 0; i < data.Length; i++) {
-								data[i].Color = Vector4.One;
-							}
-						}
-						else {
-							foreach (Vector4 item in GetArray<Vector4>(child, "Color")) {
-								data[idx++].Color = item;
-							}
-						}
-						idx = 0;
-						foreach (Vector2 item in GetArray<Vector2>(child, "UV")) {
-							data[idx++].TextureCoordinate = new Vector2(item.X, 1 - item.Y);
-						}
-						idx = 0;
-						foreach (Vector3 item in GetArray<Vector3>(child, "Normal")) {
-							data[idx++].Normal = new Vector3(item.X, item.Z, -item.Y);
-						}
+                                        }
+                                    }
+                                }
+                            }
 
-						List<MonocleVertex> comp = new List<MonocleVertex>(data.Distinct());
-						List<List<int>> finalIndices = new List<List<int>>();
+							pvi = child["PolygonVertexIndex"].properties[0] as int[];
 
-						// Material Mapping
-						string mappingType = "AllSame";
-						if (child.HasChild("LayerElementMaterial")) {
-							mappingType = child["LayerElementMaterial"]["MappingInformationType"].properties[0].ToString();
-						}
-						switch (mappingType) {
-							default:
-							case "AllSame": {
 
-								List<int> indices = new List<int>();
-								idx = 0;
-								for (int i = 0; i < faceCount.Count; i++) {
-									for (int j = 0; j < faceCount[i] - 2; j++) {
-										indices.Add(comp.IndexOf(data[idx]));
-										indices.Add(comp.IndexOf(data[idx + j + 2]));
-										indices.Add(comp.IndexOf(data[idx + j + 1]));
-									}
-									idx += faceCount[i];
+                            Dictionary<BonePairs, List<int>> segments = new Dictionary<BonePairs, List<int>>();
+
+                            for (int i = 0; i < pvi.Length; i += 2)
+                            {
+                                int offset = 0;
+
+                                do
+                                {
+                                    int last = pvi[i + 2 + offset];
+                                    if (last < 0)
+                                        last = ~last;
+
+
+                                    Dictionary<string, float> values = new Dictionary<string, float>();
+
+                                    foreach (var weight in weights)
+                                    {
+                                        values[weight.Key] = weight.Value[verts[pvi[i]].VertexIndex];
+                                        values[weight.Key] += weight.Value[verts[pvi[i + offset + 1]].VertexIndex];
+                                        values[weight.Key] += weight.Value[verts[last].VertexIndex];
+                                    }
+
+                                    var pairs = BonePairs.Get(values);
+                                    if (!segments.ContainsKey(pairs))
+                                    {
+                                        segments[pairs] = new List<int>();
+                                    }
+                                    segments[pairs].Add(i);
+
+                                    verts[pvi[i]].WeightA = pairs.A;
+                                    verts[pvi[i]].WeightB = pairs.B;
+                                    verts[pvi[i]].WeightC = pairs.C;
+                                    verts[pvi[i]].WeightD = pairs.D;
+
+                                    verts[pvi[i + offset + 1]].WeightA = pairs.A;
+                                    verts[pvi[i + offset + 1]].WeightB = pairs.B;
+                                    verts[pvi[i + offset + 1]].WeightC = pairs.C;
+                                    verts[pvi[i + offset + 1]].WeightD = pairs.D;
+
+                                    verts[last].WeightA = pairs.A;
+                                    verts[last].WeightB = pairs.B;
+                                    verts[last].WeightC = pairs.C;
+                                    verts[last].WeightD = pairs.D;
+
+                                    offset++;
+                                }
+                                while (pvi[i + offset + 1] >= 0);
+                                i += offset;
+                            }
+
+                            VertexData[] data = new VertexData[pvi.Length];
+							
+
+							// Triangulating faces
+							List<int> faceCount = new List<int>();
+							int c = 0;
+							for (int i = 0; i < data.Length; i++)
+							{
+								c++;
+								int index = pvi[i];
+								if (index < 0)
+								{
+									index = ~index;
+									faceCount.Add(c);
+									c = 0;
 								}
-								finalIndices.Add(indices);
-								break;
+								data[i] = verts[index];
 							}
-							case "ByPolygon": {
-								var exChild = child["LayerElementMaterial"];
 
-								idx = 0;
+							// Other properties
+							int idx = 0;
+							if (child[$"LayerElementColor"] == null)
+							{
 
-
-								int[] matArray = exChild["Materials"].properties[0] as int[];
-
-								for (int i = 0; i < faceCount.Count; i++) {
-									int index = matArray[i];
-									while (finalIndices.Count <= index) {
-										finalIndices.Add(new List<int>());
-									}
-									for (int j = 0; j < faceCount[i] - 2; j++) {
-										finalIndices[index].Add(comp.IndexOf(data[idx]));
-										finalIndices[index].Add(comp.IndexOf(data[idx + j + 2]));
-										finalIndices[index].Add(comp.IndexOf(data[idx + j + 1]));
-									}
-									idx += faceCount[i];
-								}
-								break;
-							}
-						}
-
-						int[] mapping = new int[comp.Count];
-
-						for (int i = 0; i < comp.Count; i++) {
-							mapping[i] = Array.IndexOf(verts, comp[i].Position);
-						}
-
-						List<object> retval = new List<object>(){
-							comp.ToArray(),
-							finalIndices.Select((l) => { return l.ToArray(); }).ToArray(),
-						};
-
-						if (parent2Child.ContainsKey(uuid)) {
-							foreach (var val in parent2Child[uuid]) {
-								var node = nodeIDs[val];
-								if (node.name == "Deformer" && node.properties[2] as string == "Skin") {
-									foreach (var value in getWeights(comp, mapping, node)) {
-										retval.Add(value);
-									}
+								for (int i = 0; i < data.Length; i++)
+								{
+									data[i].vertex.Color = Vector4.One;
 								}
 							}
-						}
+							else
+							{
+								foreach (Vector4 item in GetArray<Vector4>(child, "Color"))
+								{
+									data[idx++].vertex.Color = item;
+								}
+							}
+							idx = 0;
+							foreach (Vector2 item in GetArray<Vector2>(child, "UV"))
+							{
+								data[idx++].vertex.TextureCoordinate = new Vector2(item.X, 1 - item.Y);
+							}
+							idx = 0;
+							foreach (Vector3 item in GetArray<Vector3>(child, "Normal"))
+							{
+								data[idx++].vertex.Normal = new Vector3(item.X, item.Z, -item.Y);
+							}
 
-						return retval.ToArray();
-					}
+							List<List<int>> finalIndices = new List<List<int>>();
+							Dictionary<VertexData, int> comp = new Dictionary<VertexData, int>();
+
+
+
+							for (int i = 0; i < data.Length; i++)
+							{
+								var vert = data[i];
+
+								if (!comp.ContainsKey(vert))
+								{
+									comp.Add(vert, comp.Count);
+								}
+							}
+
+
+							// Material Mapping
+							string mappingType = "AllSame";
+							if (child.HasChild("LayerElementMaterial"))
+							{
+								mappingType = child["LayerElementMaterial"]["MappingInformationType"].properties[0].ToString();
+							}
+							switch (mappingType)
+							{
+								default:
+								case "AllSame":
+									{
+
+										List<int> indices = new List<int>();
+										idx = 0;
+										for (int i = 0; i < faceCount.Count; i++)
+										{
+											for (int j = 0; j < faceCount[i] - 2; j++)
+                                            {
+                                                indices.Add(comp[data[idx]]);
+                                                indices.Add(comp[data[idx + j + 2]]);
+                                                indices.Add(comp[data[idx + j + 1]]);
+                                            }
+											idx += faceCount[i];
+										}
+										finalIndices.Add(indices);
+										break;
+									}
+								case "ByPolygon":
+									{
+										var exChild = child["LayerElementMaterial"];
+
+										idx = 0;
+
+
+										int[] matArray = exChild["Materials"].properties[0] as int[];
+
+										for (int i = 0; i < faceCount.Count; i++)
+										{
+											int index = matArray[i];
+											while (finalIndices.Count <= index)
+											{
+												finalIndices.Add(new List<int>());
+											}
+											for (int j = 0; j < faceCount[i] - 2; j++)
+											{
+												finalIndices[index].Add(comp[data[idx]]);
+												finalIndices[index].Add(comp[data[idx + j + 2]]);
+												finalIndices[index].Add(comp[data[idx + j + 1]]);
+											}
+											idx += faceCount[i];
+										}
+										break;
+									}
+							}
+
+							List<object> retval = new List<object>(){
+								comp.Keys.ToArray(),
+								finalIndices.Select((l) => { return l.ToArray(); }).ToArray(),
+								weights
+							};
+
+
+							return retval.ToArray();
+						}
 					case "Model": {
 
 						switch (type) {
@@ -1303,6 +1524,7 @@ namespace Monocle {
 
 
 
+			
 			foreach (var mesh in meshes) {
 				long uuid = (long)mesh.properties[0];
 				string[] split = ((string)mesh.properties[1]).Split("\0\u0001");
@@ -1318,22 +1540,118 @@ namespace Monocle {
 								meshData = compileNode(node) as object[];
 								break;
 						}
-					}
-				}
-				if (child2Parent.ContainsKey(uuid)) {
-					foreach (var val in child2Parent[uuid]) {
-						var node = nodeIDs[val];
+						if (meshData != null)
+							break;
 					}
 				}
 
-				retval.meshes[split[0]] = ((MonocleVertex[])meshData[0], Array.ConvertAll((int[][])meshData[1], input => Array.ConvertAll(input, input2 => (short)input2)));
-				var dict = retval.weights[split[0]] = new Dictionary<string, float[]>();
+				var verts = (VertexData[])meshData[0];
+				var indices = Array.ConvertAll((int[][])meshData[1], input => Array.ConvertAll(input, input2 => (short)input2));
 
-				for (int i = 2; i < meshData.Length; i++) {
-					(string, float[]) weights = ((string, float[]))meshData[i];
-					dict.Add(weights.Item1, weights.Item2);
-				}
-			}
+                CalculateTangent(verts.Select(x => x.vertex).ToArray(), indices);
+
+				var weightDict = meshData[2] as Dictionary<string, float[]>;
+
+				List<short[]> totalCompiled = new List<short[]>();
+
+				List<(int, BonePairs)> totalIndices = new List<(int, BonePairs)>();
+				int totalI = 0;
+
+				foreach (var inds in indices)
+				{
+                    Dictionary<BonePairs, List<int>> segments = new Dictionary<BonePairs, List<int>>();
+
+                    for (int i = 0; i < inds.Length; i += 3)
+					{
+						var pairs = BonePairs.Get(verts[inds[i]]);
+						if (!segments.ContainsKey(pairs))
+						{
+							segments[pairs] = new List<int>();
+						}
+						segments[pairs].Add(i);
+					}
+
+					List<short[]> compiled = new List<short[]>();
+
+					foreach (var item in segments)
+					{
+						List<short> indicesCompiled = new List<short>();
+
+						foreach (var i in item.Value)
+						{
+							for (int j = 0; j < 3; j++)
+							{
+								indicesCompiled.Add(inds[i + j]);
+							}
+						}
+						totalCompiled.Add(indicesCompiled.ToArray());
+						totalIndices.Add((totalI, item.Key));
+					}
+
+					totalI++;
+                }
+
+
+				totalI = 0;
+
+				List<MonocleModelPart[]> modelWhole = new List<MonocleModelPart[]>();
+				List<MonocleModelPart> parts = new List<MonocleModelPart>();
+
+				int index = 0;
+				for (int i = 0; i < totalIndices.Count; i++)
+                {
+                    var p = totalIndices[i];
+
+					if (p.Item1 != totalI)
+					{
+						totalI = p.Item1;
+						modelWhole.Add(parts.ToArray());
+						parts.Clear();
+					}
+					MonocleVertex[] vertices = new MonocleVertex[totalCompiled[i].Length];
+					short[] inds = new short[vertices.Length];
+					MonocleVertexWeight[] weights = new MonocleVertexWeight[vertices.Length];
+
+					bool hasWeight = false;
+
+					for (int j = 0; j < vertices.Length; j++)
+					{
+						var vert = verts[totalCompiled[i][j]];
+
+						vertices[j] = vert.vertex;
+						inds[j] = (short)j;
+
+						weights[j] = new MonocleVertexWeight()
+						{
+							Weight0 = vert.WeightA == null ? 0 : weightDict[vert.WeightA][vert.VertexIndex],
+							Weight1 = vert.WeightB == null ? 0 : weightDict[vert.WeightB][vert.VertexIndex],
+							Weight2 = vert.WeightC == null ? 0 : weightDict[vert.WeightC][vert.VertexIndex],
+							Weight3 = vert.WeightD == null ? 0 : weightDict[vert.WeightD][vert.VertexIndex],
+						};
+
+						if (!hasWeight && (weights[j].Weight0 != 0 || weights[j].Weight1!= 0 || weights[j].Weight2 != 0 || weights[j].Weight3 != 0))
+                        {
+							hasWeight = true;
+						}
+					}
+
+                    var pointers = MeshHeap.CreateSection(vertices.ToArray(), inds);
+
+					VertexBuffer weightBuffer = null;
+
+					if (hasWeight)
+					{
+						weightBuffer = MeshHeap.CreateWeight(weights);
+
+                    }
+
+                    parts.Add(new MonocleModelPart(pointers, weightBuffer, p.Item2.A, p.Item2.B, p.Item2.C, p.Item2.D));
+
+					index++;
+                }
+                modelWhole.Add(parts.ToArray());
+                retval.parts[split[0]] = modelWhole.ToArray();
+            }
 
 			foreach (var arm in armatures) {
 				long uuid = (long)arm.properties[0];
@@ -1356,71 +1674,33 @@ namespace Monocle {
 			return retval;
 		}
 
-		Dictionary<string, (MonocleVertex[], short[][])> meshes;
-		Dictionary<string, MonocleModel> cachedMeshes = new Dictionary<string, MonocleModel>();
-		Dictionary<string, Dictionary<string, float[]>> weights;
+		Dictionary<string, MonocleModelPart[][]> parts = new Dictionary<string, MonocleModelPart[][]>();
 
-		Dictionary<string, MonocleArmature> armatures;
+		Dictionary<string, MonocleArmature> armatures = new Dictionary<string, MonocleArmature>();
 
 		FBXScene() {
 
 		}
 
-		public (MonocleVertex[], short[][]) GetModifyableMesh(string mesh) {
-			var pair = meshes[mesh];
-			MonocleVertex[] verts = new MonocleVertex[pair.Item1.Length];
-			Array.Copy(pair.Item1, verts, pair.Item1.Length);
-			short[][] indices = new short[pair.Item2.Length][];
-			for (int i = 0; i < indices.Length; i++) {
-				indices[i] = new short[pair.Item2[i].Length];
-				Array.Copy(pair.Item2[i], indices[i], pair.Item2[i].Length);
-			}
-
-			Dictionary<string, float[]> weights = new Dictionary<string, float[]>();
-			if (this.weights.ContainsKey(mesh)) {
-				var toCopy = this.weights[mesh];
-				foreach (var key in toCopy.Keys) {
-					float[] array = new float[toCopy[key].Length];
-					Array.Copy(toCopy[key], array, array.Length);
-					weights.Add(key, array);
-				}
-			}
-
-			CalculateTangent(verts);
-
-			return (verts, indices);
-		}
 		public MonocleModel GetMesh(string mesh) {
-			if (cachedMeshes.ContainsKey(mesh))
-				return cachedMeshes[mesh];
 
-			var pair = meshes[mesh];
-			MonocleVertex[] verts = new MonocleVertex[pair.Item1.Length];
-			Array.Copy(pair.Item1, verts, pair.Item1.Length);
-			short[][] indices = new short[pair.Item2.Length][];
-			for (int i = 0; i < indices.Length; i++) {
-				indices[i] = new short[pair.Item2[i].Length];
-				Array.Copy(pair.Item2[i], indices[i], pair.Item2[i].Length);
+			List<MonocleModelMaterialSlot> slots = new List<MonocleModelMaterialSlot>();
+
+            var pointers = parts[mesh];
+
+            foreach (var mat in pointers)
+			{
+				slots.Add(new MonocleModelMaterialSlot(mat));
 			}
 
-			Dictionary<string, float[]> weights = new Dictionary<string, float[]>();
-			if (this.weights.ContainsKey(mesh)) {
-				var toCopy = this.weights[mesh];
-				foreach (var key in toCopy.Keys) {
-					float[] array = new float[toCopy[key].Length];
-					Array.Copy(toCopy[key], array, array.Length);
-					weights.Add(key, array);
-				}
-			}
+			var value = new MonocleModel(slots);
 
-			CalculateTangent(verts, indices);
-
-			return cachedMeshes[mesh] = new MonocleModel(verts, indices);
+			return value;
 		}
 		public Dictionary<string, MonocleModel> GetMeshes() {
 			Dictionary<string, MonocleModel> retval = new Dictionary<string, MonocleModel>();
 
-			foreach (var key in meshes.Keys) {
+			foreach (var key in parts.Keys) {
 				retval[key] = GetMesh(key);
 			}
 
@@ -1430,21 +1710,6 @@ namespace Monocle {
 			return armatures[armature].CreateCopy();
 		}
 
-		public void Decache() {
-			Dictionary<string, MonocleModel> cached = new Dictionary<string, MonocleModel>();
-
-			foreach (var mesh in cachedMeshes) {
-				if (mesh.Value.Used) {
-					cached.Add(mesh.Key, mesh.Value);
-				}
-				else {
-					mesh.Value.Dispose();
-				}
-				
-			}
-			cachedMeshes.Clear();
-			cachedMeshes = cached;
-		}
 	}
 
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -1592,7 +1857,10 @@ namespace Monocle {
 		/// <summary>
 		/// Weight
 		/// </summary>
-		public float Weight;
+		public float Weight0;
+		public float Weight1;
+		public float Weight2;
+		public float Weight3;
 
 		/// <summary>
 		/// Vertex declaration object.
@@ -1614,6 +1882,9 @@ namespace Monocle {
 		static MonocleVertexWeight() {
 			VertexElement[] elements = new VertexElement[] {
 				new VertexElement(0 * 4, VertexElementFormat.Single, VertexElementUsage.BlendWeight, 0),
+				new VertexElement(1 * 4, VertexElementFormat.Single, VertexElementUsage.BlendWeight, 1),
+				new VertexElement(2 * 4, VertexElementFormat.Single, VertexElementUsage.BlendWeight, 2),
+				new VertexElement(3 * 4, VertexElementFormat.Single, VertexElementUsage.BlendWeight, 3),
 			};
 			VertexDeclaration declaration = new VertexDeclaration(elements);
 			VertexDeclaration = declaration;
@@ -1628,400 +1899,81 @@ namespace Monocle {
 		/// <param name="textureCoordinate">Texture coordinates.</param>
 		/// <param name="tangent">Vertex tangent.</param>
 		/// <param name="binormal">Vertex binormal.</param>
-		public MonocleVertexWeight(float weight) {
-			Weight = weight;
+		public MonocleVertexWeight(float weightA, float weightB, float weightC, float weightD) {
+			Weight0 = weightA;
+			Weight1 = weightB;
+			Weight2 = weightC;
+			Weight3	= weightD;
 		}
 	}
 
-	public class MonocleModelPart : IDisposable {
+	public class MonocleModelPart {
 
-		public MeshPointer MeshData;
-		public int MaterialIndex { get; private set; }
+		internal MeshPointer MeshData;
+		internal VertexBuffer WeightData;
+		internal string[] BoneNames;
 
-		public MonocleModelPart(MeshPointer pointer, int mat) {
+		public MonocleModelPart(MeshPointer pointer, VertexBuffer weights, params string[] boneNames) {
 			MeshData = pointer;
-			MaterialIndex = mat;
-		}
+			WeightData = weights;
+			BoneNames = boneNames;
+        }
+    }
 
-		public void Dispose() {
-			MeshData.Dispose();
-		}
-	}
-	public class MonocleModel : IDisposable {
+    public sealed class MonocleModelMaterialSlot : ReadOnlyCollection<MonocleModelPart>
+    {
+        public MonocleModelMaterialSlot(IList<MonocleModelPart> list) : base(list)
+        {
+        }
 
-		public static MonocleModel CreateCube(float size, bool invert, bool smooth = false) {
+        internal void Render(Matrix matrix, Material material, MonocleArmature armature = null)
+        {
+            var mat = material ?? Draw.DefaultMaterial;
 
-			size /= 2;
+            Draw.CustomDrawCall(new ModelRenderCall()
+            {
+                armature = armature,
+                mesh = this,
+                material = mat,
+                transform = matrix,
+                RenderOrder = mat.RenderOrder ?? Draw.CurrentRenderOrder,
+            });
+        }
+    }
 
-			Vector3[] verts;
-			short[] tris;
-			float xScale = invert ? -1 : 1;
+    public class MonocleModel : ReadOnlyCollection<MonocleModelMaterialSlot>
+    {
+		public Material[] Materials { get; private set; }
 
-			if (smooth) {
-				verts = new Vector3[8];
-				tris = new short[]{
-					7, 6, 4, // Top
-					5, 7, 4,
-					1, 0, 2, // Bottom
-					3, 1, 2,
+        public MonocleModel(IList<MonocleModelMaterialSlot> list) : base(list)
+        {
+            Materials = new Material[list.Count];
+        }
 
-					0, 1, 5, // Back
-					4, 0, 5,
-					3, 2, 6, // Front
-					7, 3, 6,
+        public void Render(Matrix matrix)
+		{
 
-					2, 0, 4, // Left
-					6, 2, 4,
-					1, 3, 7, // Right
-					5, 1, 7,
-				};
+			for (int i = 0; i < Count; i++)
+            {
+				var mesh = this[i];
+				var mat = Materials[i]??Draw.DefaultMaterial;
 
-				int idx = 0;
-				for (int a = -1; a <= 1; a += 2)
-					for (int b = -1; b <= 1; b += 2)
-						for (int c = -1; c <= 1; c += 2) {
-							verts[idx++] = new Vector3(c * size, a * size * xScale, b * size);
-						}
+                Draw.CustomDrawCall(new ModelRenderCall()
+                {
+                    mesh = mesh,
+                    material = mat,
+                    transform = matrix,
+                    RenderOrder = mat.RenderOrder ?? Draw.CurrentRenderOrder,
+                });
+            }
+        }
+        public void Render(Matrix matrix, MonocleArmature armature)
+        {
+
+			for (int i = 0; i < Count; i++)
+			{
+				this[i].Render(matrix, Materials[i], armature);
 			}
-			else {
-				verts = new Vector3[24];
-				tris = new short[]{
-					03, 00, 06, // Top
-					09, 03, 06,
-					21, 18, 12, // Bottom
-					15, 21, 12,
-
-					01, 04, 16, // Back
-					13, 01, 16,
-					10, 07, 19, // Front
-					22, 10, 19,
-
-					08, 02, 14, // Left
-					20, 08, 14,
-					05, 11, 23, // Right
-					17, 05, 23,
-				};
-
-				int idx = 0;
-				for (int a = -1; a <= 1; a += 2)
-					for (int b = -1; b <= 1; b += 2)
-						for (int c = -1; c <= 1; c += 2) {
-							verts[idx++] = new Vector3(c * size, a * size * xScale, b * size);
-							verts[idx++] = new Vector3(c * size, a * size * xScale, b * size);
-							verts[idx++] = new Vector3(c * size, a * size * xScale, b * size);
-						}
-
-			}
-
-			var md = new MonocleModel(verts, tris);
-
-			return md;
 		}
-		public static MonocleModel CreateCube(Vector3 size, bool invert, bool smooth = false) {
-
-			size /= 2;
-
-			Vector3[] verts;
-			short[] tris;
-			float xScale = invert ? -1 : 1;
-
-			if (smooth) {
-				verts = new Vector3[8];
-				tris = new short[]{
-					7, 6, 4, // Top
-					5, 7, 4,
-					1, 0, 2, // Bottom
-					3, 1, 2,
-
-					0, 1, 5, // Back
-					4, 0, 5,
-					3, 2, 6, // Front
-					7, 3, 6,
-
-					2, 0, 4, // Left
-					6, 2, 4,
-					1, 3, 7, // Right
-					5, 1, 7,
-				};
-
-				int idx = 0;
-				for (int a = -1; a <= 1; a += 2)
-					for (int b = -1; b <= 1; b += 2)
-						for (int c = -1; c <= 1; c += 2) {
-							verts[idx++] = new Vector3(c * size.X, a * size.Y * xScale, b * size.Z);
-						}
-			}
-			else {
-				verts = new Vector3[24];
-				tris = new short[]{
-					03, 00, 06, // Top
-					09, 03, 06,
-					21, 18, 12, // Bottom
-					15, 21, 12,
-
-					01, 04, 16, // Back
-					13, 01, 16,
-					10, 07, 19, // Front
-					22, 10, 19,
-
-					08, 02, 14, // Left
-					20, 08, 14,
-					05, 11, 23, // Right
-					17, 05, 23,
-				};
-
-				int idx = 0;
-				for (int a = -1; a <= 1; a += 2)
-					for (int b = -1; b <= 1; b += 2)
-						for (int c = -1; c <= 1; c += 2) {
-							verts[idx++] = new Vector3(c * size.X, a * size.Y * xScale, b * size.Z);
-							verts[idx++] = new Vector3(c * size.X, a * size.Y * xScale, b * size.Z);
-							verts[idx++] = new Vector3(c * size.X, a * size.Y * xScale, b * size.Z);
-						}
-
-			}
-
-			var md = new MonocleModel(verts, tris);
-			//md.RecalculateNormals();
-
-			return md;
-		}
-		public static Dictionary<string, MonocleModel> Import(string contentPath) {
-
-			//var ext = Path.GetExtension(contentPath);
-			//var asset = AssetLoader.GetContent(contentPath);
-
-			//if (asset == null)
-			//	return null;
-
-			//switch (ext) {
-			//	case ".obj": {
-
-			//		List<Vector3> verts = new List<Vector3>();
-			//		List<Vector3> normals = new List<Vector3>();
-			//		List<Vector2> uvs = new List<Vector2>();
-
-			//		List<MonocleVertex> facesReal = new List<MonocleVertex>();
-
-
-			//		Dictionary<string, MonocleModel> retval = new Dictionary<string, MonocleModel>();
-			//		string current = null;
-
-			//		int count = 1;
-
-			//		void AddObject() {
-			//			List<Vector3> faceVerts = new List<Vector3>();
-			//			List<Vector3> faceNormals = new List<Vector3>();
-			//			List<Vector2> faceUVs = new List<Vector2>();
-			//			List<int> faces = new List<int>();
-
-			//			var dist = new List<MonocleVertex>(facesReal.Distinct());
-
-			//			for (int i = 0; i < facesReal.Count; i++) {
-
-			//				var val = facesReal[i];
-			//				short index = (short)dist.IndexOf(val);
-
-			//				faces.Add(index);
-			//			}
-			//			for (int i = 0; i < dist.Count; i++) {
-			//				faceVerts.Add(dist[i].Position);
-			//				faceNormals.Add(dist[i].Normal);
-			//				faceUVs.Add(dist[i].TextureCoordinate);
-			//			}
-			//			var model = new MonocleModel(faceVerts.ToArray(), faceNormals.ToArray(), faceUVs.ToArray(), faces.ToArray());
-			//			//model.CalculateTangent();
-			//			retval.Add(current, model);
-
-			//		}
-
-			//		using (StreamReader reader = new StreamReader(asset.ContentStream)) {
-			//			while (!reader.EndOfStream) {
-			//				string line = reader.ReadLine();
-			//				if (line.StartsWith("#"))
-			//					continue;
-
-
-			//				string[] split = line.Split(' ');
-
-			//				switch (split[0]) {
-			//					case "o":
-			//						if (current != null) {
-
-			//							AddObject();
-			//						}
-
-			//						facesReal.Clear();
-
-			//						current = split[1];
-			//						break;
-			//					case "v": {
-			//						var group = Regex.Matches(line, @"[-\d\.]+");
-			//						verts.Add(new Vector3(float.Parse(group[0].Value, System.Globalization.CultureInfo.InvariantCulture), float.Parse(group[1].Value, System.Globalization.CultureInfo.InvariantCulture), float.Parse(group[2].Value, System.Globalization.CultureInfo.InvariantCulture)));
-			//						break;
-			//					}
-			//					case "vn": {
-			//						var group = Regex.Matches(line, @"[-\d\.]+");
-			//						normals.Add(new Vector3(float.Parse(group[0].Value, System.Globalization.CultureInfo.InvariantCulture), float.Parse(group[1].Value, System.Globalization.CultureInfo.InvariantCulture), float.Parse(group[2].Value, System.Globalization.CultureInfo.InvariantCulture)));
-			//						break;
-			//					}
-			//					case "vt": {
-			//						var group = Regex.Matches(line, @"[-\d\.]+");
-			//						uvs.Add(new Vector2(float.Parse(group[0].Value, System.Globalization.CultureInfo.InvariantCulture), 1 - float.Parse(group[1].Value, System.Globalization.CultureInfo.InvariantCulture)));
-			//						break;
-			//					}
-			//					case "f": {
-			//						var group = Regex.Match(line, @"f (\d+)/(\d+)/(\d+) (\d+)/(\d+)/(\d+) (\d+)/(\d+)/(\d+)");
-
-
-			//						facesReal.Add(new MonocleVertex(
-			//							verts[int.Parse(group.Groups[1].Value) - 1],
-			//							normals[int.Parse(group.Groups[3].Value) - 1],
-			//							Vector3.Zero, Vector3.Zero,
-			//							uvs[int.Parse(group.Groups[2].Value) - 1], Vector4.One));
-			//						facesReal.Add(new MonocleVertex(
-			//							verts[int.Parse(group.Groups[7].Value) - 1],
-			//							normals[int.Parse(group.Groups[9].Value) - 1],
-			//							Vector3.Zero, Vector3.Zero,
-			//							uvs[int.Parse(group.Groups[8].Value) - 1], Vector4.One));
-			//						facesReal.Add(new MonocleVertex(
-			//							verts[int.Parse(group.Groups[4].Value) - 1],
-			//							normals[int.Parse(group.Groups[6].Value) - 1],
-			//							Vector3.Zero, Vector3.Zero,
-			//							uvs[int.Parse(group.Groups[5].Value) - 1], Vector4.One));
-
-			//						break;
-			//					}
-			//				}
-			//			}
-			//		}
-
-			//		AddObject();
-
-			//		return retval;
-			//	}
-			//	//case ".fbx": {
-
-			//	//	return ImportMeshes(FBXNode.GetFBX(contentPath));
-
-			//	//}
-			//}
-
-			return null;
-		}
-
-
-		internal bool Used => usedCount > 0;
-
-		public int MaterialCount { get; private set; }
-
-		internal MonocleModelPart[] parts;
-
-		public MonocleModel(MonocleVertex[] vertices, short[] indices) {
-			var pointer = MeshHeap.CreateSection(vertices, indices);
-
-			parts = new MonocleModelPart[] {
-				new MonocleModelPart(pointer, 0)
-			};
-
-			MaterialCount = 1;
-		}
-		public MonocleModel(MonocleVertex[] vertices, short[][] indices) {
-
-			var pointers = MeshHeap.CreateSections(vertices, indices);
-			parts = new MonocleModelPart[pointers.Length];
-
-			for (int i = 0; i < pointers.Length; i++) {
-				parts[i] = new MonocleModelPart(pointers[i], i);
-			}
-			MaterialCount = indices.Length;
-		}
-		public MonocleModel(MonocleVertex[] vertices, short[][] indices, int[] materials) {
-
-			var pointers = MeshHeap.CreateSections(vertices, indices);
-			parts = new MonocleModelPart[pointers.Length];
-
-			for (int i = 0; i < pointers.Length; i++) {
-				parts[i] = new MonocleModelPart(pointers[i], materials[i]);
-				MaterialCount = Math.Max(MaterialCount, materials[i] + 1);
-			}
-
-		}
-		public MonocleModel(Vector3[] points, short[] indices) {
-
-			var vertices = new MonocleVertex[points.Length];
-			for (int i = 0; i < points.Length; i++) {
-				vertices[i].Position = points[i];
-				vertices[i].TextureCoordinate = Vector2.Zero;
-				vertices[i].Color = Color.White.ToVector4();
-			}
-
-			var pointer = MeshHeap.CreateSection(vertices, indices);
-
-			parts = new MonocleModelPart[] {
-				new MonocleModelPart(pointer, 0)
-			};
-
-			MaterialCount = 1;
-		}
-		public MonocleModel(Vector3[] points, Vector2[] uvs, short[] indices) {
-			if (points.Length != uvs.Length)
-				throw new FormatException();
-
-			var vertices = new MonocleVertex[points.Length];
-			for (int i = 0; i < points.Length; i++) {
-				vertices[i].Position = points[i];
-				vertices[i].TextureCoordinate = uvs[i];
-				vertices[i].Color = Color.White.ToVector4();
-			}
-
-			var pointer = MeshHeap.CreateSection(vertices, indices);
-
-			parts = new MonocleModelPart[] {
-				new MonocleModelPart(pointer, 0)
-			};
-
-			MaterialCount = 1;
-		}
-		public MonocleModel(Vector3[] points, Vector3[] normals, Vector2[] uvs, short[] indices) {
-			if (points.Length != normals.Length || points.Length != uvs.Length)
-				throw new FormatException();
-
-			var vertices = new MonocleVertex[points.Length];
-			for (int i = 0; i < points.Length; i++) {
-				vertices[i].Position = points[i];
-				vertices[i].Normal = normals[i];
-				vertices[i].TextureCoordinate = uvs[i];
-				vertices[i].Color = Color.White.ToVector4();
-			}
-			FBXScene.CalculateTangent(vertices);
-
-			var pointer = MeshHeap.CreateSection(vertices, indices);
-
-			parts = new MonocleModelPart[] {
-				new MonocleModelPart(pointer, 0)
-			};
-
-			MaterialCount = 1;
-		}
-
-		int usedCount = 0;
-
-		internal void Added() {
-			usedCount++;
-		}
-		internal void Removed() {
-			usedCount--;
-		}
-
-		public void Dispose() {
-			if (usedCount > 0)
-				return;
-
-			foreach (var part in parts) {
-				part.Dispose();
-			}
-			parts = null;
-		}
-	}
+    }
 }

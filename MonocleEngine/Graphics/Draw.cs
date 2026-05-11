@@ -149,11 +149,13 @@ namespace Monocle {
 
 			static MeshPointer mesh;
 
-			public static void SetBuffers() {
-				mesh.SetIndex();
-			}
-			public static void RenderSprite() {
-				mesh.RenderTriangleList();
+            public static void SetIndex()
+            {
+                mesh.SetIndex();
+            }
+            public static void RenderSprite()
+            {
+                mesh.RenderList();
 			}
 
 			public static void Initialize() {
@@ -291,10 +293,7 @@ namespace Monocle {
 
 				techPass.Apply();
 
-				mesh.SetIndex();
-				mesh.RenderTriangleList();
-
-
+				mesh.Render();
 			}
 		}
 
@@ -500,24 +499,6 @@ namespace Monocle {
 		public static void CustomDrawCall(IDrawCall call) {
 			opaque.Add(call);
 		}
-
-		#region 3D Meshes
-
-		public static void Mesh(VertexBuffer verts, IndexBuffer indices, Matrix matrix, Color color, Material material = null) {
-
-			//opaque.Add(new DrawCall() {
-
-			//	transform = matrix,
-			//	material = material??Material.Shader(Pixel, color),
-			//	stencil = (material == null) ? 0 : material.Stencil,
-			//});
-		}
-		public static void Mesh(MonocleModel model, Matrix matrix, Color color, Material material = null) {
-
-		}
-
-
-		#endregion
 
 		#region 3D Images
 

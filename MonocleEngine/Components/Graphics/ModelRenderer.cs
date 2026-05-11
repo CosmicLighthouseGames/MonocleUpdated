@@ -96,9 +96,10 @@ namespace Monocle {
 	}
 	public struct ModelRenderCall : IDrawCall {
 
+		public MonocleArmature armature;
 		public Material material;
 		public int vertexCount;
-		public MonocleModelPart mesh;
+		public MonocleModelMaterialSlot mesh;
 		public Matrix transform;
 		public DepthStencilState DepthStencilState;
 
@@ -116,103 +117,100 @@ namespace Monocle {
 			var RenderOrder = this.RenderOrder;
 			var DepthStencilState = this.DepthStencilState;
 
-			void SetMaterial(Material newMat) {
-				if (mat == newMat) {
-					return;
-				}
-				mat = newMat;
+			var model = mesh;
 
-				var tech = mat.GetTechnique(RenderOrder);
-				var techPass = tech.Passes[0];
 
-				var stencil = DepthStencilState??mat.DepthStencilState??Draw.FallbackDepthState;
-				device.DepthStencilState = stencil;
-
-				var tex = mat.Texture??Draw.Pixel;
-				var pData = mat.parameterData;
-
-				mat.SetParameters(drawcall.transform, tex);
-
-				techPass.Apply();
-			}
-
-			Material newMat;
 			if (Draw.OverridingMaterial != null) {
-				newMat = Draw.OverridingMaterial;
+				mat = Draw.OverridingMaterial;
 			}
 			else {
-				newMat = material;
-			}
-			SetMaterial(newMat);
+                mat = material;
+            }
 
-			mesh.MeshData.SetIndex();
-			mesh.MeshData.RenderTriangleList();
+            var tech = mat.GetTechnique(RenderOrder);
+
+            var stencil = DepthStencilState ?? mat.DepthStencilState ?? Draw.FallbackDepthState;
+            device.DepthStencilState = stencil;
+
+            var tex = mat.Texture ?? Draw.Pixel;
+
+
+            mat.SetParameters(drawcall.transform, tex);
+
+            if (armature != null)
+            {
+				foreach (var part in mesh)
+				{
+					for (int i = 0; i < 4 && part.BoneNames[i] != null && material.BaseEffect.Parameters[$"Bone{i}"] != null; i++)
+					{
+						var bone = armature[part.BoneNames[i]];
+
+                        material.BaseEffect.Parameters[$"Bone{i}"].SetValue(bone.Transform);
+					}
+
+                    foreach (var pass in tech.Passes)
+                    {
+                        pass.Apply();
+                        {
+                            part.MeshData.SetIndex(part.WeightData);
+                            part.MeshData.RenderList();
+                        }
+                    }
+                }
+            }
+			else
+			{
+                foreach (var part in mesh)
+				{
+					foreach (var pass in tech.Passes)
+					{
+						pass.Apply();
+						{
+							part.MeshData.SetIndex(part.WeightData);
+							part.MeshData.RenderList();
+						}
+					}
+				}
+            }
+
+
+
+
 		}
 	}
 	[Tracked(true)]
 	public class ModelRenderer : GraphicsComponent {
 
-		MonocleModel mesh;
-		public MonocleModel Mesh {
-			get => mesh;
+		public MonocleModel Mesh;
 
-			set {
-				if (Entity != null && Entity.Scene != null) {
-					mesh?.Removed();
-					value?.Added();
-				}
+        public MonocleArmature Armature;
 
-				mesh = value;
-				if (mesh != null) {
-					Material[] mats = new Material[mesh.MaterialCount];
-					int i = 0;
-					if (materials != null) {
-						for (i = 0; i < Math.Min(mats.Length, materials.Length); i++) {
-							mats[i] = materials[i];
-						}
-					}
-					for (; i < mats.Length; i++) {
-						mats[i] = Draw.DefaultMaterial;
-					}
-					materials = mats;
-				}
-			}
-		}
-		public Material Material {
+        public Material Material {
 			get {
-				return materials[0];
+				return Mesh.Materials[0];
 			}
 			set {
-				if (materials == null) {
-					materials = new Material[] { value };
-				}
-				else {
-					materials[0] = value;
-				}
+                Mesh.Materials[0] = value;
 			}
 		}
 		public Material[] Materials {
 			get {
-				return materials;
+				return Mesh.Materials;
 			}
 		}
-		protected Material[] materials;
 
 		public Material this[int i] {
 			get {
-				return materials[i];
+				return Mesh.Materials[i];
 			}
 			set {
-				materials[i] = value;
+                Mesh.Materials[i] = value;
 			}
 		}
 
 		public ModelRenderer Parent;
 
 		public List<TransformVertex> Transforms = new List<TransformVertex>();
-
-		public MonocleArmature Armature;
-
 
 		private Matrix GlobalTransform() {
 
@@ -265,30 +263,6 @@ namespace Monocle {
 			Scale = Vector3.One;
 		}
 
-		public override void EntityAdded(Scene scene) {
-			base.EntityAdded(scene);
-			mesh?.Added();
-		}
-		public override void EntityRemoved(Scene scene) {
-			base.EntityRemoved(scene);
-			mesh?.Removed();
-		}
-		public override void Added(Entity entity) {
-			if (entity.Scene != null) {
-				mesh?.Added();
-			}
-			base.Added(entity);
-		}
-		public override void Removed(Entity entity) {
-			if (entity.Scene != null) {
-				mesh?.Removed();
-			}
-			base.Removed(entity);
-		}
-		public override void SceneEnd(Scene scene) {
-			mesh?.Removed();
-			base.SceneEnd(scene);
-		}
 		public override void Update() {
 			base.Update();
 		}
@@ -299,49 +273,32 @@ namespace Monocle {
 			if (Mesh == null)
 				return;
 
-			for (int i = 0; i < mesh.parts.Length; i++) {
-				if (mesh.parts[i].MeshData.PrimitiveCount == 0)
-					continue;
-
-				var mat = materials.Length > 0 ? ((mesh.parts[i].MaterialIndex < materials.Length) ? materials[mesh.parts[i].MaterialIndex] : materials[0]) : Draw.DefaultMaterial;
-				Draw.CustomDrawCall(new ModelRenderCall() {
-					mesh = mesh.parts[i],
-					material = mat,
-					transform = TransMatrix(),
-					RenderOrder = mat.RenderOrder??Draw.CurrentRenderOrder,
-				});
-			}
+			Mesh.Render(TransMatrix(), Armature);
 
 		}
 
 		public ModelRenderer SetMaterial(Material material, int index = 0) {
-			materials[index] = material;
+            Mesh.Materials[index] = material;
 			return this;
 		}
 		public ModelRenderer SetMaterials(params Material[] material) {
-			if (materials == null) {
-				materials = new Material[material.Length];
-			}
-			for (int i = 0; i < Math.Min(materials.Length, material.Length); i++) {
-				materials[i] = material[i];
+			for (int i = 0; i < Math.Min(Mesh.Materials.Length, material.Length); i++) {
+                Mesh.Materials[i] = material[i];
 			}
 			return this;
 		}
 		public ModelRenderer CopyMaterial(Material material, int index = 0) {
-			materials[index] = new Material(material);
+            Mesh.Materials[index] = new Material(material);
 			return this;
 		}
 		public ModelRenderer CopyMaterials(params Material[] material) {
-			if (materials == null) {
-				materials = new Material[material.Length];
-			}
-			for (int i = 0; i < Math.Min(materials.Length, material.Length); i++) {
-				materials[i] = new Material(material[i]);
+			for (int i = 0; i < Math.Min(Mesh.Materials.Length, material.Length); i++) {
+                Mesh.Materials[i] = new Material(material[i]);
 			}
 			return this;
 		}
 		public ModelRenderer SetMesh(MonocleModel mesh) {
-			this.Mesh = mesh;
+			Mesh = mesh;
 			return this;
 		}
 	}

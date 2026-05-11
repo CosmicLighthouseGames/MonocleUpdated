@@ -69,7 +69,9 @@ namespace Monocle {
 					}
 				});
 
-				foreach (var pass in tech.Passes) {
+                Draw.SpriteDrawCall.SetIndex();
+
+                foreach (var pass in tech.Passes) {
 					pass.Apply();
 
 					if (filter.renderTargets != null) {
@@ -85,7 +87,6 @@ namespace Monocle {
 					device.Viewport = viewport;
 					device.BlendState = filter.blendState??BlendState.AlphaBlend;
 					device.DepthStencilState = filter.depthStencilState;
-					Draw.SpriteDrawCall.SetBuffers();
 
 					Draw.SpriteDrawCall.RenderSprite();
 				}
