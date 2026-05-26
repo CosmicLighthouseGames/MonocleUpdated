@@ -14,10 +14,15 @@ using System.Threading;
 
 namespace Monocle
 {
-	public class Atlas
-	{
-		private Dictionary<string, MTexture> textures = new Dictionary<string, MTexture>(StringComparer.OrdinalIgnoreCase);
+	public class Atlas : MultiObjectAtlas<Texture2D> {
+		private Dictionary<string, MTexture> textures = new Dictionary<string, MTexture>();
+		private Dictionary<LoadedAsset, PriorityValue> itemToSprite = new Dictionary<LoadedAsset, PriorityValue>();
 		private Dictionary<string, List<MTexture>> orderedTexturesCache = new Dictionary<string, List<MTexture>>();
+		private Dictionary<PackMetadata, List<PriorityValue>> packs = new Dictionary<PackMetadata, List<PriorityValue>>();
+
+
+
+		public MTexture this[string key] { get => textures[key]; }
 
 		string Folder;
 
@@ -30,6 +35,37 @@ namespace Monocle
 			OnAdded(item);
 		}
 
+		protected override void OnUpdated(string key, PriorityValue value) {
+			textures[key].SetTexture(value.Value);
+		}
+
+		private void Add(string path, Texture2D tex, LoadedAsset asset) {
+			if (!textures.ContainsKey(path))
+				textures[path] = new MTexture(tex);
+
+			if (!packs.ContainsKey(asset.PackMetaData))
+				packs.Add(asset.PackMetaData, new List<PriorityValue>());
+
+			itemToSprite[asset] = Add(path, tex, asset.PackMetaData.IsAssetPack ? asset.PackMetaData.Priority : int.MinValue);
+			packs[asset.PackMetaData].Add(itemToSprite[asset]);
+		}
+		private void Set(string key, Texture2D tex, LoadedAsset item) {
+			if (itemToSprite.ContainsKey(item)) {
+
+				var path = itemToSprite[item];
+
+				path.Value = tex;
+				if (ContainsKey(key) && GetHighestValue(key) == path) {
+					textures[key].SetTexture(tex);
+				}
+				else {
+					Add(key, tex, item);
+				}
+			}
+			else {
+				Add(key, tex, item);
+			}
+		}
 
 		private void OnAdded(LoadedAsset item) {
 			if (item.IsInFolder(Folder)) {
@@ -61,12 +97,8 @@ namespace Monocle
 						if (tex == null)
 							return;
 
-						if (textures.ContainsKey(filepath)) {
-							textures[filepath].SetTexture(tex);
-						}
-						else {
-							textures[filepath] = new MTexture(tex);
-						}
+						Set(filepath, tex, item);
+
 						return;
 					}
 				};
@@ -76,78 +108,48 @@ namespace Monocle
 
 		public event Func<LoadedAsset, Texture2D, Texture2D> OnLoadTexture;
 
-		[DebuggerHidden]
-		public static Texture2D TextureFromStream(BinaryReader reader) {
-
-			var graphics = Engine.Instance.GraphicsDevice;
-
-			byte meta = reader.ReadByte();
-
-
-			int width = reader.ReadUInt16(),
-				height = reader.ReadUInt16();
-
-			Color[] colors = new Color[reader.ReadByte()];
-			Color[] image = new Color[width * height];
-
-			for (int i = 0; i < colors.Length; ++i) {
-				colors[i] = new Color(reader.ReadByte(), reader.ReadByte(), reader.ReadByte(), reader.ReadByte());
-			}
-
-			for (int i = 0; i < image.Length; ++i) {
-				image[i] = colors[reader.ReadByte()];
-			}
-
-			Texture2D texture = new Texture2D(graphics, width, height);
-			texture.SetData(image);
-			
-
-			return texture;
-		}
-
 		public static Atlas FromAssetLoader(string contentFolder, Func<LoadedAsset, Texture2D, Texture2D> loadTex = null) {
 
 			contentFolder = contentFolder.Replace('\\', '/');
 
 			var atlas = new Atlas();
-			atlas.textures = new Dictionary<string, MTexture>();
 			atlas.Folder = contentFolder;
 
 			var graphics = Engine.Instance.GraphicsDevice;
 
 			if (AssetLoader.HasContent($"{contentFolder}.bin")) {
 
-				var content = AssetLoader.GetZipContent($"{contentFolder}.bin");
+				foreach (var con in AssetLoader.GetContents($"{contentFolder}.bin")) {
 
-				foreach (var entry in content.Entries) {
+					var content = con.GetZipContent();
 
-					Texture2D texture;
-					string filepath;
+					foreach (var entry in content.Entries) {
 
-					switch (Path.GetExtension(entry.FullName)) {
-						case ".png":
+						Texture2D texture;
+						string filepath;
 
-							// make nice for dictionary
-							filepath = Path.ChangeExtension(entry.FullName, null);
-							filepath = filepath.Replace('\\', '/');
+						switch (Path.GetExtension(entry.FullName)) {
+							case ".png":
 
-							texture = Texture2D.FromStream(graphics, entry.Open());
+								// make nice for dictionary
+								filepath = Path.ChangeExtension(entry.FullName, null);
+								filepath = filepath.Replace('\\', '/');
 
-						break;
-						default:
+								texture = Texture2D.FromStream(graphics, entry.Open());
+
+							break;
+							default:
+								continue;
+						}
+						if (texture == null)
 							continue;
-					}
-					if (texture == null)
-						continue;
 
-					// load
-					if (atlas.textures.ContainsKey(filepath)) {
-						atlas.textures[filepath].SetTexture(texture);
-					}
-					else {
-						atlas.textures.Add(filepath, new MTexture(texture));
+						// load
+
+						atlas.Set(filepath, texture, con);
 					}
 				}
+
 			}
 
 			foreach (var item in AssetLoader.GetContentInFolder(contentFolder)) {
@@ -179,50 +181,33 @@ namespace Monocle
 					texture = loadTex(item, texture);
 				}
 				// load
-				if (atlas.textures.ContainsKey(filepath)) {
-					atlas.textures[filepath].SetTexture(texture);
-				}
-				else {
-					atlas.textures.Add(filepath, new MTexture(texture));
-				}
+
+				atlas.Set(filepath, texture, item);
 
 			}
-
-			//AssetLoader.OnAssetUpdatedEvent(contentFolder, (s) => {
-
-			//	var item = AssetLoader.GetContent(s);
-			//	Texture2D tex = null;
-			//	Engine.LockGraphicsDevice(() => {
-			//		tex = Texture2D.FromStream(graphics, item.ContentStream);
-			//	});
-
-			//	var filepath = Path.ChangeExtension(item.Path, null);
-			//	filepath = filepath.Replace('\\', '/');
-			//	filepath = filepath.Substring(contentFolder.Length + 1);
-
-			//	atlas.textures[s] = new MTexture(tex);
-			//});
 
 			return atlas;
 		}
 
-		public MTexture this[string id]
-		{
-			[DebuggerHidden]
-			get { return textures[id]; }
-			set { textures[id] = value; }
+		public void SetPackEnabled(PackMetadata metadata, bool value) {
+			if (!packs.ContainsKey(metadata))
+				return;
+			foreach (var item in packs[metadata]) {
+				item.Enabled = value;
+			}
 		}
+
 
 		public bool Has(string id)
 		{
-			return textures.ContainsKey(id);
+			return ContainsKey(id);
 		}
 
 		public MTexture GetOrDefault(string id, MTexture defaultTexture)
 		{
 			if (String.IsNullOrEmpty(id) || !Has(id))
 				return defaultTexture;
-			return textures[id];
+			return this[id];
 		}
 
 		public List<MTexture> GetAtlasSubtextures(string key)
@@ -257,8 +242,8 @@ namespace Monocle
 
 		private MTexture GetAtlasSubtextureFromAtlasAt(string key, int index)
 		{
-			if (index == 0 && textures.ContainsKey(key))
-				return textures[key];
+			if (index == 0 && ContainsKey(key))
+				return this[key];
 
 			var indexString = index.ToString();
 			var startLength = indexString.Length;
@@ -284,9 +269,9 @@ namespace Monocle
 
 		public void Dispose()
 		{
-			foreach (var texture in textures.Values)
-				texture.Dispose();
-			textures.Clear();
+			foreach (var texture in this)
+				texture.Value.Dispose();
+			Clear();
 			orderedTexturesCache.Clear();
 		}
 	

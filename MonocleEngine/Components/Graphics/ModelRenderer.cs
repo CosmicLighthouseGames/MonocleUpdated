@@ -181,30 +181,45 @@ namespace Monocle {
 	[Tracked(true)]
 	public class ModelRenderer : GraphicsComponent {
 
-		public MonocleModel Mesh;
+        public Material[] Materials { get; private set; }
+
+		MonocleModel mesh;
+
+        public MonocleModel Mesh
+		{
+			get
+			{
+				return mesh;
+			}
+			set
+			{
+				mesh = value;
+				if (mesh == null)
+					return;
+				var oldMaterials = Materials;
+				Materials = new Material[Math.Max(mesh.Count, 1)];
+				if (oldMaterials != null)
+					SetMaterials(oldMaterials);
+			}
+		}
 
         public MonocleArmature Armature;
 
         public Material Material {
 			get {
-				return Mesh.Materials[0];
+				return Materials[0];
 			}
 			set {
-                Mesh.Materials[0] = value;
-			}
-		}
-		public Material[] Materials {
-			get {
-				return Mesh.Materials;
+				Materials[0] = value;
 			}
 		}
 
 		public Material this[int i] {
 			get {
-				return Mesh.Materials[i];
+				return Materials[i];
 			}
 			set {
-                Mesh.Materials[i] = value;
+                Materials[i] = value;
 			}
 		}
 
@@ -261,6 +276,7 @@ namespace Monocle {
 
 			Rotation = Quaternion.Identity;
 			Scale = Vector3.One;
+			Materials = new Material[1];
 		}
 
 		public override void Update() {
@@ -273,27 +289,27 @@ namespace Monocle {
 			if (Mesh == null)
 				return;
 
-			Mesh.Render(TransMatrix(), Armature);
+			Mesh.Render(TransMatrix(), Armature, Materials);
 
 		}
 
 		public ModelRenderer SetMaterial(Material material, int index = 0) {
-            Mesh.Materials[index] = material;
+            Materials[index] = material;
 			return this;
 		}
 		public ModelRenderer SetMaterials(params Material[] material) {
-			for (int i = 0; i < Math.Min(Mesh.Materials.Length, material.Length); i++) {
-                Mesh.Materials[i] = material[i];
+			for (int i = 0; i < Math.Min(Materials.Length, material.Length); i++) {
+                Materials[i] = material[i];
 			}
 			return this;
 		}
 		public ModelRenderer CopyMaterial(Material material, int index = 0) {
-            Mesh.Materials[index] = new Material(material);
+            Materials[index] = new Material(material);
 			return this;
 		}
 		public ModelRenderer CopyMaterials(params Material[] material) {
-			for (int i = 0; i < Math.Min(Mesh.Materials.Length, material.Length); i++) {
-                Mesh.Materials[i] = new Material(material[i]);
+			for (int i = 0; i < Math.Min(Materials.Length, material.Length); i++) {
+                Materials[i] = new Material(material[i]);
 			}
 			return this;
 		}

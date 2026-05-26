@@ -85,6 +85,18 @@ namespace Monocle {
         public int width, height, depth;
 		public Dictionary<string, object> values;
 
+        public Dictionary<string, object> GetFullValues() {
+            var val = new Dictionary<string, object>(values);
+
+            val["X"] = x;
+            val["Z"] = z;
+            val["Width"] = width;
+            val["Height"] = height;
+            val["Depth"] = depth;
+
+            return val;
+        }
+
 		public static EntityData Default {
 			get {
 				EntityData ret = new EntityData();

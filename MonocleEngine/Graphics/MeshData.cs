@@ -1943,14 +1943,12 @@ namespace Monocle {
 
     public class MonocleModel : ReadOnlyCollection<MonocleModelMaterialSlot>
     {
-		public Material[] Materials { get; private set; }
 
         public MonocleModel(IList<MonocleModelMaterialSlot> list) : base(list)
         {
-            Materials = new Material[list.Count];
         }
 
-        public void Render(Matrix matrix)
+        public void Render(Matrix matrix, params Material[] Materials)
 		{
 
 			for (int i = 0; i < Count; i++)
@@ -1967,7 +1965,7 @@ namespace Monocle {
                 });
             }
         }
-        public void Render(Matrix matrix, MonocleArmature armature)
+        public void Render(Matrix matrix, MonocleArmature armature, params Material[] Materials)
         {
 
 			for (int i = 0; i < Count; i++)
