@@ -1,81 +1,59 @@
-Texture2D<float4> Texture : register(t0);
-sampler Texture_Sampler = sampler_state {
-	Texture = (Texture);
-	MagFilter = Point;
-	MinFilter = Point;
-	AddressU = Clamp;
-	AddressV = Clamp;
+#include "../material_header.fxh"
+
+BasicMaterialHeader()
+BoneMatrices()
+
+DECLARE_TEXTURE(Texture, 0, Point, Clamp)
+
+#define BasicVSStructs()
+struct VertexInput
+{
+    MonocleVertexInput()
+    MonocleBoneWeights()
+};
+struct VertexOutput
+{
+    MonocleVertexOutput()
 };
 
-float4 DiffuseColor;
-float4x4 World : register(vs, c0);
-float4x4 WorldViewProj : register(vs, c4);
-
-struct VSInput
+#define BasicPSStruct()
+struct ShaderOutput
 {
-	float4 position		: SV_Position;
-	float4 color		: COLOR0;
-    float2 texCoord		: TEXCOORD0;
+    FragmentTarget(color, 0)
+    FragmentTarget(normal, 1)
+    float depth : SV_Depth;
 };
 
-struct VSOutput
+VertexOutput VertexShader_Main(VertexInput input)
 {
-	float4 position		: SV_Position;
-	float4 color		: COLOR0;
-    float2 texCoord		: TEXCOORD0;
-    float2 depthBuffer	: TEXCOORD1;
-};
-
-struct PSOutput
-{
-	float4 color		: SV_Target0;
-	float depth			: SV_Depth;
-};
-
-VSOutput VertexShader_Main (VSInput input)
-{
-	VSOutput output;
+    VertexOutput output;
+    
+    output.position = WorldPositionSkinned(input.position, input);
+    output.texCoord = MappedTexCoord(input.texCoord, Texture);
+    output.normal = WorldNormal(input.normal);
+    output.color = input.color * DiffuseColor;
+    output.depthBuffer = output.position.zw;
 	
-	float4 position = input.position;
-	position = mul(position, World);
-	position = mul(position, WorldViewProj);
-	output.position = position;
-    output.depthBuffer = float2(position[2], 0);
-	
-	float2 texCoord = input.texCoord;
-	output.texCoord = texCoord;
-
-    output.color = input.color;
-	
-	return output;
+    return output;
 }
-PSOutput PixelShader_Main(VSOutput input)
+ShaderOutput PixelShader_Main(VertexOutput input)
 {
-	PSOutput retval;
+    ShaderOutput retval;
 	
-	float4 c = tex2D(Texture_Sampler, input.texCoord) * DiffuseColor * input.color;
+    float4 texColor = tex2D(TextureSampler, input.texCoord);
+    texColor *= input.color;
 	
-	if (c.a >= 0.0001)
-		retval.depth = input.depthBuffer[0];
-	else
-		retval.depth = 1;
+    bool visible = texColor.a > 0;
 	
-	retval.color = c;
+    retval.color = texColor * visible;
+    retval.normal = float4(input.normal / 2 + 0.5, 1) * visible;
 	
+    retval.depth = input.depthBuffer.r * visible;
+
 	
-	return retval;
+    return retval;
 }
 
-technique Opaque
-{
-	pass
-	{
-#if SM4
-        VertexShader = compile vs_4_0_level_9_1 VertexShader_Main();
-        PixelShader = compile ps_4_0_level_9_1 PixelShader_Main();
-#else
-        VertexShader = compile vs_3_0 VertexShader_Main();
-        PixelShader = compile ps_3_0 PixelShader_Main();
-#endif
-	}
-}
+MaterialTechniqueStart(Opaque)
+MaterialPass(VertexShader_Main, PixelShader_Main)
+MaterialTechniqueEnd()

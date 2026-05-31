@@ -14,7 +14,7 @@ using System.Threading;
 
 namespace Monocle
 {
-	public class Atlas : MultiObjectAtlas<Texture2D> {
+	public class TextureAtlas : MultiObjectAtlas<Texture2D> {
 		private Dictionary<string, MTexture> textures = new Dictionary<string, MTexture>();
 		private Dictionary<LoadedAsset, PriorityValue> itemToSprite = new Dictionary<LoadedAsset, PriorityValue>();
 		private Dictionary<string, List<MTexture>> orderedTexturesCache = new Dictionary<string, List<MTexture>>();
@@ -26,7 +26,7 @@ namespace Monocle
 
 		string Folder;
 
-		public Atlas() {
+		public TextureAtlas() {
 			AssetLoader.OnAssetAdded += OnAdded;
 			AssetLoader.OnAssetUpdated += OnUpdated;
 		}
@@ -108,11 +108,11 @@ namespace Monocle
 
 		public event Func<LoadedAsset, Texture2D, Texture2D> OnLoadTexture;
 
-		public static Atlas FromAssetLoader(string contentFolder, Func<LoadedAsset, Texture2D, Texture2D> loadTex = null) {
+		public static TextureAtlas FromAssetLoader(string contentFolder, Func<LoadedAsset, Texture2D, Texture2D> loadTex = null) {
 
 			contentFolder = contentFolder.Replace('\\', '/');
 
-			var atlas = new Atlas();
+			var atlas = new TextureAtlas();
 			atlas.Folder = contentFolder;
 
 			var graphics = Engine.Instance.GraphicsDevice;

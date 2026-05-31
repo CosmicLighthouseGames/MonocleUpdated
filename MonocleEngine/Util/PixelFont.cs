@@ -359,13 +359,13 @@ namespace Monocle
 		{
 		}
 		
-		public PixelFont AddFontSize(string path, Atlas atlas = null)
+		public PixelFont AddFontSize(string path, TextureAtlas atlas = null)
 		{
 			var data = Calc.LoadXML(path)["font"];
 			return AddFontSize(path, data, atlas);
 		}
 
-		public PixelFont AddFontSize(string path, XmlElement data, Atlas atlas = null)
+		public PixelFont AddFontSize(string path, XmlElement data, TextureAtlas atlas = null)
 		{
 			// check if size already exists
 			var size = data["info"].AttrFloat("size");

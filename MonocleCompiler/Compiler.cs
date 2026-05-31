@@ -1,56 +1,103 @@
 #pragma warning disable CA1416
 
-using System.Reflection;
 using System;
-using System.IO;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Diagnostics;
-using System.Threading;
-using System.Text.RegularExpressions;
-using System.Xml;
-using System.Reflection.PortableExecutable;
+using System.IO;
 using System.IO.Compression;
+using System.Linq;
+using System.Net.Http;
+using System.Reflection;
+using System.Reflection.PortableExecutable;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Xml;
+using System.Xml.Serialization;
 
 namespace MonocleCompiler {
 	
-	public struct ImageMeta {
+	public partial class ImageMeta {
 		public string type;
 		public int byteAmount;
 		public bool threeDimensions;
-		public Dictionary<string, string> fullData;
+
+		public void SetData(string[] data)
+		{
+
+			foreach (var str in data)
+			{
+				string[] split = str.Split(':');
+				var field = typeof(ImageMeta).GetField(split[0]);
+
+                if (field != null)
+				{
+					if (field.FieldType == typeof(int))
+					{
+						field.SetValue(this, Convert.ToInt32(split[1]));
+                    }
+                    else if (field.FieldType == typeof(float))
+                    {
+                        field.SetValue(this, Convert.ToSingle(split[1]));
+                    }
+                    else if (field.FieldType == typeof(string))
+                    {
+                        field.SetValue(this, split[1]);
+                    }
+                    else if (field.FieldType == typeof(bool))
+                    {
+                        field.SetValue(this, Convert.ToBoolean(split[1]));
+                    }
+                }
+			}
+		}
+
+		internal void Copy(ImageMeta other)
+		{
+			foreach (var field in typeof(ImageMeta).GetFields(BindingFlags.Public | BindingFlags.Instance))
+			{
+				var val = field.GetValue(other);
+
+                field.SetValue(this, val);
+			}
+		}
 	}
 
 	public class CompilerBase {
 
-		public static string EffectsCompiler;
+		public virtual ImageMeta DefaultImageMeta =>
+			new ImageMeta()
+			{
+				type = "image",
+				byteAmount = 1,
+				threeDimensions = false,
+			};
 
-		Dictionary<string, long> oldEditTimes = new Dictionary<string, long>(),
-		currentEditTimes = new Dictionary<string, long>();
+		public string EffectsCompilerPath;
 
-		Dictionary<string, byte[]> binaryData;
 
-		public string RawFilesPath, CompiledPath, DumpPath;
+		public bool IsDebug { get; private set; }
+		public string ProjectFolder => projectFolder;
 
-		public bool isDebug { get; private set; }
 
-		public string solutionPath, projectFolder, projectName, contentPath, engineContentPath, compiledPath;
+		string solutionPath, projectFolder, userContentFolder, engineContentFolder, compiledBinaryFolder, outputFolder;
 
 		public Dictionary<string, string> projectPaths;
 
 		public List<string> IgnoredFolders = new List<string>();
 
-		string[] args;
 
-		[DebuggerHidden]
-		public CompilerBase(string[] args) {
+		public CompilerBase(string[] args)
+		{
+			projectPaths = new Dictionary<string, string>();
+
 			string dir = Assembly.GetExecutingAssembly().Location;
-			this.args = args;
 
 			dir = Path.GetDirectoryName(dir)!;
 			while (!string.IsNullOrWhiteSpace(dir) && solutionPath == null) {
-				foreach (var path in Directory.GetFiles(dir)) {
+				foreach (var path in Directory.GetFiles(dir, "*.sln")) {
 					if (path.EndsWith(".sln")) {
 						solutionPath = path;
 						break;
@@ -59,22 +106,55 @@ namespace MonocleCompiler {
 				dir = Path.GetDirectoryName(dir)!;
 			}
 
-			SetValues();
+			SetValues(args);
 		}
 
-		private void SetValues() {
+		public void SetValues(string[] args) {
 
-			projectPaths = new Dictionary<string, string>();
-			isDebug = args[1].Contains("Debug");
+			projectPaths.Clear();
 
-			foreach (var line in File.ReadLines(solutionPath)) {
+			foreach (var line in File.ReadLines(solutionPath))
+			{
 				var match = Regex.Match(line, @"Project\(""{.+?}""\) = ""(.+?)"", ""(.+?)"".+");
-				if (match.Success) {
+				if (match.Success)
+				{
 					projectPaths.Add(match.Groups[1].Value, match.Groups[2].Value);
 				}
 			}
 
-			if (EffectsCompiler == null) {
+			for (int i = 0; i < args.Length; i++)
+			{
+				switch (args[i])
+				{
+					case "-debug":
+						IsDebug = true;
+						break;
+					case "-project":
+						projectFolder = Path.GetDirectoryName(Path.Combine(Path.GetDirectoryName(solutionPath)!, projectPaths[args[i + 1]]))!;
+
+						i++;
+
+						break;
+					case "-output":
+						outputFolder = Path.GetDirectoryName(Path.Combine(Path.GetDirectoryName(solutionPath)!, args[i + 1]))!;
+
+						break;
+				}
+			}
+
+			userContentFolder = Path.Combine(projectFolder, "Content");
+
+			if (projectPaths.ContainsKey("Monocle"))
+			{
+				engineContentFolder = Path.Combine(Path.GetDirectoryName(Path.Combine(Path.GetDirectoryName(solutionPath)!, projectPaths["Monocle"]))!, "Content");
+			}
+			else
+			{
+				engineContentFolder = null;
+			}
+			compiledBinaryFolder = Path.Combine(projectFolder, "obj", "Monocle");
+
+			if (EffectsCompilerPath == null) {
 				List<string> tocheck = new List<string>();
 
 				string versionNeeded = null;
@@ -121,7 +201,7 @@ namespace MonocleCompiler {
 							if (Directory.Exists(Path.Combine(dir, versionNeeded, "tools"))) {
 								foreach (var file in Directory.EnumerateFiles(Path.Combine(dir, versionNeeded, "tools"), "*", SearchOption.AllDirectories)) {
 									if (file.EndsWith("mgfxc.exe")) {
-										EffectsCompiler = Path.GetDirectoryName(file)!;
+										EffectsCompilerPath = Path.GetDirectoryName(file)!;
 										break;
 									}
 								}
@@ -130,43 +210,24 @@ namespace MonocleCompiler {
 					}
 				}
 
-				if (EffectsCompiler == null)
+				if (EffectsCompilerPath == null)
 					throw new Exception();
-
 			}
 
-			projectFolder = Path.GetDirectoryName(Path.Combine(Path.GetDirectoryName(solutionPath)!, projectPaths[args[0]]))!;
-			contentPath = Path.Combine(projectFolder, "Content");
-
-			if (projectPaths.ContainsKey("Monocle")) {
-				engineContentPath = Path.Combine(Path.GetDirectoryName(Path.Combine(Path.GetDirectoryName(solutionPath)!, projectPaths["Monocle"]))!, "Content");
-			}
-			else {
-				engineContentPath = null;
-			}
-			compiledPath = Path.Combine(projectFolder, "obj", "Monocle");
 		}
 
-		public virtual ImageMeta DefaultImageMeta => 
-			new ImageMeta() {
-				type = "image",
-				byteAmount = 1,
-				threeDimensions = false,
-				fullData = new Dictionary<string, string>() {
-					{"type", "image" },
-					{"byteAmount", "1" },
-					{"threeDimensions", "false" },
-				}
-			};
 
 
 		public void CompileSprites() {
-				
+
+			Dictionary<string, long> oldEditTimes = new Dictionary<string, long>(),
+				currentEditTimes = new Dictionary<string, long>();
+
 			bool dirty = false;
 
-			RawFilesPath = Path.Combine(contentPath, "Graphics");
-			CompiledPath = Path.Combine(compiledPath, "graphics");
-			DumpPath = Path.Combine(projectFolder, args[1], "Content", "Graphics");
+			var RawFilesPath = Path.Combine(userContentFolder, "Graphics");
+			var CompiledPath = Path.Combine(compiledBinaryFolder, "Graphics");
+			var DumpPath = Path.Combine(outputFolder, "Content", "Graphics");
 
 			if (!Directory.Exists(DumpPath)) {
 				Directory.CreateDirectory(DumpPath);
@@ -174,14 +235,12 @@ namespace MonocleCompiler {
 			if (!Directory.Exists(CompiledPath)) {
 				Directory.CreateDirectory(CompiledPath);
 			}
-			else if (File.Exists(Path.Combine(CompiledPath, "editTime.d"))) {
+			else if (File.Exists(Path.Combine(CompiledPath, "editTime.d")) && IsDebug) {
 				try {
 					using (var stream = new BinaryReader(File.Open(Path.Combine(CompiledPath, "editTime.d"), FileMode.Open))) {
-#if !DEBUG
 						while (stream.BaseStream.Position < stream.BaseStream.Length) {
 							oldEditTimes.Add(stream.ReadString(), stream.ReadInt64());
 						}
-#endif
 					}
 				}
 				catch {
@@ -189,40 +248,39 @@ namespace MonocleCompiler {
 				}
 			}
 
-			if (Directory.Exists(RawFilesPath)) {
-				
-				foreach (var file in Directory.EnumerateFiles(RawFilesPath, "*.png", SearchOption.AllDirectories)) {
-					string localPath = file.Remove(0, RawFilesPath.Length + 1);
-					long editTime = File.GetLastWriteTime(file).Ticks;
-					currentEditTimes.Add(localPath, editTime);
+			foreach (var file in EnumAllFiles("Graphics", "*.png")) {
+				long editTime = File.GetLastWriteTime(file.fullPath).Ticks;
+				currentEditTimes.Add(file.localPath, editTime);
 
-					if (dirty || !oldEditTimes.ContainsKey(localPath) || oldEditTimes[localPath] != editTime)
-						dirty = true;
-				}
-				ImageMeta meta = DefaultImageMeta;
-
-				foreach (var dir in Directory.EnumerateDirectories(RawFilesPath)) {
-					using FileStream stream = File.Open(Path.Combine(CompiledPath, Path.GetFileName(dir)) + ".bin", FileMode.Create);
-					using ZipArchive archive = new ZipArchive(stream, ZipArchiveMode.Create);
-
-					var localMeta = File.Exists(dir + ".meta") ? ChangeMeta(File.ReadAllLines(dir + ".meta"), meta) : meta;
-
-					CompileSprites(dir, dir, archive, localMeta);
-
-				}
-
-				CopyFiles();
+				if (dirty || !oldEditTimes.ContainsKey(file.localPath) || oldEditTimes[file.localPath] != editTime)
+					dirty = true;
 			}
+			ImageMeta meta = DefaultImageMeta;
+
+			foreach (var dir in EnumDirectories("Graphics")) {
+				using FileStream stream = File.Open(Path.Combine(CompiledPath, Path.GetFileName(dir)) + ".bin", FileMode.Create);
+				using ZipArchive archive = new ZipArchive(stream, ZipArchiveMode.Create);
+
+				var localMeta = FileExists(dir + ".meta") ? ChangeMeta(ReadAllLines(dir + ".meta")!, meta) : meta;
+
+				CompileSprites(dir, dir, CompiledPath, archive, localMeta);
+
+			}
+
+			CopyFiles(CompiledPath, DumpPath);
+
 			currentEditTimes.Clear();
 			oldEditTimes.Clear();
 		}
-		//[DebuggerHidden]
-		public void CompileEffects() {
+		public void CompileEffects()
+		{
+			Dictionary<string, long> oldEditTimes = new Dictionary<string, long>(),
+			currentEditTimes = new Dictionary<string, long>();
 
 			bool dirty = false;
-			RawFilesPath = Path.Combine(contentPath, "Effects");
-			CompiledPath = Path.Combine(compiledPath, "effects");
-			DumpPath = Path.Combine(projectFolder, args[1], "Content", "Effects");
+			var RawFilesPath = Path.Combine(userContentFolder, "Effects");
+			var CompiledPath = Path.Combine(compiledBinaryFolder, "Effects");
+			var DumpPath = Path.Combine(outputFolder, "Content", "Effects");
 
 			if (!Directory.Exists(DumpPath)) {
 				Directory.CreateDirectory(DumpPath);
@@ -230,7 +288,7 @@ namespace MonocleCompiler {
 			if (!Directory.Exists(CompiledPath)) {
 				Directory.CreateDirectory(CompiledPath);
 			}
-			else if (File.Exists(Path.Combine(CompiledPath, "editTime.d"))) {
+			else if (File.Exists(Path.Combine(CompiledPath, "editTime.d")) && IsDebug) {
 				try {
 					using (var stream = new BinaryReader(File.Open(Path.Combine(CompiledPath, "editTime.d"), FileMode.Open))) {
 						while (stream.BaseStream.Position < stream.BaseStream.Length) {
@@ -243,26 +301,12 @@ namespace MonocleCompiler {
 				}
 			}
 
-			IEnumerable<(string, string)> GetFiles() {
 
-				if (Directory.Exists(RawFilesPath)) {
-					foreach (var f in Directory.EnumerateFiles(RawFilesPath, "*.fx", SearchOption.AllDirectories))
-						yield return (RawFilesPath, f);
-				}
-				if (engineContentPath != null) {
-					string monoclePath = Path.Combine(engineContentPath, "Effects");
-					foreach (var f in Directory.EnumerateFiles(monoclePath, "*", SearchOption.AllDirectories))
-						yield return (monoclePath, f);
-				}
+			foreach (var file in EnumAllFiles("Effects", "*.fx")) {
+				long editTime = File.GetLastWriteTime(file.fullPath).Ticks;
+				string dir = Path.GetDirectoryName(file.fullPath)!;
 
-			}
-
-			foreach (var file in GetFiles()) {
-				string localPath = file.Item2.Remove(0, file.Item1.Length + 1);
-				long editTime = File.GetLastWriteTime(file.Item2).Ticks;
-				string dir = Path.GetDirectoryName(file.Item2)!;
-
-				foreach (var line in File.ReadAllLines(file.Item2)) {
+				foreach (var line in ReadAllLines(file.localPath)!) {
 					var reg = Regex.Match(line, "#include \"(.+?)\"");
 					if (reg.Success) {
 						string combined = Path.Combine(dir, reg.Groups[1].Value);
@@ -272,20 +316,41 @@ namespace MonocleCompiler {
 							throw new FileNotFoundException();
 					}
 				}
-				currentEditTimes.Add(localPath, editTime);
+				currentEditTimes.Add(file.localPath, editTime);
 
-				if (!oldEditTimes.ContainsKey(localPath) || oldEditTimes[localPath] != editTime)
+				if (!oldEditTimes.ContainsKey(file.localPath) || oldEditTimes[file.localPath] != editTime)
 					dirty = true;
 			}
 
 			if (dirty) {
 
-				Console.WriteLine("--- Compiling Shaders");
+                string effectCompFolder = Path.Combine(compiledBinaryFolder, "EffectCompile");
+
+                if (Directory.Exists(Path.Combine(compiledBinaryFolder, "EffectCompile")))
+				{
+					Directory.Delete(Path.Combine(compiledBinaryFolder, "EffectCompile"), true);
+				}
+				Directory.CreateDirectory(Path.Combine(compiledBinaryFolder, "EffectCompile"));
+
+                foreach (var file in EnumAllFiles("Effects", "*.fx"))
+                {
+					string path = Path.Combine(compiledBinaryFolder, "EffectCompile", file.localPath.Substring(8));
+                    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                    File.Copy(file.fullPath, path, true);
+                }
+                foreach (var file in EnumAllFiles("Effects", "*.fxh"))
+                {
+                    string path = Path.Combine(compiledBinaryFolder, "EffectCompile", file.localPath.Substring(8));
+                    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                    File.Copy(file.fullPath, path, true);
+                }
+
+                Console.WriteLine("--- Compiling Shaders");
 
 				using (Process cmd = new Process()) {
 					ProcessStartInfo info = new ProcessStartInfo();
 					info.FileName = "cmd.exe";
-					info.WorkingDirectory = EffectsCompiler;
+					info.WorkingDirectory = EffectsCompilerPath;
 					info.RedirectStandardInput = true;
 					info.RedirectStandardOutput = true;
 					info.RedirectStandardError = true;
@@ -296,17 +361,27 @@ namespace MonocleCompiler {
 
 
 					Task.Factory.StartNew(() => {
-						using (var sw = cmd.StandardInput) {
+						try
+						{
+							using (var sw = cmd.StandardInput)
+							{
 
-							foreach (var file in GetFiles()) {
+								foreach (var file in Directory.EnumerateFiles(effectCompFolder, "*.fx", SearchOption.AllDirectories))
+								{
 
-								string localPath = file.Item2.Remove(0, file.Item1.Length + 1);
-								if ((!oldEditTimes.ContainsKey(localPath) || oldEditTimes[localPath] != currentEditTimes[localPath])) {
+									string localPath = file.Substring(effectCompFolder.Length + 1);
+									string checkPath = Path.Combine("Effects", localPath);
+									if ((!oldEditTimes.ContainsKey(checkPath) || oldEditTimes[checkPath] != currentEditTimes[checkPath]))
+									{
 
-									Console.WriteLine($"--- Compiling {localPath}");
-									CompileShader(sw, file.Item2, localPath);
+										Console.WriteLine($"--- Compiling {localPath}");
+										CompileShader(sw, file, $"{CompiledPath}\\{localPath}");
+									}
 								}
 							}
+						}
+						catch (Exception e) {
+							Console.WriteLine(e.ToString());
 						}
 					});
 					Task.Factory.StartNew(() => {
@@ -318,8 +393,8 @@ namespace MonocleCompiler {
 								Console.WriteLine(sr.ReadLine());
 								//*/
 							}
-						}
-					});
+                        }
+                    });
 					using (var sr = cmd.StandardError) {
 						bool error = false;
 						while (!sr.EndOfStream) {
@@ -336,8 +411,9 @@ namespace MonocleCompiler {
 						}
 					}
 
-				}
-				WriteEditTimes();
+                }
+                Directory.Delete(Path.Combine(compiledBinaryFolder, "EffectCompile"), true);
+                WriteEditTimes(CompiledPath, currentEditTimes);
 			}
 			else {
 
@@ -370,12 +446,11 @@ namespace MonocleCompiler {
 			oldEditTimes.Clear();
 		}
 		public void CopyFromContent(string regex, string replace = null!) {
-			string folder = Path.GetDirectoryName(Path.Combine(Path.GetDirectoryName(solutionPath)!, projectPaths[args[0]]))!;
-			string contentPath = Path.Combine(folder, "Content");
-			DumpPath = Path.Combine(folder, args[1], "Content");
 
-			foreach (var item in Directory.EnumerateFiles(contentPath, "*", SearchOption.AllDirectories)) {
-				string sub = item.Replace(contentPath + "\\", "");
+			var dumpPath = Path.Combine(outputFolder, "Content");
+
+			foreach (var item in Directory.EnumerateFiles(userContentFolder, "*", SearchOption.AllDirectories)) {
+				string sub = item.Replace(userContentFolder + "\\", "");
 				if (sub.StartsWith("obj\\") || sub.StartsWith("bin\\"))
 					continue;
 
@@ -395,21 +470,19 @@ namespace MonocleCompiler {
 						sub = Regex.Replace(sub, regex, replace);
 					}
 
-					if (!Directory.Exists(Path.GetDirectoryName(Path.Combine(DumpPath, sub)))) {
-						Directory.CreateDirectory(Path.GetDirectoryName(Path.Combine(DumpPath, sub))!);
+					if (!Directory.Exists(Path.GetDirectoryName(Path.Combine(dumpPath, sub)))) {
+						Directory.CreateDirectory(Path.GetDirectoryName(Path.Combine(dumpPath, sub))!);
 					}
 					
-					File.Copy(item, Path.Combine(DumpPath, sub), true);
+					File.Copy(item, Path.Combine(dumpPath, sub), true);
 				}
 			}
 		}
 		public void CopyFromContent(string regex, Action<string, string, string> onFile) {
-			string folder = Path.GetDirectoryName(Path.Combine(Path.GetDirectoryName(solutionPath)!, projectPaths[args[0]]))!;
-			string contentPath = Path.Combine(folder, "Content");
-			DumpPath = Path.Combine(folder, args[1], "Content");
+			var dumpPath = Path.Combine(outputFolder, "Content");
 
-			foreach (var item in Directory.EnumerateFiles(contentPath, "*", SearchOption.AllDirectories)) {
-				string sub = item.Replace(contentPath + "\\", "");
+			foreach (var item in Directory.EnumerateFiles(userContentFolder, "*", SearchOption.AllDirectories)) {
+				string sub = item.Replace(userContentFolder + "\\", "");
 				if (sub.StartsWith("obj\\") || sub.StartsWith("bin\\"))
 					continue;
 
@@ -425,7 +498,7 @@ namespace MonocleCompiler {
 				sub = sub.Replace('\\', '/');
 
 				if (Regex.Match(sub, regex).Success) {
-					onFile(contentPath, DumpPath, sub);
+					onFile(userContentFolder, dumpPath, sub);
 				}
 			}
 		}
@@ -436,34 +509,135 @@ namespace MonocleCompiler {
 			});
 		}
 		public void CopyFile(string file, Action<string, string, string> onFile) {
-			string folder = Path.GetDirectoryName(Path.Combine(Path.GetDirectoryName(solutionPath)!, projectPaths[args[0]]))!;
-			string contentPath = Path.Combine(folder, "Content");
-			DumpPath = Path.Combine(folder, args[1], "Content");
+			var dumpPath = Path.Combine(outputFolder, "Content");
 
 			file = file.Replace('\\', '/');
 
-			if (File.Exists(Path.Combine(contentPath, file))) {
-				onFile(contentPath, DumpPath, file);
+			if (File.Exists(Path.Combine(userContentFolder, file))) {
+				onFile(userContentFolder, dumpPath, file);
 
 			}
 		}
 
 
-		void WriteEditTimes() {
+		IEnumerable<string> EnumDirectories(string directory)
+		{
+			IEnumerable<string> ed(string directory)
+			{
 
-			using (var sw = new BinaryWriter(File.Open(Path.Combine(CompiledPath, "editTime.d"), FileMode.Create))) {
-				foreach (var kp in currentEditTimes) {
+				if (Directory.Exists(Path.Combine(userContentFolder, directory)))
+				{
+					foreach (var dir in Directory.EnumerateDirectories(Path.Combine(userContentFolder, directory)))
+					{
+						yield return dir.Substring(userContentFolder.Length + 1);
+					}
+				}
+				if (Directory.Exists(Path.Combine(engineContentFolder, directory)))
+				{
+					foreach (var dir in Directory.EnumerateDirectories(Path.Combine(engineContentFolder, directory)))
+					{
+						yield return dir.Substring(engineContentFolder.Length + 1);
+					}
+				}
+			}
+
+			foreach (var dir in ed(directory).Distinct())
+			{
+				yield return dir;
+			}
+
+
+			yield break;
+		}
+		IEnumerable<string> EnumAllDirectories(string directory)
+		{
+			IEnumerable<string> ed(string directory)
+			{
+				foreach (var dir in Directory.EnumerateDirectories(Path.Combine(userContentFolder, directory), "*", SearchOption.AllDirectories))
+				{
+					yield return dir.Substring(userContentFolder.Length + 1);
+				}
+				foreach (var dir in Directory.EnumerateDirectories(Path.Combine(engineContentFolder, directory), "*", SearchOption.AllDirectories))
+				{
+					yield return dir.Substring(engineContentFolder.Length + 1);
+				}
+			}
+
+			foreach (var dir in ed(directory).Distinct())
+			{
+				yield return dir;
+			}
+
+			yield break;
+		}
+		IEnumerable<(string fullPath, string localPath)> EnumFiles(string directory, string search = "*")
+		{
+			if (Directory.Exists(Path.Combine(userContentFolder, directory)))
+			{
+				foreach (var file in Directory.EnumerateFiles(Path.Combine(userContentFolder, directory), search))
+				{
+					yield return (file, file.Substring(userContentFolder.Length + 1));
+				}
+            }
+            if (Directory.Exists(Path.Combine(engineContentFolder, directory)))
+			{
+				foreach (var file in Directory.EnumerateFiles(Path.Combine(engineContentFolder, directory), search))
+				{
+					yield return (file, file.Substring(engineContentFolder.Length + 1));
+				}
+			}
+
+
+			yield break;
+		}
+		IEnumerable<(string fullPath, string localPath)> EnumAllFiles(string directory, string search = "*")
+		{
+			foreach (var file in Directory.EnumerateFiles(Path.Combine(userContentFolder, directory), search, SearchOption.AllDirectories))
+			{
+				yield return (file, file.Substring(userContentFolder.Length + 1));
+			}
+			foreach (var file in Directory.EnumerateFiles(Path.Combine(engineContentFolder, directory), search, SearchOption.AllDirectories))
+			{
+				yield return (file, file.Substring(engineContentFolder.Length + 1));
+			}
+
+			yield break;
+		}
+
+		public string[]? ReadAllLines(string path)
+        {
+            if (File.Exists(Path.Combine(userContentFolder, path)))
+				return File.ReadAllLines(Path.Combine(userContentFolder, path));
+            if (File.Exists(Path.Combine(engineContentFolder, path)))
+                return File.ReadAllLines(Path.Combine(engineContentFolder, path));
+			return null;
+		}
+		public bool FileExists(string path)
+        {
+			if (File.Exists(Path.Combine(userContentFolder, path)))
+				return true;
+			if (File.Exists(Path.Combine(engineContentFolder, path)))
+				return true;
+			return false;
+        }
+
+
+		void WriteEditTimes(string compiledPath, Dictionary<string, long> editTimes) {
+
+			using (var sw = new BinaryWriter(File.Open(Path.Combine(compiledPath, "editTime.d"), FileMode.Create))) {
+				foreach (var kp in editTimes) {
 					sw.Write(kp.Key);
 					sw.Write(kp.Value);
 				}
 			}
 		}
-		void CopyFiles() {
-			foreach (var file in Directory.EnumerateFiles(CompiledPath, "*.bin")) {
-				File.Copy(file, Path.Combine(DumpPath, Path.GetFileName(file)), true);
-				
-				if (isDebug)
-					File.Copy(file, Path.Combine(RawFilesPath, Path.GetFileName(file)), true);
+		void CopyFiles(string from, string to) {
+			foreach (var file in Directory.EnumerateFiles(from, "*.bin")) {
+				File.Copy(file, Path.Combine(to, Path.GetFileName(file)), true);
+
+				Console.WriteLine(Path.Combine(to, Path.GetFileName(file)));
+				//if (IsDebug)
+				//	File.Copy(file, Path.Combine(RawFilesPath, Path.GetFileName(file)), true);
 			}
 		}
 
@@ -508,58 +682,34 @@ namespace MonocleCompiler {
 			return imageData;
 		}
 
-		void CompileShader(StreamWriter sw, string path, string localPath) {
-			if (!Directory.Exists($"{CompiledPath}\\{Path.GetDirectoryName(localPath)}")) {
-				Directory.CreateDirectory($"{CompiledPath}\\{Path.GetDirectoryName(localPath)}");
+		void CompileShader(StreamWriter sw, string path, string compiledPath) {
+			if (!Directory.Exists(Path.GetDirectoryName($"{compiledPath}"))) {
+				Directory.CreateDirectory(Path.GetDirectoryName($"{compiledPath}"));
 			}
-			sw.WriteLine(@$"mgfxc ""{path}"" ""{CompiledPath}\\{Path.ChangeExtension(localPath, ".cso")}""");
+			sw.WriteLine(@$"mgfxc ""{path}"" ""{Path.ChangeExtension(compiledPath, ".cso")}""");
 		}
 
 		ImageMeta ChangeMeta(string[] meta, ImageMeta original) {
 
-			foreach (var str in meta) {
-				string[] split = str.Split(':');
-				switch (split[0]) {
-					case "type":
-						original.type = split[1];
-						original.fullData["type"] = split[1];
-						break;
-					case "byteAmount":
-						original.byteAmount = int.Parse(split[1]);
-						switch (original.byteAmount) {
-							case 1: case 2: case 4:
-								break;
-							default:
-								original.byteAmount = 1;
-								break;
-						}
-						original.fullData["byteAmount"] = original.byteAmount.ToString();
-						break;
-					case "threeDimensions":
-						original.threeDimensions = bool.Parse(split[1]);
-						original.fullData["threeDimensions"] = original.threeDimensions.ToString();
-						break;
-					default:
-						original.fullData[split[0]] = split[1];
-						break;
-				}
-			}
+			var im = new ImageMeta();
+			im.Copy(original);
+			im.SetData(meta);
 
-			return original;
+			return im;
 		}
-		unsafe void CompileSprites(string path, string rawPath, ZipArchive archive, ImageMeta meta) {
+		unsafe void CompileSprites(string path, string rawPath, string compiledPath, ZipArchive archive, ImageMeta meta) {
 
-			foreach (var file in Directory.EnumerateFiles(path, "*.png")) {
+			foreach (var file in EnumFiles(path, "*.png")) {
 
-				var localMeta = File.Exists(file + ".meta") ? ChangeMeta(File.ReadAllLines(file + ".meta"), meta) : meta;
+				var localMeta = FileExists(file.localPath + ".meta") ? ChangeMeta(ReadAllLines(file.localPath + ".meta")!, meta) : meta;
 
-				string localPath = file.Remove(0, rawPath.Length + 1);
+				var localPath = file.localPath.Substring(path.Length + 1);
 
 				uint[] data;
 
-				data = CompileImage(file, localMeta, out Size size);
+				data = CompileImage(file.fullPath, localMeta, out Size size);
 
-				string newPath = Path.Combine(CompiledPath, "temp.png");
+				string newPath = Path.Combine(compiledPath, "temp.png");
 
 
 				using var map = new Bitmap(size.Width, size.Height);
@@ -585,31 +735,10 @@ namespace MonocleCompiler {
 				writer.Write(File.ReadAllBytes(newPath));
 
 			}
-			foreach (var dir in Directory.EnumerateDirectories(path)) {
-				var localMeta = File.Exists(dir + ".meta") ? ChangeMeta(File.ReadAllLines(dir + ".meta"), meta) : meta;
+			foreach (var dir in EnumDirectories(path)) {
+				var localMeta = FileExists(dir + ".meta") ? ChangeMeta(ReadAllLines(dir + ".meta")!, meta) : meta;
 
-				CompileSprites(dir, rawPath, archive, localMeta);
-				//if (File.Exists(dir + ".meta") && (!oldEditTimes.ContainsKey(dir + ".meta") || (oldEditTimes[dir + ".meta"] != currentEditTimes[dir + ".meta"]))) {
-				//	CompileSpritesAlways(dir, localMeta);
-				//}
-				//else {
-				//}
-			}
-		}
-		void CompileSpritesAlways(string path, ImageMeta meta) {
-
-			foreach (var file in Directory.EnumerateFiles(path, "*.png")) {
-
-				var localMeta = File.Exists(file + ".meta") ? ChangeMeta(File.ReadAllLines(file + ".meta"), meta) : meta;
-
-				string localPath = file.Remove(0, RawFilesPath.Length + 1);
-
-				//binaryData.Add(localPath, CompileImage(file, localMeta));
-			}
-			foreach (var dir in Directory.EnumerateDirectories(path)) {
-				var localMeta = File.Exists(dir + ".meta") ? ChangeMeta(File.ReadAllLines(dir + ".meta"), meta) : meta;
-
-				CompileSpritesAlways(dir, localMeta);
+				CompileSprites(dir, rawPath, compiledPath, archive, localMeta);
 			}
 		}
 	}

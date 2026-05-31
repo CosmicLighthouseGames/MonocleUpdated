@@ -23,7 +23,7 @@ namespace Monocle
 
 		public float AnimationTimer => animationTimer;
 
-		private Atlas atlas;
+		private TextureAtlas atlas;
 		public string Path;
 		private Dictionary<string, Animation> animations;
 		private Animation currentAnimation;
@@ -32,7 +32,7 @@ namespace Monocle
 		private int width;
 		private int height;
 
-		public Sprite(Atlas atlas, string path)
+		public Sprite(TextureAtlas atlas, string path)
 			: base(null, true)
 		{
 			this.atlas = atlas;
@@ -76,7 +76,7 @@ namespace Monocle
 			CurrentAnimationID = "";
 		}
 
-		public void Reset(Atlas atlas, string path)
+		public void Reset(TextureAtlas atlas, string path)
 		{
 			this.atlas = atlas;
 			Path = path;

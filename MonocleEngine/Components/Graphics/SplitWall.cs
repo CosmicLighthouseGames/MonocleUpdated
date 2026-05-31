@@ -26,7 +26,7 @@ namespace Monocle {
 		private Vector3 pos;
 		Vector3 offset;
 
-		public SplitWall(Atlas _atlas, string _folder, int size)
+		public SplitWall(TextureAtlas _atlas, string _folder, int size)
 			: base(true) {
 			RenderPosition = Vector3.Zero;
 			offset = new Vector3(16, 20, 0);

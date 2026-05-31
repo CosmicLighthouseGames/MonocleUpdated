@@ -11,6 +11,8 @@
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)Components\Component.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Graphics\PrepRenderPass.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)graphics\ModelAtlas.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Graphics\TextureAtlas.cs" />
     <Compile Include="..\MonocleUpdated\MonocleEngine\Components\Graphics\ModelRenderer.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Graphics\GraphicsComponent.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Components\Graphics\Image.cs" />
@@ -38,7 +40,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Components\Logic\Wiggler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Engine.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Entity.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Graphics\Atlas.cs" />
+    <Compile Include="..\MonocleUpdated\MonocleEngine\Graphics\TextureAtlas.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Graphics\Draw.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Graphics\EffectAtlas.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Graphics\Material.cs" />
@@ -93,11 +95,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)Content\Effects\Monocle\default_material.fx" />
-    <None Include="$(MSBuildThisFileDirectory)Content\Effects\Monocle\filter_header.fxh" />
-    <None Include="$(MSBuildThisFileDirectory)Content\Effects\Monocle\filter_vertex.fx" />
+    <None Include="$(MSBuildThisFileDirectory)Content\Effects\material_header.fxh" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="$(MSBuildThisFileDirectory)Content\Graphics\Monocle\small_font.png" />
-    <Content Include="$(MSBuildThisFileDirectory)Content\Graphics\Monocle\small_font.xml" />
+    <Content Include="$(MSBuildThisFileDirectory)Content\Graphics\Monocle\small_font.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 </Project>

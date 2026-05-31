@@ -19,9 +19,9 @@ namespace Monocle
 	{
 		public List<SpriteDataSource> Sources = new List<SpriteDataSource>();
 		public Sprite Sprite;
-		public Atlas Atlas;
+		public TextureAtlas Atlas;
 
-		public SpriteData(Atlas atlas)
+		public SpriteData(TextureAtlas atlas)
 		{
 			Sprite = new Sprite(atlas, "");
 			Atlas = atlas;
@@ -125,7 +125,7 @@ namespace Monocle
 			Sources.Add(source);
 		}
 
-		private bool HasFrames(Atlas atlas, string path, int[] frames = null)
+		private bool HasFrames(TextureAtlas atlas, string path, int[] frames = null)
 		{
 			if (frames == null || frames.Length <= 0)
 				return atlas.GetAtlasSubtexturesAt(path, 0) != null;
