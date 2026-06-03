@@ -14,6 +14,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using YamlDotNet.Core.Events;
 
 namespace Monocle {
@@ -624,6 +625,8 @@ namespace Monocle {
 
 		public string Name { get; private set; }
 
+		public bool CopyScale = true;
+
 		Vector3 Position_orig;
 		Quaternion Rotation_orig;
 
@@ -638,15 +641,44 @@ namespace Monocle {
 				rotation = value;
 				localLocalRotation = Quaternion.Inverse(Rotation_orig) * value * Rotation_orig;
 			}
-		}
+        }
+        public Quaternion GlobalRotation
+        {
+            get {
+				var rot = localLocalRotation;
 
-		public Matrix Transform {
+				if (Parent != null) {
+					rot = Parent.GlobalRotation * rot;
+				}
+				return rot;
+			}
+            set
+            {
+                rotation = value;
+                localLocalRotation = Quaternion.Inverse(Rotation_orig) * value * Rotation_orig;
+            }
+        }
+
+        public Matrix Transform {
 			get {
-				Vector3 globalOffset = GlobalOffset(LocalPosition);
 
-				var mat = Matrix.CreateTranslation(-Position_orig) * GlobalTransform() * Matrix.CreateTranslation(Position_orig);
+				Vector3 pos = Position_orig;
 
-				return mat;
+
+				var mat = Matrix.CreateTranslation(-pos) * LocalTransform;
+
+                mat *= Matrix.CreateTranslation(pos);
+
+                if (Parent != null)
+				{
+					var newMat = mat * Matrix.CreateScale(Parent.LocalScale);
+
+					mat = newMat;
+					mat *= Matrix.CreateFromQuaternion(Parent.GlobalRotation);
+				}
+
+
+                return mat;
 			}
 		}
 		public Matrix LocalTransform {
@@ -693,15 +725,13 @@ namespace Monocle {
 
 			return mat;
 		}
-		private Vector3 GlobalOffset(Vector3 pos) {
-
+		private Vector3 TransformPoint(Vector3 pos) {
 
 			if (Parent != null) {
-				Matrix mat = Parent.GlobalTransform();
-				Vector3 parentPos = Parent.GlobalOffset(Parent.LocalPosition);
-				pos = Vector3.Transform(pos, mat);
-				pos += parentPos;
+				pos = Parent.TransformPoint(pos);
 			}
+
+			pos = Vector3.Transform(pos, Transform);
 
 			return pos;
 		}
@@ -1064,6 +1094,9 @@ namespace Monocle {
             List<short[]> totalCompiled = new List<short[]>();
 
             List<(int, BonePairs)> totalIndices = new List<(int, BonePairs)>();
+            List<MonocleModelPart[]> modelWhole = new List<MonocleModelPart[]>();
+            List<MonocleModelPart> parts = new List<MonocleModelPart>();
+
             int totalI = 0;
 
             foreach (var inds in pvi)
@@ -1124,10 +1157,9 @@ namespace Monocle {
                 totalI++;
             }
 
+
             totalI = 0;
 
-            List<MonocleModelPart[]> modelWhole = new List<MonocleModelPart[]>();
-            List<MonocleModelPart> parts = new List<MonocleModelPart>();
 
             int index = 0;
             for (int i = 0; i < totalIndices.Count; i++)
@@ -1201,6 +1233,73 @@ namespace Monocle {
 		FBXScene() {
 		}
 
+		MonocleBone GetBone(FBXNode child, Matrix parentMatrix)
+		{
+            long uuid = (long)child.properties[0];
+            string name = ((string)child.properties[1]).Split("\0\u0001")[0];
+            var type = ((string)child.properties[2]);
+
+			var properties = child["Properties70"];
+
+			var matrix = Matrix.Identity;
+			var rotationMatrix = Matrix.Identity;
+
+			foreach (var pr in properties.children)
+			{
+				switch (pr.properties[0].ToString())
+				{
+					case "Lcl Translation":
+						var test = Convert.ToSingle(pr.properties[5].ToString());
+                        Vector3 pos = new Vector3(
+                            Convert.ToSingle(pr.properties[4]),
+                            Convert.ToSingle(pr.properties[5]),
+                            Convert.ToSingle(pr.properties[6])
+                            );
+                        matrix *= Matrix.CreateTranslation(pos);
+						break;
+					case "Lcl Rotation":
+						Vector3 rot = new Vector3(
+                            MathHelper.ToRadians(Convert.ToSingle(pr.properties[4].ToString())),
+                            MathHelper.ToRadians(Convert.ToSingle(pr.properties[5].ToString())),
+                            MathHelper.ToRadians(Convert.ToSingle(pr.properties[6].ToString()))
+                            );
+                        var mat = Matrix.CreateFromQuaternion(Calc.EulerAngle(rot));
+						rotationMatrix *= mat;
+						matrix *= mat;
+						break;
+					case "Lcl Scaling":
+                        Vector3 sc = new Vector3(
+                            Convert.ToSingle(pr.properties[4]),
+                            Convert.ToSingle(pr.properties[5]),
+                            Convert.ToSingle(pr.properties[6])
+                            );
+                        matrix *= Matrix.CreateScale(sc);
+						break;
+				}
+			}
+			matrix = parentMatrix * matrix;
+
+            var bone = new MonocleBone(name, matrix);
+
+			if (parent2Child.ContainsKey(uuid))
+			{
+				foreach (var val in parent2Child[uuid])
+				{
+					var node = nodeIDs[val];
+					if (node.name == "Model")
+					{
+						var childBone = GetBone(node, matrix);
+						if (childBone != null)
+						{
+							bone.AddChild(childBone);
+						}
+					}
+				}
+			}
+
+			return bone;
+
+		}
 
         void ImportFromNode(FBXNode array)
         {
@@ -1324,52 +1423,6 @@ namespace Monocle {
                     case "Model":
                         {
 
-                            switch (type)
-                            {
-                                case "LimbNode":
-                                    {
-                                        var properties = child["Properties70"];
-
-                                        var matrix = Matrix.Identity;
-
-                                        foreach (var pr in properties.children)
-                                        {
-                                            switch (pr.properties[0].ToString())
-                                            {
-                                                case "Lcl Translation":
-                                                    matrix *= Matrix.CreateTranslation(new Vector3(Convert.ToSingle(pr.properties[4]), Convert.ToSingle(pr.properties[5]), Convert.ToSingle(pr.properties[6])));
-                                                    break;
-                                                case "Lcl Rotation":
-                                                    matrix *= Matrix.CreateFromQuaternion(Calc.EulerAngle(MathHelper.ToRadians(Convert.ToSingle(pr.properties[4])), MathHelper.ToRadians(Convert.ToSingle(pr.properties[5])), MathHelper.ToRadians(Convert.ToSingle(pr.properties[6]))));
-                                                    break;
-                                                case "Lcl Scaling":
-                                                    matrix *= Matrix.CreateScale(new Vector3(Convert.ToSingle(pr.properties[4]), Convert.ToSingle(pr.properties[5]), Convert.ToSingle(pr.properties[6])));
-                                                    break;
-                                            }
-                                        }
-                                        var bone = new MonocleBone(name, matrix);
-
-                                        if (parent2Child.ContainsKey(uuid))
-                                        {
-                                            foreach (var val in parent2Child[uuid])
-                                            {
-                                                var node = nodeIDs[val];
-                                                if (node.name == "Model")
-                                                {
-                                                    var childBone = compileNode(node) as MonocleBone;
-                                                    if (childBone != null)
-                                                    {
-                                                        bone.AddChild(childBone);
-                                                    }
-                                                }
-                                            }
-                                        }
-
-                                        return bone;
-
-                                        break;
-                                    }
-                            }
                             break;
                         }
                 }
@@ -1394,17 +1447,19 @@ namespace Monocle {
                 foreach (var val in parent2Child[uuid])
                 {
                     var child = nodeIDs[val];
+					var localUUID = (long)child.properties[0];
                     if (child.name == "Geometry")
                     {
                         FBXNode deformer = null;
 
-                        if (parent2Child.ContainsKey(uuid))
+                        if (parent2Child.ContainsKey(localUUID))
                         {
-                            foreach (var val2 in parent2Child[uuid])
+                            foreach (var val2 in parent2Child[localUUID])
                             {
-                                if (nodeIDs[val].name == "Deformer" && nodeIDs[val].properties[2] as string == "Skin")
+								var n = nodeIDs[val2];
+                                if (nodeIDs[val2].name == "Deformer" && nodeIDs[val2].properties[2] as string == "Skin")
                                 {
-                                    deformer = nodeIDs[val];
+                                    deformer = nodeIDs[val2];
                                 }
                             }
                         }
@@ -1473,9 +1528,9 @@ namespace Monocle {
 
                         // Material Mapping
                         string mappingType = "AllSame";
-                        if (array.HasChild("LayerElementMaterial"))
+                        if (child.HasChild("LayerElementMaterial"))
                         {
-                            mappingType = array["LayerElementMaterial"]["MappingInformationType"].properties[0].ToString();
+                            mappingType = child["LayerElementMaterial"]["MappingInformationType"].properties[0].ToString();
                         }
                         switch (mappingType)
                         {
@@ -1551,7 +1606,7 @@ namespace Monocle {
                         var node = nodeIDs[val];
                         if (node.name == "Model")
                         {
-                            var bone = compileNode(node) as MonocleBone;
+                            var bone = GetBone(node, Matrix.CreateFromQuaternion(Calc.EulerAngle(MathHelper.PiOver2, 0, 0)));
                             armature.AddBone(bone);
                         }
                     }
@@ -1561,6 +1616,9 @@ namespace Monocle {
         }
         IEnumerable<(string, float[])> getWeights(int vertLength, FBXNode parentNode)
         {
+			if (!parent2Child.ContainsKey((long)parentNode.properties[0]))
+				yield break;
+
             foreach (var val in parent2Child[(long)parentNode.properties[0]])
             {
                 var node = nodeIDs[val];

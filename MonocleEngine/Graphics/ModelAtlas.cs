@@ -79,6 +79,8 @@ namespace Monocle
             path = path.Replace('\\', '/');
             string scene = path.Substring(0, path.IndexOf('.'));
             string arm = path.Substring(path.IndexOf('.') + 1);
+            var s = data[scene];
+
             return data[scene].CreateArmature(arm);
         }
         public MonocleArmature CreateArmature(string path, string name)

@@ -195,11 +195,11 @@ namespace Monocle {
 				},
 				new short[]{
 					0,
-					2,
-					1,
 					1,
 					2,
+					1,
 					3,
+					2,
 				});
 
 			}
@@ -266,8 +266,8 @@ namespace Monocle {
 			public DepthStencilState DepthStencilState;
 
 			public SpriteDrawCall() {
-				this.material = null;
-				this.overrideTexture = null;
+				material = null;
+				overrideTexture = null;
 				worldTransform = Matrix.Identity;
 				flip = SpriteEffects.None;
 				color = Color.White;

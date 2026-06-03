@@ -5,7 +5,6 @@ BoneMatrices()
 
 DECLARE_TEXTURE(Texture, 0, Point, Clamp)
 
-#define BasicVSStructs()
 struct VertexInput
 {
     MonocleVertexInput()
@@ -16,7 +15,6 @@ struct VertexOutput
     MonocleVertexOutput()
 };
 
-#define BasicPSStruct()
 struct ShaderOutput
 {
     FragmentTarget(color, 0)

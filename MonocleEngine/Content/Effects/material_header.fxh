@@ -201,7 +201,7 @@ float4x4 Bone3 : register(vs, c20);
 	float2 depthBuffer : TEXCOORD1;				\
 	float3 normal : TEXCOORD2;
 
-#define FragmentTarget(color, c)			\
+#define FragmentTarget(color, c)		\
 	float4 color : SV_Target##c;		\
 
 #define WorldPosition(position) mul(mul(position, World), WorldViewProj)

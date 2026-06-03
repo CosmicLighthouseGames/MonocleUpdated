@@ -703,7 +703,7 @@ namespace MonocleCompiler {
 
 				var localMeta = FileExists(file.localPath + ".meta") ? ChangeMeta(ReadAllLines(file.localPath + ".meta")!, meta) : meta;
 
-				var localPath = file.localPath.Substring(path.Length + 1);
+				var localPath = file.localPath.Substring(rawPath.Length + 1);
 
 				uint[] data;
 

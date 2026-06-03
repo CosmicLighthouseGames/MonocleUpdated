@@ -209,7 +209,9 @@ namespace Monocle {
 
 		public string Name { get; private set; }
 
-		public Effect BaseEffect { get; private set; }
+        public CullMode CullType = CullMode.CullClockwiseFace;
+
+        public Effect BaseEffect { get; private set; }
 
 		List<(int, EffectTechnique)> techniques = new List<(int, EffectTechnique)>();
 
@@ -409,6 +411,17 @@ namespace Monocle {
 						return false;
 				}
 			});
+
+			if (CullType == CullMode.None) {
+				Draw.GraphicsDevice.RasterizerState = RasterizerState.CullNone;
+			}
+			else
+			{
+				bool useFront = Vector3.Dot(Vector3.Cross(worldTransform.Up, worldTransform.Left), worldTransform.Forward) > 0;
+				
+                Draw.GraphicsDevice.RasterizerState = (useFront == (CullType == CullMode.CullClockwiseFace)) ? RasterizerState.CullCounterClockwise : RasterizerState.CullClockwise ;
+            }
+
 		}
 	}
 }
