@@ -141,8 +141,17 @@ namespace Monocle {
             {
 				foreach (var part in mesh)
 				{
-					for (int i = 0; i < 4 && part.BoneNames[i] != null && material.BaseEffect.Parameters[$"Bone{i}"] != null; i++)
+					for (int i = 0; i < 4; i++)
 					{
+						if (material.BaseEffect.Parameters[$"Bone{i}"] == null)
+							continue;
+
+						if (part.BoneNames[i] == null)
+                        {
+                            material.BaseEffect.Parameters[$"Bone{i}"].SetValue(Matrix.Identity);
+                            continue;
+						}
+
 						var bone = armature[part.BoneNames[i]];
 
                         material.BaseEffect.Parameters[$"Bone{i}"].SetValue(bone.Transform);

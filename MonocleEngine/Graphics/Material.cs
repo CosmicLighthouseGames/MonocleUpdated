@@ -185,8 +185,15 @@ namespace Monocle {
 			Name = "Default Material";
 		}
 		Material(string name) {
-			if (!LoadedTechniques.ContainsKey(name))
-				throw new Exception($"Missing {name} Material");
+			if (!LoadedTechniques.ContainsKey(name)){
+                //throw new Exception($"Missing {name} Material");
+
+                SetTechnique("Default");
+                Color = Color.White;
+                Name = "Default Material";
+
+                return;
+            }
 			SetTechnique(name);
 			Color = Color.White;
 			Name = name;

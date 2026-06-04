@@ -1091,7 +1091,6 @@ namespace Monocle {
         {
             CalculateTangent(verts, pvi);
 
-            List<short[]> totalCompiled = new List<short[]>();
 
             List<(int, BonePairs)> totalIndices = new List<(int, BonePairs)>();
             List<MonocleModelPart[]> modelWhole = new List<MonocleModelPart[]>();
@@ -1137,31 +1136,19 @@ namespace Monocle {
                     verts[inds[i + 2]].BoneD = pairs.D;
                 }
 
-                List<short[]> compiled = new List<short[]>();
-
                 foreach (var item in segments)
                 {
-                    List<short> indicesCompiled = new List<short>();
-
-                    foreach (var i in item.Value)
-                    {
-                        for (int j = 0; j < 3; j++)
-                        {
-                            indicesCompiled.Add((short)inds[i + j]);
-                        }
-                    }
-                    totalCompiled.Add(indicesCompiled.ToArray());
                     totalIndices.Add((totalI, item.Key));
                 }
 
                 totalI++;
             }
-
-
             totalI = 0;
 
+            List<short[]> totalCompiled = new List<short[]>();
+			Dictionary<VertexData, int> data = new Dictionary<VertexData, int>();
+            MonocleVertexWeight[][] weightTotal = new MonocleVertexWeight[totalIndices.Count][];
 
-            int index = 0;
             for (int i = 0; i < totalIndices.Count; i++)
             {
                 var p = totalIndices[i];
@@ -1172,20 +1159,23 @@ namespace Monocle {
                     modelWhole.Add(parts.ToArray());
                     parts.Clear();
                 }
-                MonocleVertex[] vertices = new MonocleVertex[totalCompiled[i].Length];
-                short[] inds = new short[vertices.Length];
-                MonocleVertexWeight[] weights = new MonocleVertexWeight[vertices.Length];
 
-                bool hasWeight = false;
+                short[] inds = new short[pvi[p.Item1].Length];
 
-                for (int j = 0; j < vertices.Length; j++)
+				var weights = weightTotal[i] = new MonocleVertexWeight[inds.Length];
+
+                for (int j = 0; j < inds.Length; j++)
                 {
-					var t = totalCompiled[i];
-					var t2 = t[j];
-                    var vert = verts[t2];
+					var t = pvi[p.Item1][j];
+                    var vert = verts[t];
 
-                    vertices[j] = vert.vertex;
-                    inds[j] = (short)j;
+					if (!data.ContainsKey(vert))
+					{
+						data[vert] = data.Count;
+                    }
+
+                    //vertices[j] = vert.vertex;
+                    inds[j] = (short)data[vert];
 
                     weights[j] = new MonocleVertexWeight()
                     {
@@ -1194,27 +1184,40 @@ namespace Monocle {
                         Weight2 = vert.BoneC == null ? 0 : weightDict[vert.BoneC][vert.VertexIndex],
                         Weight3 = vert.BoneD == null ? 0 : weightDict[vert.BoneD][vert.VertexIndex],
                     };
-
-                    if (!hasWeight && (weights[j].Weight0 != 0 || weights[j].Weight1 != 0 || weights[j].Weight2 != 0 || weights[j].Weight3 != 0))
-                    {
-                        hasWeight = true;
-                    }
                 }
 
-                var pointers = MeshHeap.CreateSection(vertices.ToArray(), inds);
+				totalCompiled.Add(inds);
+
+            }
+            
+			var pointers = MeshHeap.CreateSections(data.Keys.Select(a => a.vertex).ToArray(), totalCompiled.ToArray());
+			for (int i = 0; i < totalCompiled.Count; i++)
+			{
+				var inds = totalCompiled[i];
+                var weights = weightTotal[i];
+                var p = totalIndices[i];
 
                 VertexBuffer weightBuffer = null;
+
+                bool hasWeight = false;
+
+                for (int j = 0; j < inds.Length; j++)
+                {
+                    if (weights[j].Weight0 != 0 || weights[j].Weight1 != 0 || weights[j].Weight2 != 0 || weights[j].Weight3 != 0)
+                    {
+                        hasWeight = true;
+						break;
+                    }
+                }
 
                 if (hasWeight)
                 {
                     weightBuffer = MeshHeap.CreateWeight(weights);
-
                 }
 
-                parts.Add(new MonocleModelPart(pointers, weightBuffer, p.Item2.A, p.Item2.B, p.Item2.C, p.Item2.D));
-
-                index++;
+                parts.Add(new MonocleModelPart(pointers[i], weightBuffer, p.Item2.A, p.Item2.B, p.Item2.C, p.Item2.D));
             }
+
             modelWhole.Add(parts.ToArray());
 
             return modelWhole.ToArray();

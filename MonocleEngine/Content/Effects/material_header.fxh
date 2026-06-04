@@ -8,6 +8,8 @@
 
 #if defined(SM6) || defined(VULKAN)
 
+
+
 #define BEGIN_CONSTANTS     cbuffer _MG_Globals : register(b0) {
 #define MATRIX_CONSTANTS
 #define END_CONSTANTS       };
@@ -58,8 +60,9 @@
 
 #define UNROLL [unroll]
 
-#elif defined(SM4)
 
+
+#elif defined(SM4)
 // Macros for targetting shader model 4.0 (DX11)
 
 #define BEGIN_CONSTANTS     cbuffer Parameters : register(b0) {
@@ -112,9 +115,9 @@
 
 #define UNROLL [unroll]
 
+
+
 #else
-
-
 // Macros for targetting shader model 2.0 (DX9)
 
 #define BEGIN_CONSTANTS
@@ -169,6 +172,9 @@
 #define UNROLL [unroll]
 
 #endif
+
+
+
 
 
 #define BasicMaterialHeader()						\
