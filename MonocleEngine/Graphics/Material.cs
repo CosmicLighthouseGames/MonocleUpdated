@@ -12,6 +12,8 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Monocle {
 	public class Material {
+		
+		public static List<(int, string)> PassNames = new List<(int, string)>();
 
 		static Dictionary<string, (Effect effect, EffectTechnique technique)> LoadedTechniques = new Dictionary<string, (Effect, EffectTechnique)>();
 
@@ -180,21 +182,21 @@ namespace Monocle {
 		}
 
 		Material() {
-			SetTechnique("Default");
+			SetTechniques("Default", PassNames.ToArray());
 			Color = Color.White;
 			Name = "Default Material";
 		}
 		Material(string name) {
 			if (!LoadedTechniques.ContainsKey(name)){
-                //throw new Exception($"Missing {name} Material");
+				//throw new Exception($"Missing {name} Material");
 
-                SetTechnique("Default");
-                Color = Color.White;
+				SetTechniques("Default", PassNames.ToArray());
+				Color = Color.White;
                 Name = "Default Material";
 
                 return;
             }
-			SetTechnique(name);
+			SetTechniques(name, PassNames.ToArray());
 			Color = Color.White;
 			Name = name;
 		}
@@ -303,7 +305,7 @@ namespace Monocle {
 			return false;
 		}
 		public Material SetTechnique(string technique) {
-
+			
 			if (technique == "Default") {
 				techniques.Clear();
 
@@ -326,31 +328,36 @@ namespace Monocle {
 		}
 		public Material SetTechniques(string effect, params (int, string)[] techs) {
 
-			if (LoadedTechniques.ContainsKey(effect)) {
-				techniques.Clear();
+			techniques.Clear();
 
+			if (LoadedTechniques.ContainsKey(effect)) {
 				var lt = LoadedTechniques[effect];
 				BaseEffect = lt.effect;
-
-				for (int i = 0; i < techs.Length; i++) {
-					string key = $"{effect}.{techs[i].Item2}";
-
-					if (LoadedTechniques.ContainsKey(key)) {
-						techniques.Add((techs[i].Item1, LoadedTechniques[key].technique));
-					}
-					else {
-						techniques.Add((techs[i].Item1, BaseEffect.CurrentTechnique));
-					}
-				}
-
-				techniques.Sort((a, b) => a.Item1.CompareTo(b.Item1));
 			}
-			
+			else {
+				BaseEffect = Draw.DefaultEffect;
+			}
+
+			for (int i = 0; i < techs.Length; i++) {
+				string key = $"{effect}.{techs[i].Item2}";
+
+				if (LoadedTechniques.ContainsKey(key)) {
+					techniques.Add((techs[i].Item1, LoadedTechniques[key].technique));
+				}
+				else if (BaseEffect.Techniques[techs[i].Item2] != null) {
+					techniques.Add((techs[i].Item1, BaseEffect.Techniques[techs[i].Item2]));
+				}
+				else {
+					techniques.Add((techs[i].Item1, BaseEffect.CurrentTechnique));
+				}
+			}
+
+			techniques.Sort((a, b) => a.Item1.CompareTo(b.Item1));
 
 			return this;
 		}
 
-		public Material		SetParameter(string name, object value) {
+		public Material	SetParameter(string name, object value) {
 			parameterData[name] = value;
 			return this;
 		}
