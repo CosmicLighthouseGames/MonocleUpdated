@@ -371,8 +371,14 @@ namespace Monocle {
 				}
 
 				pausedListening = true;
-				OnAssetUpdated?.Invoke(path, e.FullPath, metadata);
-				pausedListening = false;
+				try {
+
+					OnAssetUpdated?.Invoke(path, e.FullPath, metadata);
+				}
+				finally {
+
+					pausedListening = false;
+				}
 			}
 
 			private void Deleted(object sender, FileSystemEventArgs e) {
@@ -405,7 +411,7 @@ namespace Monocle {
 				}
 				while (true) {
 					try {
-						File.OpenRead(path).Close();
+						File.OpenRead(e.FullPath).Close();
 
 						break;
 					}

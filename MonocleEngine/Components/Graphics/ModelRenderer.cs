@@ -141,43 +141,44 @@ namespace Monocle {
             {
 				foreach (var part in mesh)
 				{
-					for (int i = 0; i < 4; i++)
+
+
+                    for (int i = 0; i < 4; i++)
 					{
-						if (material.BaseEffect.Parameters[$"Bone{i}"] == null)
+						var param = material.BaseEffect.Parameters[$"Bone{i}"];
+
+                        if (param == null)
 							continue;
 
 						if (part.BoneNames[i] == null)
                         {
-                            material.BaseEffect.Parameters[$"Bone{i}"].SetValue(Matrix.Identity);
+                            param.SetValue(Matrix.Identity);
                             continue;
 						}
 
 						var bone = armature[part.BoneNames[i]];
 
-                        material.BaseEffect.Parameters[$"Bone{i}"].SetValue(bone.Transform);
-					}
+						param.SetValue(bone.Transform);
+                    }
+
 
                     foreach (var pass in tech.Passes)
                     {
                         pass.Apply();
-                        {
-                            part.MeshData.SetIndex(part.WeightData);
-                            part.MeshData.RenderList();
-                        }
+						part.MeshData.SetIndex();
+						part.MeshData.RenderList();
                     }
                 }
             }
 			else
 			{
                 foreach (var part in mesh)
-				{
-					foreach (var pass in tech.Passes)
+                {
+                    part.MeshData.SetIndex();
+                    foreach (var pass in tech.Passes)
 					{
 						pass.Apply();
-						{
-							part.MeshData.SetIndex(part.WeightData);
-							part.MeshData.RenderList();
-						}
+						part.MeshData.RenderList();
 					}
 				}
             }

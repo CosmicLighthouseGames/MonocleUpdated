@@ -160,6 +160,8 @@ namespace Monocle {
 	}
 	public static class MeshHeap {
 
+		static DynamicVertexBuffer emptyWeightBuffer;
+
 		static List<(DynamicVertexBuffer buffer, GenericHeap heap)> vertices;
 		static List<(DynamicVertexBuffer buffer, GenericHeap heap)> weights;
 		static List<(DynamicIndexBuffer buffer, GenericHeap heap)> indices;
@@ -181,6 +183,8 @@ namespace Monocle {
 		public static void Initialize(GraphicsDevice device) {
 			graphics = device;
 
+			emptyWeightBuffer = new DynamicVertexBuffer(device, typeof(MonocleVertexWeight), 0x1000, BufferUsage.None);
+
 			vertices = new List<(DynamicVertexBuffer, GenericHeap)>();
 			weights = new List<(DynamicVertexBuffer, GenericHeap)>();
 			indices = new List<(DynamicIndexBuffer, GenericHeap)>();
@@ -198,15 +202,15 @@ namespace Monocle {
 
 		static void AddVertexBuffer() {
 			Engine.WaitForRendering();
-			vertices.Add((new DynamicVertexBuffer(graphics, typeof(MonocleVertex), 0x20000, BufferUsage.WriteOnly), new GenericHeap(0x20000)));
+			vertices.Add((new DynamicVertexBuffer(graphics, typeof(MonocleVertex), 0x20000, BufferUsage.None), new GenericHeap(0x20000)));
 		}
 		static void AddWeightBuffer() {
 			Engine.WaitForRendering();
-			weights.Add((new DynamicVertexBuffer(graphics, typeof(MonocleVertexWeight), 0x20000, BufferUsage.WriteOnly), new GenericHeap(0x20000)));
+			weights.Add((new DynamicVertexBuffer(graphics, typeof(MonocleVertexWeight), 0x20000, BufferUsage.None), new GenericHeap(0x20000)));
 		}
 		static void AddIndexBuffer() {
 			Engine.WaitForRendering();
-			indices.Add((new DynamicIndexBuffer(graphics, IndexElementSize.SixteenBits, 0xC0000, BufferUsage.WriteOnly), new GenericHeap(0xC0000)));
+			indices.Add((new DynamicIndexBuffer(graphics, IndexElementSize.SixteenBits, 0xC0000, BufferUsage.None), new GenericHeap(0xC0000)));
 		}
 
 		static (VertexBuffer, int) GetVBuffer(MonocleVertex[] data) {
@@ -225,7 +229,7 @@ namespace Monocle {
 
 			return buffer;
         }
-        static VertexBuffer GetWeightBuffer(MonocleVertexWeight[] data)
+        static (VertexBuffer, int) GetWeightBuffer(MonocleVertexWeight[] data)
         {
             int index = weights.Count;
             for (int i = 0; i < weights.Count; i++)
@@ -239,9 +243,8 @@ namespace Monocle {
             if (index == weights.Count)
                 AddWeightBuffer();
 
-			int size = weights[index].heap.AddRange(data.Length);
-            var buffer = weights[index].buffer;
-            buffer.SetData(size * MonocleVertexWeight.VertexDeclaration.VertexStride, data, 0, data.Length, MonocleVertexWeight.VertexDeclaration.VertexStride);
+            var buffer = (weights[index].buffer, weights[index].heap.AddRange(data.Length));
+            buffer.Item1.SetData(buffer.Item2 * MonocleVertexWeight.VertexDeclaration.VertexStride, data, 0, data.Length, MonocleVertexWeight.VertexDeclaration.VertexStride);
 
             return buffer;
         }
@@ -272,15 +275,49 @@ namespace Monocle {
 				var ib = GetIBuffer(inds, vb.Item2);
 
 
-				return new MeshPointer(graphics, vb.Item1, ib.Item1, vb.Item2, ib.Item2, inds.Length / 3);
+				return new MeshPointer(graphics, vb.Item1, ib.Item1, emptyWeightBuffer, vb.Item2, ib.Item2, inds.Length / 3, 0);
 
 			}
 			catch {
 				return null;
 			}
-		}
-		public static MeshPointer[] CreateSections(MonocleVertex[] verts, short[][] inds) {
+        }
+        public static MeshPointer CreateSection(MonocleVertex[] verts, short[] inds, MonocleVertexWeight[] weights)
+        {
 
+
+            try
+            {
+                var vb = GetVBuffer(verts);
+                var ib = GetIBuffer(inds, vb.Item2);
+				bool hasWeight = false;
+
+                foreach (var w in weights)
+                {
+                    if (w.Weight0 > 0 || w.Weight1 > 0 || w.Weight2 > 0 || w.Weight3 > 0)
+                    {
+                        hasWeight = true;
+                        break;
+                    }
+                }
+
+                if (hasWeight)
+                {
+                    var wb = GetWeightBuffer(weights);
+                    return new MeshPointer(graphics, vb.Item1, ib.Item1, wb.Item1, vb.Item2, ib.Item2, inds.Length / 3, wb.Item2);
+                }
+                else
+                {
+                    return new MeshPointer(graphics, vb.Item1, ib.Item1, emptyWeightBuffer, vb.Item2, ib.Item2, inds.Length / 3, 0);
+                }
+
+            }
+            catch
+            {
+                return null;
+            }
+        }
+        public static MeshPointer[] CreateSections(MonocleVertex[] verts, short[][] inds) {
 
 			try {
 				MeshPointer[] pointers = new MeshPointer[inds.Length];
@@ -290,7 +327,7 @@ namespace Monocle {
 				for (int i = 0; i < inds.Length; i++) {
 					var ib = GetIBuffer(inds[i], vb.Item2);
 
-					pointers[i] = new MeshPointer(graphics, vb.Item1, ib.Item1, vb.Item2, ib.Item2, inds[i].Length / 3);
+					pointers[i] = new MeshPointer(graphics, vb.Item1, ib.Item1, emptyWeightBuffer, vb.Item2, ib.Item2, inds[i].Length / 3, 0);
 
 				}
 
@@ -300,16 +337,45 @@ namespace Monocle {
 				return null;
 			}
         }
-        public static VertexBuffer CreateWeight(MonocleVertexWeight[] weights)
+
+        public static MeshPointer[] CreateSections(MonocleVertex[] verts, short[][] inds, MonocleVertexWeight[] weights)
         {
-            try
+			if (weights != null && verts.Length != weights.Length)
+				throw new Exception();
+
+			if (verts.Length == 0)
+				return null;
+
+
+            MeshPointer[] pointers = new MeshPointer[inds.Length];
+
+			var vb = GetVBuffer(verts);
+			(VertexBuffer, int) wb = default;
+
+			foreach (var w in weights) {
+				if (w.Weight0 > 0 || w.Weight1 > 0 || w.Weight2 > 0 || w.Weight3 > 0) {
+					wb = GetWeightBuffer(weights);
+					break;
+				}
+			}
+
+            for (int i = 0; i < inds.Length; i++)
             {
-                return GetWeightBuffer(weights);
+                var ib = GetIBuffer(inds[i], vb.Item2);
+
+
+				if (wb.Item1 != null)
+				{
+					pointers[i] = new MeshPointer(graphics, vb.Item1, ib.Item1, wb.Item1, vb.Item2, ib.Item2, inds[i].Length / 3, wb.Item2);
+				}
+				else
+				{
+					pointers[i] = new MeshPointer(graphics, vb.Item1, ib.Item1, emptyWeightBuffer, vb.Item2, ib.Item2, inds[i].Length / 3, 0);
+				}
+
             }
-            catch
-            {
-                return null;
-            }
+
+            return pointers;
         }
         internal static void DisposePointer(MeshPointer pointer) {
 			foreach (var b in vertices) {
@@ -348,21 +414,49 @@ namespace Monocle {
 			VertexOffset = voffset;
 			IndexOffset = ioffset;
 			PrimitiveCount = count;
-		}
-
-		public void SetIndex()
+        }
+        public MeshPointer(GraphicsDevice graphicsDevice, VertexBuffer vbuffer, IndexBuffer ibuffer, VertexBuffer wbuffer, int voffset, int ioffset, int count, int woffset)
         {
-            gd.SetVertexBuffers(new VertexBufferBinding(VertexBuffer, VertexOffset));
+            gd = graphicsDevice;
+            VertexBuffer = vbuffer;
+            IndexBuffer = ibuffer;
+			WeightBuffer = wbuffer;
+            VertexOffset = voffset;
+            IndexOffset = ioffset;
+			WeightOffset = woffset;
+            PrimitiveCount = count;
+        }
+
+        public void SetIndex()
+        {
             gd.Indices = IndexBuffer;
+            if (WeightBuffer != null)
+			{
+				gd.SetVertexBuffers(new VertexBufferBinding(VertexBuffer, VertexOffset), new VertexBufferBinding(WeightBuffer, WeightOffset));
+			}
+			else
+			{
+				gd.SetVertexBuffers(new VertexBufferBinding(VertexBuffer, VertexOffset));
+			}
 		}
-		public void SetIndex(VertexBuffer extra) {
+		public void SetIndex(VertexBuffer extra, int offset) {
 			if (extra == null)
 			{
 				SetIndex();
 				return;
 
             }
-			gd.SetVertexBuffers(new VertexBufferBinding(VertexBuffer, VertexOffset), new VertexBufferBinding(extra, WeightOffset));
+
+            if (WeightBuffer != null)
+            {
+                gd.SetVertexBuffers(new VertexBufferBinding(VertexBuffer, VertexOffset), new VertexBufferBinding(WeightBuffer, WeightOffset), new VertexBufferBinding(extra, offset));
+            }
+            else
+            {
+                gd.SetVertexBuffers(new VertexBufferBinding(VertexBuffer, VertexOffset), new VertexBufferBinding(extra, offset));
+            }
+
+            
 			gd.Indices = IndexBuffer;
         }
         public void RenderList()
@@ -1147,7 +1241,7 @@ namespace Monocle {
 
             List<short[]> totalCompiled = new List<short[]>();
 			Dictionary<VertexData, int> data = new Dictionary<VertexData, int>();
-            MonocleVertexWeight[][] weightTotal = new MonocleVertexWeight[totalIndices.Count][];
+			List<MonocleVertexWeight> weightTotal = new List<MonocleVertexWeight>();
 
             for (int i = 0; i < totalIndices.Count; i++)
             {
@@ -1162,8 +1256,6 @@ namespace Monocle {
 
                 short[] inds = new short[pvi[p.Item1].Length];
 
-				var weights = weightTotal[i] = new MonocleVertexWeight[inds.Length];
-
                 for (int j = 0; j < inds.Length; j++)
                 {
 					var t = pvi[p.Item1][j];
@@ -1172,50 +1264,34 @@ namespace Monocle {
 					if (!data.ContainsKey(vert))
 					{
 						data[vert] = data.Count;
+
+						weightTotal.Add(new MonocleVertexWeight()
+						{
+							Weight0 = vert.BoneA == null ? 0 : weightDict[vert.BoneA][vert.VertexIndex],
+							Weight1 = vert.BoneB == null ? 0 : weightDict[vert.BoneB][vert.VertexIndex],
+							Weight2 = vert.BoneC == null ? 0 : weightDict[vert.BoneC][vert.VertexIndex],
+							Weight3 = vert.BoneD == null ? 0 : weightDict[vert.BoneD][vert.VertexIndex],
+						});
                     }
 
                     //vertices[j] = vert.vertex;
                     inds[j] = (short)data[vert];
 
-                    weights[j] = new MonocleVertexWeight()
-                    {
-                        Weight0 = vert.BoneA == null ? 0 : weightDict[vert.BoneA][vert.VertexIndex],
-                        Weight1 = vert.BoneB == null ? 0 : weightDict[vert.BoneB][vert.VertexIndex],
-                        Weight2 = vert.BoneC == null ? 0 : weightDict[vert.BoneC][vert.VertexIndex],
-                        Weight3 = vert.BoneD == null ? 0 : weightDict[vert.BoneD][vert.VertexIndex],
-                    };
                 }
 
 				totalCompiled.Add(inds);
 
             }
-            
-			var pointers = MeshHeap.CreateSections(data.Keys.Select(a => a.vertex).ToArray(), totalCompiled.ToArray());
+
+			var finalVerts = data.Keys.Select(a => a.vertex).ToArray();
+
+
+			var pointers = MeshHeap.CreateSections(data.Keys.Select(a => a.vertex).ToArray(), totalCompiled.ToArray(), weightTotal.ToArray());
 			for (int i = 0; i < totalCompiled.Count; i++)
 			{
-				var inds = totalCompiled[i];
-                var weights = weightTotal[i];
                 var p = totalIndices[i];
 
-                VertexBuffer weightBuffer = null;
-
-                bool hasWeight = false;
-
-                for (int j = 0; j < inds.Length; j++)
-                {
-                    if (weights[j].Weight0 != 0 || weights[j].Weight1 != 0 || weights[j].Weight2 != 0 || weights[j].Weight3 != 0)
-                    {
-                        hasWeight = true;
-						break;
-                    }
-                }
-
-                if (hasWeight)
-                {
-                    weightBuffer = MeshHeap.CreateWeight(weights);
-                }
-
-                parts.Add(new MonocleModelPart(pointers[i], weightBuffer, p.Item2.A, p.Item2.B, p.Item2.C, p.Item2.D));
+                parts.Add(new MonocleModelPart(pointers[i], p.Item2.A, p.Item2.B, p.Item2.C, p.Item2.D));
             }
 
             modelWhole.Add(parts.ToArray());
@@ -1342,97 +1418,6 @@ namespace Monocle {
                     }
                 }
             }
-
-            object compileNode(FBXNode child)
-            {
-
-                string name = ((string)child.properties[1]).Split("\0\u0001")[0];
-                var type = ((string)child.properties[2]);
-
-                long uuid = (long)child.properties[0];
-
-                switch (child.name)
-                {
-                    default:
-                        break;
-                    case "Deformer":
-                        {
-
-                            if (type == "Skin")
-                            {
-
-                                List<float[]> weights = new List<float[]>();
-                                if (parent2Child.ContainsKey(uuid))
-                                {
-                                    foreach (var val in parent2Child[uuid])
-                                    {
-                                        var node = nodeIDs[val];
-
-                                    }
-                                }
-
-                                return weights.ToArray();
-                            }
-                            else if (type == "SubDeformer" && child.HasChild("Indexes"))
-                            {
-
-                            }
-                            else
-                            {
-
-                            }
-
-                            break;
-                        }
-                    case "NodeAttribute":
-                        {
-
-                            switch ((string)child.properties[2])
-                            {
-                                case "Null":
-                                    //armatureIDQueue.Enqueue(armature);
-                                    if (parent2Child.ContainsKey(uuid))
-                                    {
-                                        foreach (var val in parent2Child[uuid])
-                                        {
-                                            var node = nodeIDs[val];
-                                            var matrix = compileNode(node);
-                                        }
-                                    }
-                                    break;
-                                case "LimbNode":
-                                    {
-                                        (long, Matrix) mat;
-                                        //if (!boneTransforms.TryDequeue(out mat)) {
-                                        //	mat = (-1, Matrix.Identity);
-                                        //}
-
-                                        //boneIDs.Add((long)child.properties[0], bone);
-                                        //if (mat.Item1 >= 0) {
-                                        //	boneIDs.Add(mat.Item1, bone);
-                                        //}
-
-
-                                        break;
-                                    }
-                                default:
-                                    break;
-                            }
-
-                            break;
-                        }
-                    case "Geometry":
-                        break;
-                    case "Model":
-                        {
-
-                            break;
-                        }
-                }
-
-                return null;
-            }
-
 
             foreach (var mesh in meshes)
             {
@@ -1972,12 +1957,10 @@ namespace Monocle {
 	public class MonocleModelPart {
 
 		internal MeshPointer MeshData;
-		internal VertexBuffer WeightData;
 		internal string[] BoneNames;
 
-		public MonocleModelPart(MeshPointer pointer, VertexBuffer weights, params string[] boneNames) {
+		public MonocleModelPart(MeshPointer pointer, params string[] boneNames) {
 			MeshData = pointer;
-			WeightData = weights;
 			BoneNames = boneNames;
         }
     }

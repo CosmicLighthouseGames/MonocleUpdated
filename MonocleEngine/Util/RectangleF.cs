@@ -8,6 +8,8 @@ namespace Monocle {
 	public struct RectangleF {
 		public float X, Y, Width, Height;
 
+		public Vector2 Position => new Vector2(X, Y);
+
 		public float Left => X;
 		public float Top => Y;
 		public float Right => X + Width;
