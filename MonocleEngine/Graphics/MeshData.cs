@@ -1237,7 +1237,6 @@ namespace Monocle {
 
                 totalI++;
             }
-            totalI = 0;
 
             List<short[]> totalCompiled = new List<short[]>();
 			Dictionary<VertexData, int> data = new Dictionary<VertexData, int>();
@@ -1247,12 +1246,6 @@ namespace Monocle {
             {
                 var p = totalIndices[i];
 
-                if (p.Item1 != totalI)
-                {
-                    totalI = p.Item1;
-                    modelWhole.Add(parts.ToArray());
-                    parts.Clear();
-                }
 
                 short[] inds = new short[pvi[p.Item1].Length];
 
@@ -1283,15 +1276,19 @@ namespace Monocle {
 
             }
 
-			var finalVerts = data.Keys.Select(a => a.vertex).ToArray();
-
-
+			totalI = 0;
 			var pointers = MeshHeap.CreateSections(data.Keys.Select(a => a.vertex).ToArray(), totalCompiled.ToArray(), weightTotal.ToArray());
-			for (int i = 0; i < totalCompiled.Count; i++)
+			for (int i = 0; i < totalIndices.Count; i++)
 			{
                 var p = totalIndices[i];
 
-                parts.Add(new MonocleModelPart(pointers[i], p.Item2.A, p.Item2.B, p.Item2.C, p.Item2.D));
+				if (p.Item1 != totalI) {
+					totalI = p.Item1;
+					modelWhole.Add(parts.ToArray());
+					parts.Clear();
+				}
+
+				parts.Add(new MonocleModelPart(pointers[i], p.Item2.A, p.Item2.B, p.Item2.C, p.Item2.D));
             }
 
             modelWhole.Add(parts.ToArray());
