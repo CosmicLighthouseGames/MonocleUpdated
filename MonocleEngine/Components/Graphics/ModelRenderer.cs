@@ -10,6 +10,22 @@ using Newtonsoft.Json.Linq;
 namespace Monocle {
 	public delegate void TransformVertex(int index, ref MonocleVertex vertex);
 	public unsafe struct VertexRenderCall : IDrawCall {
+		public static void AddModelCalls(MonocleVertex[] vertices, short[] indices, Matrix transform, Material material = null) {
+
+			var mat = material ?? Draw.DefaultMaterial;
+
+			foreach (var pass in mat.Passes) {
+				Draw.CustomDrawCall(new VertexRenderCall() {
+					vertices = vertices,
+					indices = indices,
+					material = mat,
+					transform = transform,
+					RenderOrder = pass.Key,
+				});
+			}
+		}
+
+
 		static MonocleVertex[] buffer = new MonocleVertex[0x2000];
 
 		public Material material;
@@ -26,6 +42,23 @@ namespace Monocle {
 		public void Render(GraphicsDevice device) {
 
 			if (indices.Length == 0)
+				return;
+
+			Material mat = null;
+			var drawcall = this;
+
+			var RenderOrder = this.RenderOrder;
+			var DepthStencilState = this.DepthStencilState;
+
+
+			if (Draw.OverridingMaterial != null) {
+				mat = Draw.OverridingMaterial;
+			}
+			else {
+				mat = material;
+			}
+
+			if (mat.Passes.ContainsKey(RenderOrder))
 				return;
 
 			if (modifiers != null) {
@@ -56,41 +89,19 @@ namespace Monocle {
 				}
 			}
 
-			Material mat = null;
-			var drawcall = this;
 
-			var RenderOrder = this.RenderOrder;
-			var DepthStencilState = this.DepthStencilState;
+			var stencil = DepthStencilState??mat.DepthStencilState??Draw.FallbackDepthState;
+			device.DepthStencilState = stencil;
 
-			void SetMaterial(Material newMat) {
-				if (mat == newMat) {
-					return;
-				}
-				mat = newMat;
+			var tex = mat.Texture??Draw.Pixel;
+			var pData = mat.parameterData;
 
-				var tech = mat.GetTechnique(RenderOrder);
-				var techPass = tech.Passes[0];
+			mat.SetParameters(drawcall.transform, tex);
 
-				var stencil = DepthStencilState??mat.DepthStencilState??Draw.FallbackDepthState;
-				device.DepthStencilState = stencil;
-
-				var tex = mat.Texture??Draw.Pixel;
-				var pData = mat.parameterData;
-
-				mat.SetParameters(drawcall.transform, tex);
-
-				techPass.Apply();
+			foreach (var pass in mat.Passes[RenderOrder]) {
+				pass.Apply();
+				device.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, buffer, 0, vertices.Length, indices, 0, indices.Length / 3);
 			}
-
-			Material newMat;
-			if (Draw.OverridingMaterial != null) {
-				newMat = Draw.OverridingMaterial;
-			}
-			else {
-				newMat = material;
-			}
-			SetMaterial(newMat);
-			device.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, buffer, 0, vertices.Length, indices, 0, indices.Length / 3);
 
 		}
 	}
@@ -102,6 +113,23 @@ namespace Monocle {
 		public MonocleModelMaterialSlot mesh;
 		public Matrix transform;
 		public DepthStencilState DepthStencilState;
+
+		public static void AddModelCalls(MonocleModelMaterialSlot mesh, Matrix transform, Material material = null, MonocleArmature armature = null) {
+
+			var mat = material ?? Draw.DefaultMaterial;
+
+			foreach (var pass in mat.Passes) {
+				Draw.CustomDrawCall(new ModelRenderCall() {
+					armature = armature,
+					mesh = mesh,
+					material = mat,
+					transform = transform,
+					RenderOrder = pass.Key,
+				});
+			}
+
+
+		}
 
 
 		public int RenderOrder { get; set; }
@@ -124,64 +152,52 @@ namespace Monocle {
 				mat = Draw.OverridingMaterial;
 			}
 			else {
-                mat = material;
-            }
+				mat = material;
+			}
 
-            var tech = mat.GetTechnique(RenderOrder);
+			if (!mat.Passes.ContainsKey(RenderOrder))
+				return;
 
-            var stencil = DepthStencilState ?? mat.DepthStencilState ?? Draw.FallbackDepthState;
-            device.DepthStencilState = stencil;
+			var tech = mat.Technique;
 
-            var tex = mat.Texture ?? Draw.Pixel;
+			var stencil = DepthStencilState ?? mat.DepthStencilState ?? Draw.FallbackDepthState;
+			device.DepthStencilState = stencil;
 
-
-            mat.SetParameters(drawcall.transform, tex);
-
-            if (armature != null)
-            {
-				foreach (var part in mesh)
-				{
+			var tex = mat.Texture ?? Draw.Pixel;
 
 
-                    for (int i = 0; i < 4; i++)
-					{
+			mat.SetParameters(drawcall.transform, tex);
+
+			if (armature != null) {
+				foreach (var part in mesh) {
+					for (int i = 0; i < 4; i++) {
 						var param = material.BaseEffect.Parameters[$"Bone{i}"];
 
-                        if (param == null)
+						if (param == null)
 							continue;
 
-						if (part.BoneNames[i] == null)
-                        {
-                            param.SetValue(Matrix.Identity);
-                            continue;
+						if (part.BoneNames[i] == null) {
+							param.SetValue(Matrix.Identity);
+							continue;
 						}
 
 						var bone = armature[part.BoneNames[i]];
 
 						param.SetValue(bone.Transform);
-                    }
-
-
-                    foreach (var pass in tech.Passes)
-                    {
-                        pass.Apply();
-						part.MeshData.SetIndex();
-						part.MeshData.RenderList();
-                    }
-                }
-            }
-			else
-			{
-                foreach (var part in mesh)
-                {
-                    part.MeshData.SetIndex();
-                    foreach (var pass in tech.Passes)
-					{
-						pass.Apply();
-						part.MeshData.RenderList();
 					}
+
+					part.MeshData.SetIndex();
+
+					mat.Render(RenderOrder, part.MeshData.RenderList);
 				}
-            }
+			}
+			else {
+				foreach (var part in mesh) {
+					part.MeshData.SetIndex();
+
+					mat.Render(RenderOrder, part.MeshData.RenderList);
+				}
+			}
 
 
 

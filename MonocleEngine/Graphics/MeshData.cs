@@ -1970,16 +1970,7 @@ namespace Monocle {
 
         internal void Render(Matrix matrix, Material material, MonocleArmature armature = null)
         {
-            var mat = material ?? Draw.DefaultMaterial;
-
-            Draw.CustomDrawCall(new ModelRenderCall()
-            {
-                armature = armature,
-                mesh = this,
-                material = mat,
-                transform = matrix,
-                RenderOrder = mat.RenderOrder ?? Draw.CurrentRenderOrder,
-            });
+			ModelRenderCall.AddModelCalls(this, matrix, material, armature);
         }
     }
 
@@ -1998,13 +1989,7 @@ namespace Monocle {
 				var mesh = this[i];
 				var mat = Materials[i]??Draw.DefaultMaterial;
 
-                Draw.CustomDrawCall(new ModelRenderCall()
-                {
-                    mesh = mesh,
-                    material = mat,
-                    transform = matrix,
-                    RenderOrder = mat.RenderOrder ?? Draw.CurrentRenderOrder,
-                });
+				ModelRenderCall.AddModelCalls(mesh, matrix, mat);
             }
         }
         public void Render(Matrix matrix, MonocleArmature armature, params Material[] Materials)

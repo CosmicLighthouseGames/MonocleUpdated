@@ -12,8 +12,8 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Monocle {
 	public class Material {
-		
-		public static List<(int, string)> PassNames = new List<(int, string)>();
+
+		public static Dictionary<string, int> PassOrders = new Dictionary<string, int>();
 
 		static Dictionary<string, (Effect effect, EffectTechnique technique)> LoadedTechniques = new Dictionary<string, (Effect, EffectTechnique)>();
 
@@ -177,12 +177,9 @@ namespace Monocle {
 		public static Material FromEffect(string effect) {
 			return new Material(effect);
 		}
-		public static Material FromEffects(string effect, params (int, string)[] data) {
-			return new Material().SetTechniques(effect, data);
-		}
 
 		Material() {
-			SetTechniques("Default", PassNames.ToArray());
+			SetTechnique("Default");
 			Color = Color.White;
 			Name = "Default Material";
 		}
@@ -190,27 +187,26 @@ namespace Monocle {
 			if (!LoadedTechniques.ContainsKey(name)){
 				//throw new Exception($"Missing {name} Material");
 
-				SetTechniques("Default", PassNames.ToArray());
+				SetTechnique("Default");
 				Color = Color.White;
                 Name = "Default Material";
 
                 return;
             }
-			SetTechniques(name, PassNames.ToArray());
+			SetTechnique(name);
 			Color = Color.White;
 			Name = name;
 		}
 		public Material(Material other) {
-			foreach (var item in other.techniques) {
-				techniques.Add((item.Item1, item.Item2));
-			}
+			Technique = other.Technique;
+			Passes = other.Passes;
+
 			BaseEffect = other.BaseEffect;
 			//TechniqueID = other.TechniqueID;
 			Color = other.Color;
 			Name = other.Name;
 			Texture = other.Texture;
 			DepthStencilState = other.DepthStencilState;
-			RenderOrder = other.RenderOrder;
 			foreach (var param in other.parameterData) {
 				parameterData[param.Key] = param.Value;
 			}
@@ -222,7 +218,9 @@ namespace Monocle {
 
         public Effect BaseEffect { get; private set; }
 
-		List<(int, EffectTechnique)> techniques = new List<(int, EffectTechnique)>();
+		public EffectTechnique Technique { get; private set; }
+
+		public Dictionary<int, EffectPass[]> Passes { get; private set; }
 
 		public Color Color;
 		public MTexture Texture {
@@ -283,76 +281,40 @@ namespace Monocle {
 			}
 		}
 
-		public int? RenderOrder = null;
-
 		public Dictionary<string, dynamic> parameterData = new Dictionary<string, dynamic>();
 
-		public EffectTechnique GetTechnique(int pass) {
 
-			for (int i = techniques.Count - 1; i >= 0; i--) {
-				if (techniques[i].Item1 <= pass)
-					return techniques[i].Item2;
-			}
-
-			return techniques[0].Item2;
-		}
-
-		public bool HasTechnique(string technique) {
-
-			foreach (var item in techniques) {
-				if (item.Item2.Name == technique) return true;
-			}
-			return false;
-		}
 		public Material SetTechnique(string technique) {
 			
 			if (technique == "Default") {
-				techniques.Clear();
-
 				BaseEffect = Draw.DefaultEffect;
-				techniques.Add((0, BaseEffect.CurrentTechnique));
+				Technique = BaseEffect.CurrentTechnique;
+			}
+			else if (BaseEffect != null && BaseEffect.Techniques[technique] != null) {
+
+				Technique = BaseEffect.Techniques[technique];
 			}
 			else if (LoadedTechniques.ContainsKey(technique)) {
-				techniques.Clear();
 
 				var lt = LoadedTechniques[technique];
 				BaseEffect = lt.effect;
-				techniques.Add((0, lt.technique));
-			}
-			else if (BaseEffect != null && BaseEffect.Techniques[technique] != null) {
-				techniques.Clear();
-
-				techniques.Add((0, BaseEffect.Techniques[technique]));
-			}
-			return this;
-		}
-		public Material SetTechniques(string effect, params (int, string)[] techs) {
-
-			techniques.Clear();
-
-			if (LoadedTechniques.ContainsKey(effect)) {
-				var lt = LoadedTechniques[effect];
-				BaseEffect = lt.effect;
-			}
-			else {
-				BaseEffect = Draw.DefaultEffect;
+				Technique = lt.technique;
 			}
 
-			for (int i = 0; i < techs.Length; i++) {
-				string key = $"{effect}.{techs[i].Item2}";
+			var temp = new Dictionary<int, List<EffectPass>>();
 
-				if (LoadedTechniques.ContainsKey(key)) {
-					techniques.Add((techs[i].Item1, LoadedTechniques[key].technique));
+			foreach (var pass in Technique.Passes) {
+				int index = 0;
+				if (PassOrders.ContainsKey(pass.Name)) {
+					index = PassOrders[pass.Name];
 				}
-				else if (BaseEffect.Techniques[techs[i].Item2] != null) {
-					techniques.Add((techs[i].Item1, BaseEffect.Techniques[techs[i].Item2]));
+				if (!temp.ContainsKey(index)) {
+					temp[index] = new List<EffectPass>();
 				}
-				else {
-					techniques.Add((techs[i].Item1, BaseEffect.CurrentTechnique));
-				}
+				temp[index].Add(pass);
 			}
 
-			techniques.Sort((a, b) => a.Item1.CompareTo(b.Item1));
+			Passes = temp.ToDictionary(x => x.Key, x => x.Value.ToArray());
 
 			return this;
 		}
@@ -379,17 +341,19 @@ namespace Monocle {
 			StencilMask = stencil;
 			return this;
 		}
-		public Material SetRenderOrder(int? renderPass) {
-			RenderOrder = renderPass;
-			return this;
-		}
 
+		public void Render(int order, Action OnApply) {
+			foreach (var pass in Passes[order]) {
+				pass.Apply();
+				OnApply();
+			}
+		}
 		public void SetParameters(Matrix worldTransform, MTexture overrideTexture, Color? offsetColor = null, SpriteEffects flip = SpriteEffects.None) {
 
 			var tex = overrideTexture??Texture;
 			var pData = parameterData;
 
-			Draw.SetParameters(BaseEffect, (param, effect) => {
+			Draw.SetParameters(BaseEffect, (effect, param) => {
 				switch (param.Name) {
 					case "DiffuseColor":
 						if (offsetColor != null) {

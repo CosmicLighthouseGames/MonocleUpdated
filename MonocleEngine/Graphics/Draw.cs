@@ -282,18 +282,16 @@ namespace Monocle {
 
 				var mat = OverridingMaterial??material;
 
-				var tech = mat.GetTechnique(RenderOrder);
-				var techPass = tech.Passes[0];
+				if (!mat.Passes.ContainsKey(RenderOrder))
+					return;
+
 
 				var stencil = DepthStencilState??mat.DepthStencilState??FallbackDepthState;
 				device.DepthStencilState = stencil;
 
 				mat.SetParameters(worldTransform, overrideTexture, color, flip);
-				
 
-				techPass.Apply();
-
-				mesh.Render();
+				mat.Render(RenderOrder, mesh.Render);
 			}
 		}
 
@@ -308,12 +306,12 @@ namespace Monocle {
 		private static Matrix[] matrixStack = new Matrix[10];
 		private static int stackIndex;
 
-		public static event Func<EffectParameter, bool> OnParameterSet;
+		public static event Func<Effect,EffectParameter, bool> OnParameterSet;
 
-		public static void SetParameters(Effect effect, Func<EffectParameter, Effect, bool> changeParameter) {
+		public static void SetParameters(Effect effect, Func<Effect, EffectParameter, bool> changeParameter) {
 
 			foreach (var param in effect.Parameters) {
-				if (!changeParameter(param, effect)) {
+				if (!changeParameter(effect, param)) {
 					switch (param.Name) {
 						case "Viewport": {
 							var viewport = GraphicsDevice.Viewport;
@@ -334,7 +332,7 @@ namespace Monocle {
 							break;
 						default:
 							try {
-								if (OnParameterSet != null && OnParameterSet.Invoke(param))
+								if (OnParameterSet != null && OnParameterSet.Invoke(effect, param))
 									continue;
 
 								switch (param.ParameterType) {

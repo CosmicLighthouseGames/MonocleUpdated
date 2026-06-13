@@ -22,6 +22,8 @@ namespace Monocle {
 
 		public void Render(GraphicsDevice device) {
 
+			return;
+
 			BeforeRender?.Invoke();
 
 			var bState = device.BlendState;
@@ -40,17 +42,14 @@ namespace Monocle {
 				if (!filter.Active)
 					continue;
 
-
-
 				var material = filter.material;
-				var tech = material.GetTechnique(RenderOrder);
-
+				var tech = material.Technique;
 
 				var tex = material.Texture??Draw.Pixel;
 				var drawcall = this;
 				var pData = material.parameterData;
 
-				Draw.SetParameters(material.BaseEffect, (param, effect) => {
+				Draw.SetParameters(material.BaseEffect, (effect, param) => {
 					switch (param.Name) {
 						default:
 							if (pData.ContainsKey(param.Name)) {

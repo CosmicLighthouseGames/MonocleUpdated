@@ -2972,7 +2972,6 @@ namespace Monocle
 						(float)value.ClipRect.Height));
 				}
             }
-			//var param = effect.Parameters[parameter];
 		}
 		public static void SetParameter(this Effect effect, string parameter, float value) {
 			var param = effect.Parameters[parameter];
