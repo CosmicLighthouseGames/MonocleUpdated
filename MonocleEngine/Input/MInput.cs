@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using Steamworks;
 using System.Linq;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace Monocle {
 
@@ -12,6 +13,436 @@ namespace Monocle {
 		Xbox,
 		PlayStation,
 		Switch,
+	}
+	public class KeyboardTextInput : IDisposable {
+		[DllImport("user32.dll", CharSet = CharSet.Auto, ExactSpelling = true, CallingConvention = CallingConvention.Winapi)]
+		static extern short GetKeyState(int keyCode);
+
+		static bool Capslock => (((ushort)GetKeyState(0x14)) & 0xffff) != 0;
+
+		public enum TextType {
+			Integer,
+			Decimal,
+			SingleLine,
+			MultiLine,
+		}
+		string text;
+		int Cursor = 0, CursorTrail = 0;
+
+		public TextType Type;
+
+		public int CursorLeft => Math.Min(Cursor, CursorTrail);
+		public int CursorRight => Math.Max(Cursor, CursorTrail);
+
+		public float RepeatStart = 0.75f, RepeatInterval = 0.3f;
+
+		public event Action OnHitEnter;
+		public event Action<string> OnChanged;
+		public event Action<Keys> OnArrows;
+
+		public bool TakingInput = true;
+
+		float lastPress = 0;
+
+		public string Text => text;
+
+		bool IsText => (Type == TextType.SingleLine || Type == TextType.MultiLine);
+
+		public KeyboardTextInput(string initialText, TextType type) {
+			text = initialText;
+			MInput.Keyboard.OnPressed += Keyboard_OnPressed;
+			Type = type;
+		}
+
+		public virtual bool ControlArrow(char current, char next) {
+
+			if (char.IsLetterOrDigit(current)) {
+				return char.IsLetterOrDigit(next);
+			}
+
+			return false;
+		}
+
+		public void SetCursor(int main, int extra = -1) {
+			Cursor = main;
+			if (extra >= 0) {
+				CursorTrail = extra;
+			}
+			else {
+				CursorTrail = main;
+			}
+		}
+
+		private void AddToText(string c) {
+			text ??= "";
+			text = $"{text.Substring(0, CursorLeft)}{c}{text.Substring(CursorRight, text.Length - CursorRight)}";
+			Cursor = CursorLeft + c.Length;
+			CursorTrail = Cursor;
+		}
+		private void AddToText(char c) {
+			AddToText(c.ToString());
+		}
+
+		private void Keyboard_OnPressed(Keys key, float time) {
+			if (!TakingInput)
+				return;
+
+			if (time > 0) {
+				time -= RepeatStart;
+				float prevTime = lastPress;
+				lastPress = time;
+				
+				if (time < 0) {
+					return;
+				}
+
+				if (!Calc.OnInterval(time, prevTime, RepeatInterval)) {
+					return;
+				}
+			}
+			else {
+				lastPress = RepeatStart;
+			}
+
+			bool shifting = MInput.Keyboard.Check(Keys.LeftShift) || MInput.Keyboard.Check(Keys.RightShift);
+			bool control = MInput.Keyboard.Check(Keys.LeftControl) || MInput.Keyboard.Check(Keys.RightControl);
+
+			switch (key) {
+				case Keys.D0:
+					if (shifting && IsText)
+						AddToText(')');
+					else if (!shifting)
+						AddToText('0');
+					break;
+				case Keys.D1:
+					if (shifting && IsText)
+						AddToText('!');
+					else if (!shifting)
+						AddToText('1');
+					break;
+				case Keys.D2:
+					if (shifting && IsText)
+						AddToText('@');
+					else if (!shifting)
+						AddToText('2');
+					break;
+				case Keys.D3:
+					if (shifting && IsText)
+						AddToText('#');
+					else if (!shifting)
+						AddToText('3');
+					break;
+				case Keys.D4:
+					if (shifting && IsText)
+						AddToText('$');
+					else if (!shifting)
+						AddToText('4');
+					break;
+				case Keys.D5:
+					if (shifting && IsText)
+						AddToText('%');
+					else if (!shifting)
+						AddToText('5');
+					break;
+				case Keys.D6:
+					if (shifting && IsText)
+						AddToText('^');
+					else if (!shifting)
+						AddToText('6');
+					break;
+				case Keys.D7:
+					if (shifting && IsText)
+						AddToText('&');
+					else if (!shifting)
+						AddToText('7');
+					break;
+				case Keys.D8:
+					if (shifting && IsText)
+						AddToText('*');
+					else if (!shifting)
+						AddToText('8');
+					break;
+				case Keys.D9:
+					if (shifting && IsText)
+						AddToText('(');
+					else if (!shifting)
+						AddToText('9');
+					break;
+				case Keys.Decimal:
+					if (Type == TextType.Integer)
+						break;
+					AddToText('.');
+					break;
+				case Keys.Divide:
+					if (!IsText)
+						break;
+					AddToText('/');
+					break;
+				case Keys.Add:
+					if (!IsText)
+						break;
+					AddToText('+');
+					break;
+				case Keys.Subtract:
+					if (!IsText)
+						break;
+					AddToText('-');
+					break;
+				case Keys.OemPeriod:
+					if (Type == TextType.Integer)
+						break;
+
+					if (shifting && IsText) {
+						AddToText('>');
+					}
+					else if (!shifting) {
+						AddToText('.');
+					}
+					break;
+				case Keys.OemComma:
+					if (Type == TextType.Integer || Type == TextType.Decimal)
+						break;
+
+					if (shifting && IsText) {
+						AddToText('<');
+					}
+					else if (!shifting) {
+						AddToText(',');
+					}
+					break;
+				case Keys.OemQuotes:
+					if (!IsText)
+						break;
+
+					if (shifting) {
+						AddToText('"');
+					}
+					else {
+						AddToText('\'');
+					}
+					break;
+				case Keys.OemOpenBrackets:
+					if (!IsText)
+						break;
+
+					if (shifting) {
+						AddToText('{');
+					}
+					else {
+						AddToText('[');
+					}
+					break;
+				case Keys.OemCloseBrackets:
+					if (!IsText)
+						break;
+
+					if (shifting) {
+						AddToText('}');
+					}
+					else {
+						AddToText(']');
+					}
+					break;
+				case Keys.OemPipe:
+					if (!IsText)
+						break;
+
+					if (shifting) {
+						AddToText('|');
+					}
+					else {
+						AddToText('\\');
+					}
+					break;
+				case Keys.OemPlus:
+					if (!IsText)
+						break;
+
+					if (shifting) {
+						AddToText('+');
+					}
+					else {
+						AddToText('=');
+					}
+					break;
+				case Keys.OemMinus:
+					if (!IsText)
+						break;
+
+					if (shifting) {
+						AddToText('_');
+					}
+					else {
+						AddToText('-');
+					}
+					break;
+				case Keys.OemQuestion:
+					if (!IsText)
+						break;
+
+					if (shifting) {
+						AddToText('?');
+					}
+					else {
+						AddToText('/');
+					}
+					break;
+				case Keys.OemTilde:
+					if (!IsText)
+						break;
+
+					if (shifting) {
+						AddToText('~');
+					}
+					else {
+					}
+					break;
+				case Keys.NumPad0:
+				case Keys.NumPad1:
+				case Keys.NumPad2:
+				case Keys.NumPad3:
+				case Keys.NumPad4:
+				case Keys.NumPad5:
+				case Keys.NumPad6:
+				case Keys.NumPad7:
+				case Keys.NumPad8:
+				case Keys.NumPad9:
+					AddToText(key.ToString()[6]);
+					break;
+				case Keys.Tab:
+					break;
+				case Keys.A:
+					if (control) {
+						Cursor = 0;
+						CursorTrail = text.Length;
+					}
+					else
+						goto default;
+					break;
+				case Keys.Up:
+
+					//if (!MInput.Keyboard.Check(Keys.LeftShift) && !MInput.Keyboard.Check(Keys.RightShift))
+					//	CursorRight = CursorLeft;
+					OnArrows?.Invoke(key);
+					break;
+				case Keys.Down:
+					//if (!MInput.Keyboard.Check(Keys.LeftShift) && !MInput.Keyboard.Check(Keys.RightShift))
+					//	CursorRight = CursorLeft;
+
+					OnArrows?.Invoke(key);
+					break;
+				case Keys.Left:
+					do {
+
+						Cursor = Math.Max(Cursor - 1, 0);
+					} while (Cursor > 0 && control && ControlArrow(text[Cursor], text[Cursor - 1]));
+
+					if (!MInput.Keyboard.Check(Keys.LeftShift) && !MInput.Keyboard.Check(Keys.RightShift))
+						CursorTrail = Cursor;
+					OnArrows?.Invoke(key);
+					break;
+				case Keys.Right:
+					do {
+
+						Cursor = Math.Min(Cursor + 1, text.Length);
+					} while (Cursor < text.Length && control && ControlArrow(text[Cursor - 1], text[Cursor]));
+
+					if (!MInput.Keyboard.Check(Keys.LeftShift) && !MInput.Keyboard.Check(Keys.RightShift))
+						CursorTrail = Cursor;
+					OnArrows?.Invoke(key);
+					break;
+				case Keys.Delete:
+					if (CursorLeft == CursorRight) {
+						if (CursorLeft >= text.Length)
+							break;
+						CursorTrail++;
+						while (control && CursorTrail < text.Length && ControlArrow(text[CursorTrail - 1], text[CursorTrail])) {
+							CursorTrail++;
+						}
+					}
+					AddToText("");
+					CursorTrail = Cursor;
+
+					break;
+				case Keys.Back:
+					if (CursorLeft == CursorRight) {
+						if (CursorLeft <= 0)
+							break;
+						CursorTrail--;
+						while (control && CursorTrail > 0 && ControlArrow(text[CursorTrail - 1], text[CursorTrail])) {
+							CursorTrail--;
+						}
+					}
+
+					if (CursorLeft != CursorRight) {
+						AddToText("");
+					}
+					else if (CursorLeft > 0) {
+						text = $"{text.Substring(0, CursorLeft - 1)}{text.Substring(CursorRight, text.Length - CursorRight)}";
+						CursorTrail = --Cursor;
+					}
+					break;
+				case Keys.Enter:
+					if (shifting || Type != TextType.MultiLine)
+						OnHitEnter?.Invoke();
+					else
+						AddToText('\n');
+					break;
+				case Keys.Space:
+					if (!IsText)
+						break;
+					AddToText(' ');
+					break;
+				case Keys.End:
+
+					break;
+				case Keys.Home:
+
+					break;
+				case Keys.Escape:
+
+					break;
+				case Keys.LeftShift:
+				case Keys.RightShift:
+				case Keys.LeftControl:
+				case Keys.RightControl:
+				case Keys.LeftAlt:
+				case Keys.RightAlt:
+				case Keys.CapsLock:
+					break;
+				default:
+					if (!IsText)
+						break;
+					if (control) {
+						if (key == Keys.A) {
+							CursorTrail = 0;
+							Cursor = text.Length;
+						}
+					}
+					else {
+						bool shift = shifting != Capslock;
+						if (key.ToString().Length == 1) {
+							if (shift) {
+								AddToText(key.ToString());
+							}
+							else {
+								AddToText(key.ToString().ToLower());
+							}
+						}
+						else {
+
+						}
+					}
+
+					break;
+			}
+
+			OnChanged?.Invoke(text);
+		}
+
+		public void Dispose() {
+			MInput.Keyboard.OnPressed -= Keyboard_OnPressed;
+		}
 	}
 	public static class MInput {
 
@@ -25,6 +456,10 @@ namespace Monocle {
 
 #if STEAM
 		public static string ActionSet { get; private set; }
+		static string DesiredActionSet;
+		public static event Action OnSteamControllerDisconnect;
+		static int connectedSteamControllers;
+		static int previousSteamControllers;
 #endif
 		public static ControllerType Controller { get; private set; }
 
@@ -37,6 +472,7 @@ namespace Monocle {
 		static InputHandle_t[] SteamControllers;
 
 		public static int SteamControllerCount { get; private set; }
+
 
 		internal static void Initialize() {
 			Controller = ControllerType.Xbox;
@@ -68,9 +504,21 @@ namespace Monocle {
 		internal static void Update(bool updateVirtual) {
 			lock (InputLock) {
 #if STEAM
+				if (DesiredActionSet != ActionSet) {
+					ActivateActionSet(DesiredActionSet);
+				}
+
 				SteamInput.RunFrame();
 
 				SteamControllerCount = SteamInput.GetConnectedControllers(SteamControllers);
+				connectedSteamControllers = 0;
+
+
+				if (previousSteamControllers > connectedSteamControllers) {
+
+				}
+
+				previousSteamControllers = connectedSteamControllers;
 
 				if (SteamControllerCount > 0) {
 
@@ -79,8 +527,14 @@ namespace Monocle {
 						if (igc != default) {
 							ActionSets.Add(ToActivate[i], igc);
 							ToActivate.RemoveAt(i);
+							break;
 						}
 					}
+				}
+
+
+				if (previousSteamControllers > connectedSteamControllers) {
+					OnSteamControllerDisconnect?.Invoke();
 				}
 #endif
 
@@ -124,11 +578,12 @@ namespace Monocle {
 #endif
 		public static void ActivateActionSet(string name) {
 #if STEAM
+			DesiredActionSet = name;
 			if (ActionSets.ContainsKey(name)) {
 				for (int i = 0; i < SteamControllers.Length; i++) {
 					SteamInput.ActivateActionSet(SteamControllers[i], ActionSets[name]);
-					ActionSet = name;
 				}
+				ActionSet = name;
 			}
 #endif
 		}
@@ -196,6 +651,10 @@ namespace Monocle {
 			public KeyboardState PreviousState;
 			public KeyboardState CurrentState;
 
+			Keys LastKeyPressed;
+			float TimePressed;
+			public event Action<Keys, float> OnPressed;
+
 			internal KeyboardData() {
 
 			}
@@ -204,6 +663,17 @@ namespace Monocle {
 				PreviousState = CurrentState;
 				CurrentState = Microsoft.Xna.Framework.Input.Keyboard.GetState();
 
+				if (CurrentState.IsKeyDown(LastKeyPressed)) {
+					TimePressed += Engine.DeltaTime;
+					OnPressed?.Invoke(LastKeyPressed, TimePressed);
+				}
+				foreach (var key in CurrentState.GetPressedKeys()) {
+					if (PreviousState.IsKeyUp(key)) {
+						TimePressed = 0;
+						LastKeyPressed = key;
+						OnPressed?.Invoke(key, 0);
+					}
+				}
 			}
 
 			internal void UpdateNull() {
@@ -304,6 +774,8 @@ namespace Monocle {
 			public MouseState PreviousState;
 			public MouseState CurrentState;
 
+			bool nulled = false;
+
 			internal MouseData() {
 				PreviousState = new MouseState();
 				CurrentState = new MouseState();
@@ -312,11 +784,13 @@ namespace Monocle {
 			internal void Update() {
 				PreviousState = CurrentState;
 				CurrentState = Microsoft.Xna.Framework.Input.Mouse.GetState();
+				nulled = false;
 			}
 
 			internal void UpdateNull() {
 				PreviousState = CurrentState;
 				CurrentState = new MouseState();
+				nulled = true;
 			}
 
 			#region Buttons
@@ -366,7 +840,7 @@ namespace Monocle {
 			}
 
 			public int WheelDelta {
-				get { return CurrentState.ScrollWheelValue - PreviousState.ScrollWheelValue; }
+				get { return nulled ? 0 : (CurrentState.ScrollWheelValue - PreviousState.ScrollWheelValue); }
 			}
 
 			#endregion
@@ -392,11 +866,11 @@ namespace Monocle {
 
 			public Vector2 Position {
 				get {
-					return Vector2.Transform(new Vector2(CurrentState.X, CurrentState.Y), Matrix.Invert(Engine.ScreenMatrix));
+					return Vector2.Transform(new Vector2(CurrentState.X, CurrentState.Y), Engine.MouseMatrix);
 				}
 
 				set {
-					var vector = Vector2.Transform(value, Engine.ScreenMatrix);
+					var vector = Vector2.Transform(value, Matrix.Invert(Engine.MouseMatrix));
 					Microsoft.Xna.Framework.Input.Mouse.SetPosition((int)Math.Round(vector.X), (int)Math.Round(vector.Y));
 				}
 			}

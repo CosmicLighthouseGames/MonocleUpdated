@@ -12,13 +12,13 @@ namespace Monocle {
 		public Vector3 RenderPosition {
 			get {
 				if (Entity != null)
-					return Entity.Position + pos;
+					return Entity.RenderPosition + pos;
 				else
 					return offset;
 			}
 			set {
 				if (Entity != null)
-					pos = value - Entity.Position;
+					pos = value - Entity.RenderPosition;
 				else
 					pos = value;
 			}

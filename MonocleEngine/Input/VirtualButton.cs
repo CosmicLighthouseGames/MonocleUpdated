@@ -90,7 +90,6 @@ namespace Monocle
 
 		public override void Update()
 		{
-			consumed = false;
 
 			bufferCounter -= Engine.DeltaTime;
 
@@ -154,6 +153,10 @@ namespace Monocle
 						repeatCounter = multiRepeatTime;
 					}
 				}
+			}
+			if (consumed) {
+				bufferCounter = 0;
+				consumed = false;
 			}
 		}
 

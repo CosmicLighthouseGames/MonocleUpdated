@@ -391,12 +391,13 @@ namespace Monocle {
 				Monocle.Draw.UpdatePerFrame();
 
 				RenderCore();
+				GraphicsDevice.SetRenderTarget(null);
+				GraphicsDevice.Clear(ClearOptions.DepthBuffer, Color.Magenta, Monocle.Draw.InvertDepthBuffer ? 1 : 0, 0);
 
 				sw.Stop();
 
 				lastFrameRender = MathHelper.Lerp(lastFrameRender, (float)sw.Elapsed.TotalMilliseconds, 0.01f);
 
-				base.Draw(gameTime);
 				if (Commands.Open || Commands.TempOpen > 0)
 					Commands.Render();
 
@@ -421,7 +422,7 @@ namespace Monocle {
 					}
 
 					float w = WindowWidth / PixelsPerUnit,
-				h = WindowHeight / PixelsPerUnit;
+						h = WindowHeight / PixelsPerUnit;
 
 					Monocle.Draw.ClearGraphics(w, h);
 
@@ -449,7 +450,7 @@ namespace Monocle {
 
 
 					Monocle.Draw.GraphicsDevice.RasterizerState = RasterizerState.CullNone;
-					Monocle.Draw.GraphicsDevice.DepthStencilState = DepthStencilState.None;
+					GraphicsDevice.SetRenderTarget(null);
 					Monocle.Draw.RenderPass();
 					Monocle.Draw.ClearGraphics();
 					//
@@ -463,7 +464,7 @@ namespace Monocle {
 #endif
 
 			Monocle.Draw.ClearGraphics();
-			GraphicsDevice.SetRenderTarget(null);
+			base.Draw(gameTime);
 
 
 			Monitor.Exit(renderLock);
@@ -618,7 +619,7 @@ namespace Monocle {
 
 			// update screen matrix
 			ScreenMatrix = Matrix.CreateScale(w / (float)UnitWidth, w / (float)UnitWidth, 1);
-			MouseMatrix = Matrix.CreateTranslation(((int)screenWidth - w) >> 1, ((int)screenHeight - h) >> 1, 0);
+			MouseMatrix = Matrix.CreateTranslation((w - (int)screenWidth) >> 1, (h - (int)screenHeight) >> 1, 0) * Matrix.CreateScale(1 / Scaling, 1 / Scaling, 1);
 
 			// update viewport
 			Viewport = new Viewport {

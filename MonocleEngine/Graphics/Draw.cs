@@ -12,11 +12,13 @@ namespace Monocle {
 	public interface IDrawCall {
 
 		int RenderOrder { get; set; }
+		float GetDepth(Matrix matrix);
 
 		void Render(GraphicsDevice device);
 	}
 	public struct PriorityDrawCall : IDrawCall {
 		public int RenderOrder { get; set; }
+		public float GetDepth(Matrix matrix) => float.PositiveInfinity;
 
 		public Action OnRender;
 
@@ -25,6 +27,11 @@ namespace Monocle {
 		}
 	}
 	public unsafe static class Draw {
+
+		public static float GetDepth(Matrix matrixA, Matrix matrixB) {
+			matrixA = matrixA * matrixB;
+			return matrixA.M43;
+		}
 
 		/// <summary>
 		/// The currently-rendering Renderer
@@ -43,24 +50,28 @@ namespace Monocle {
 		public static MTexture Pixel;
 		public static MTexture Noise;
 
-		static Matrix worldProj, worldProjInvert;
+		static Matrix viewMatrix, worldProject;
 		public static Matrix WorldProjection {
 			get {
-				return worldProj;
+				return worldProject;
 			}
 			set {
-				worldProj = value;
-				worldProjInvert = Matrix.Invert(worldProj);
+				worldProject = value;
 			}
 		}
-		public static Matrix WorldProjectionInverted {
+		public static Matrix ViewMatrix {
 			get {
-				return worldProjInvert;
+				return viewMatrix;
+			}
+			set {
+				viewMatrix = value;
 			}
 		}
 
 		public static DepthStencilState DefaultDepthState;
 		public static DepthStencilState FallbackDepthState;
+
+		public static bool InvertDepthBuffer = false;
 
 		static Effect effect;
 		public static Effect DefaultEffect {
@@ -80,6 +91,8 @@ namespace Monocle {
 
 		public static Material OverridingMaterial;
 
+		public static Dictionary<int, DepthStencilState> StencilPasses = new Dictionary<int, DepthStencilState>();
+
 		public static DepthStencilState stencilWrite, stencilRead;
 
 		public static PixelFont DefaultFont;
@@ -92,39 +105,21 @@ namespace Monocle {
 
 		private const float SB_DEPTH_DIV = 1f / DepthPrecision;
 
-		public static int Depth {
-			get { return entityDepth; }
-			set {
-				entityDepth = value;
-				RealDepth = (value * SB_DEPTH_DIV) + 0.5f;
-			}
-		}
-		public static float RealDepth;
-		private static int entityDepth;
-
-		public static int CurrentRenderOrder;
-
 		private static Rectangle rect;
 
 		class DrawCallList {
 
-			private PriorityQueue<IDrawCall, (int, int)> callLists;
+			private List<IDrawCall> callLists;
 
 			int renderQueue = 1;
 
 			public DrawCallList() {
-				var compare = Comparer<(int, int)>.Create(
-					((int pass, int order) a, (int pass, int order) b) => {
-					if (a.pass == b.pass)
-						return a.order.CompareTo(b.order);
-					return a.pass.CompareTo(b.pass);
-				});
-				callLists = new PriorityQueue<IDrawCall, (int, int)>(compare);
+				callLists = new List<IDrawCall>();
 			}
 
 			public void Add(IDrawCall call) {
 
-				callLists.Enqueue(call, (call.RenderOrder, (call is PriorityDrawCall ? 0 : renderQueue++)));
+				callLists.Add(call);
 
 			}
 
@@ -132,19 +127,15 @@ namespace Monocle {
 
 				CurrentDrawCalls += callLists.Count;
 
-				renderQueue = 1;
-
-				while (callLists.Count > 0) {
-					var queued = callLists.Dequeue();
-
-
-					yield return queued;
+				foreach (var item in callLists.OrderBy(a => { return a.GetDepth(viewMatrix); }).OrderBy(a=> { return (a is PriorityDrawCall ? 0 : 1); }).OrderBy(a => { return a.RenderOrder; })) {
+					yield return item;
 				}
-				yield break;
 
+				callLists.Clear();
 			}
 
 		}
+
 		public struct SpriteDrawCall : IDrawCall {
 
 			static MeshPointer mesh;
@@ -203,67 +194,56 @@ namespace Monocle {
 				});
 
 			}
-			public static SpriteDrawCall Draw(MTexture texture, Matrix transform, Material mat = null) {
-				var retval = AddMesh(transform, Color.White, texture.Texture, texture.ClipRect, SpriteEffects.None);
+			static void AddDrawCalls(MTexture texture, Matrix transform, Color color, SpriteEffects flip, Material material) {
 
-				retval.material = mat??DefaultMaterial;
-				retval.overrideTexture = texture;
+				transform = Matrix.CreateScale(texture.ClipRect.Width, texture.ClipRect.Height, 1) * transform;
+				var mat = material??DefaultMaterial;
 
-				return retval;
+				foreach (var p in mat.Passes) {
+
+					drawCall.Add(
+						new SpriteDrawCall() {
+							material = mat,
+							overrideTexture = texture,
+							flip = flip,
+							color = color,
+							worldTransform = transform,
+							RenderOrder = p.Key
+						}
+					);
+				}
 			}
-			public static SpriteDrawCall Draw(MTexture texture, Matrix transform, Color color, Material mat = null) {
-				var retval = AddMesh(transform, color, texture.Texture, texture.ClipRect, SpriteEffects.None);
 
-				retval.material = mat??DefaultMaterial;
-				retval.overrideTexture = texture;
 
-				return retval;
-			}
-			public static SpriteDrawCall Draw(MTexture texture, Matrix transform, Color color, SpriteEffects flip, DepthStencilState? stencil = null, Material mat = null) {
+
+			public static void Draw(MTexture texture, Matrix transform, Material mat = null) {
 				if (texture == null)
-					return default;
-				var retval = AddMesh(transform, color, texture.Texture, texture.ClipRect, flip);
-
-				retval.material = mat??DefaultMaterial;
-				retval.overrideTexture = texture;
-				retval.DepthStencilState = stencil;
-
-				return retval;
+					return;
+				AddDrawCalls(texture, transform, Color.White, SpriteEffects.None, mat);
 			}
-			public static SpriteDrawCall Draw(MTexture texture, Matrix transform, Color color, Rectangle clipRect, SpriteEffects flip, DepthStencilState? stencil = null, Material mat = null) {
-				var retval = AddMesh(transform, color, texture.Texture, clipRect, flip);
-
-				retval.material = mat??DefaultMaterial;
-				retval.overrideTexture = texture;
-				retval.DepthStencilState = stencil;
-
-				return retval;
+			public static void Draw(MTexture texture, Matrix transform, Color color, Material mat = null) {
+				if (texture == null)
+					return;
+				AddDrawCalls(texture, transform, color, SpriteEffects.None, mat);
+			}
+			public static void Draw(MTexture texture, Matrix transform, Color color, SpriteEffects flip, Material mat = null) {
+				if (texture == null)
+					return;
+				AddDrawCalls(texture, transform, color, flip, mat);
 			}
 
-			static SpriteDrawCall AddMesh(Matrix transform, Color color, Vector2 size, SpriteEffects flip) {
-
-				transform = Matrix.CreateScale(size.X, size.Y, 1) * transform;
-				return new SpriteDrawCall() {
-					flip = flip,
-					color = color,
-					worldTransform = transform,
-					RenderOrder = CurrentRenderOrder
-				};
-			}
-			static SpriteDrawCall AddMesh(Matrix transform, Color color, Texture2D texture, Rectangle clipRect, SpriteEffects flip) {
-
-				return AddMesh(transform, color, new Vector2(clipRect.Width, clipRect.Height), flip);
-
-			}
 
 			public int RenderOrder { get; set; }
+
+			public float GetDepth(Matrix matrix) {
+				return Monocle.Draw.GetDepth(matrix, worldTransform);
+			}
 
 			public Material material;
 			public MTexture overrideTexture;
 			public Matrix worldTransform = Matrix.Identity;
 			public SpriteEffects flip;
 			public Color color;
-			public DepthStencilState DepthStencilState;
 
 			public SpriteDrawCall() {
 				material = null;
@@ -271,7 +251,6 @@ namespace Monocle {
 				worldTransform = Matrix.Identity;
 				flip = SpriteEffects.None;
 				color = Color.White;
-				DepthStencilState = null;
 				RenderOrder = 0;
 			}
 
@@ -285,10 +264,6 @@ namespace Monocle {
 				if (!mat.Passes.ContainsKey(RenderOrder))
 					return;
 
-
-				var stencil = DepthStencilState??mat.DepthStencilState??FallbackDepthState;
-				device.DepthStencilState = stencil;
-
 				mat.SetParameters(worldTransform, overrideTexture, color, flip);
 
 				mat.Render(RenderOrder, mesh.Render);
@@ -297,7 +272,7 @@ namespace Monocle {
 
 
 
-		private static DrawCallList opaque;
+		private static DrawCallList drawCall;
 
 		public static int PreviousDrawCalls;
 		static int CurrentDrawCalls;
@@ -318,17 +293,20 @@ namespace Monocle {
 							param.SetValue(new Vector4(viewport.X, viewport.Y, viewport.Width, viewport.Height));
 						}
 							break;
-						case "WorldViewProj":
-							param.SetValue(worldProj);
+						case "CameraInverted":
+							param.SetValue(Matrix.Invert(viewMatrix) * Matrix.Invert(worldProject));
 							break;
-						case "WorldViewProjInvert":
-							param.SetValue(worldProjInvert);
+						case "World2Screen":
+							param.SetValue(worldProject);
+							break;
+						case "WorldViewProject":
+							param.SetValue(viewMatrix);
 							break;
 						case "NoiseTexture":
 							param.SetValue(Noise.Texture);
 							break;
-						case "ViewDirection":
-							param.SetValue(Vector3.Transform(Vector3.Forward, Camera.Main.Rotation));
+						case "CameraPosition":
+							param.SetValue(Camera.Main.Position);
 							break;
 						default:
 							try {
@@ -385,7 +363,6 @@ namespace Monocle {
 		}
 		internal static void UpdatePerFrame() {
 
-			Depth = 0;
 			PreviousDrawCalls = CurrentDrawCalls;
 			CurrentDrawCalls = 0;
 			
@@ -399,6 +376,8 @@ namespace Monocle {
 			MeshHeap.Initialize(GraphicsDevice);
 
 			SpriteDrawCall.Initialize();
+			
+			
 
 			DefaultDepthState = new DepthStencilState();
 			DefaultDepthState.ReadFrom(DepthStencilState.Default);
@@ -413,7 +392,7 @@ namespace Monocle {
 				matrixStack[i] = Matrix.Identity;
 			}
 
-			opaque = drawStack[0];
+			drawCall = drawStack[0];
 			WorldProjection = Matrix.Identity;
 
 			stencilWrite = new DepthStencilState();
@@ -452,7 +431,7 @@ namespace Monocle {
 
 			var width = GraphicsDevice.Viewport.Width;
 
-			foreach (var draw in opaque.GetItems()) {
+			foreach (var draw in drawCall.GetItems()) {
 				draw.Render(GraphicsDevice);
 				if (width != GraphicsDevice.Viewport.Width) {
 					//GraphicsDevice.Viewport = new Viewport(GraphicsDevice.Viewport.X, GraphicsDevice.Viewport.Y, width, GraphicsDevice.Viewport.Height);
@@ -478,7 +457,7 @@ namespace Monocle {
 
 			stackIndex += 1;
 
-			opaque = drawStack[stackIndex];
+			drawCall = drawStack[stackIndex];
 			WorldProjection = Matrix.Identity;
 
 		}
@@ -490,17 +469,17 @@ namespace Monocle {
 
 			WorldProjection = matrixStack[stackIndex];
 
-			opaque = drawStack[stackIndex / 2];
+			drawCall = drawStack[stackIndex / 2];
 		}
 
 
 		public static void CustomDrawCall(IDrawCall call) {
-			opaque.Add(call);
+			drawCall.Add(call);
 		}
 
 		#region 3D Images
 
-		public static void Texture(MTexture tex, Matrix matrix, Color color, DepthStencilState? stencil = null, SpriteEffects flipping = SpriteEffects.None, Material mat = null) {
+		public static void Texture(MTexture tex, Matrix matrix, Color color, SpriteEffects flipping = SpriteEffects.None, Material mat = null) {
 
 			if (tex == null)
 				return;
@@ -509,7 +488,7 @@ namespace Monocle {
 				mat = DefaultMaterial;
 			}
 
-			opaque.Add(SpriteDrawCall.Draw(tex, matrix, color, flipping, stencil, mat));
+			SpriteDrawCall.Draw(tex, matrix, color, flipping, mat);
 
 		}
 		public static void Texture(MTexture tex, Vector3 position, Vector2 origin, Color color, Vector2 scale, Material mat = null) {
@@ -539,7 +518,7 @@ namespace Monocle {
 			Texture(tex, matrix, Color.White);
 		}
 
-		public static void Texture(MTexture tex, Vector3 position, Vector2 origin, Vector2 scale, Quaternion rotation, Color color, Material mat = null, DepthStencilState? stencil = null, SpriteEffects flipping = SpriteEffects.None) {
+		public static void Texture(MTexture tex, Vector3 position, Vector2 origin, Vector2 scale, Quaternion rotation, Color color, Material mat = null, SpriteEffects flipping = SpriteEffects.None) {
 
 			if (tex == null)
 				return;
@@ -551,36 +530,18 @@ namespace Monocle {
 				* Matrix.CreateTranslation(position.X, position.Y, position.Z)
 				;
 
-			Texture(tex, matrix, color, stencil, flipping, mat);
+			Texture(tex, matrix, color, flipping, mat);
 		}
 
 		#endregion
 
-		#region Screen Rectangle
-
-		//public static void ScreenRect(float x, float y, float width, float height, Color color, Camera cam = null) {
-		//	if (cam == null)
-		//		cam = Camera.Main;
-
-		//	Matrix mat = Matrix.Identity
-		//		* cam.MatrixSprites
-		//		* Matrix.CreateScale(width, height, 1)
-		//		* Matrix.CreateTranslation(x, y, (RealDepth - 0.5f) * 250)
-		//		;
-		//	Texture3D(Pixel, mat, color);
-		//}
-		//public static void ScreenRect(Vector2 pos, Vector2 size, Color color, Camera cam = null) {
-		//	ScreenRect(pos.X, pos.Y, size.X, size.Y, color, cam);
-		//}
-
-		#endregion
 
 		#region Rectangle
 
 		public static void Rect(float x, float y, float width, float height, Color color) {
 			Matrix mat = Matrix.Identity
 				* Matrix.CreateScale(width, height, 1)
-				* Matrix.CreateTranslation(x, y, RealDepth)
+				* Matrix.CreateTranslation(x, y, 0)
 				;
 			Texture(Pixel, mat, color);
 		}

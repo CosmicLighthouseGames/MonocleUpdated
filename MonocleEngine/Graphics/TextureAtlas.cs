@@ -55,8 +55,14 @@ namespace Monocle
 				var path = itemToSprite[item];
 
 				path.Value = tex;
-				if (ContainsKey(key) && GetHighestValue(key) == path) {
-					textures[key].SetTexture(tex);
+				if (ContainsKey(key)) {
+					var prio = GetHighestValue(key);
+					
+					if (path.Priority == prio.Priority) {
+						textures[key].SetTexture(tex);
+					}
+
+
 				}
 				else {
 					Add(key, tex, item);
@@ -68,6 +74,9 @@ namespace Monocle
 		}
 
 		private void OnAdded(LoadedAsset item) {
+			if (item.Extention == ".ase" || item.Extention == ".aseprite")
+				return;
+
 			if (item.IsInFolder(Folder)) {
 
 				Engine.OnNextFrame += () => {

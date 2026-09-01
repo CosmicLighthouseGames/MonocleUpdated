@@ -32,12 +32,14 @@ namespace Monocle {
 		public MonocleVertex[] vertices;
 		public short[] indices;
 		public Matrix transform;
-		public DepthStencilState DepthStencilState;
 
 		public List<TransformVertex> modifiers;
 
 
 		public int RenderOrder { get; set; }
+		public float GetDepth(Matrix matrix) {
+			return Draw.GetDepth(matrix, transform);
+		}
 
 		public void Render(GraphicsDevice device) {
 
@@ -48,7 +50,6 @@ namespace Monocle {
 			var drawcall = this;
 
 			var RenderOrder = this.RenderOrder;
-			var DepthStencilState = this.DepthStencilState;
 
 
 			if (Draw.OverridingMaterial != null) {
@@ -58,7 +59,7 @@ namespace Monocle {
 				mat = material;
 			}
 
-			if (mat.Passes.ContainsKey(RenderOrder))
+			if (!mat.Passes.ContainsKey(RenderOrder))
 				return;
 
 			if (modifiers != null) {
@@ -89,19 +90,17 @@ namespace Monocle {
 				}
 			}
 
-
-			var stencil = DepthStencilState??mat.DepthStencilState??Draw.FallbackDepthState;
-			device.DepthStencilState = stencil;
-
 			var tex = mat.Texture??Draw.Pixel;
 			var pData = mat.parameterData;
 
 			mat.SetParameters(drawcall.transform, tex);
 
-			foreach (var pass in mat.Passes[RenderOrder]) {
-				pass.Apply();
-				device.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, buffer, 0, vertices.Length, indices, 0, indices.Length / 3);
-			}
+			var verts = vertices;
+			var inds = indices;
+
+			mat.Render(RenderOrder, () => {
+				device.DrawUserIndexedPrimitives(PrimitiveType.TriangleList, buffer, 0, verts.Length, inds, 0, inds.Length / 3);
+			});
 
 		}
 	}
@@ -112,7 +111,6 @@ namespace Monocle {
 		public int vertexCount;
 		public MonocleModelMaterialSlot mesh;
 		public Matrix transform;
-		public DepthStencilState DepthStencilState;
 
 		public static void AddModelCalls(MonocleModelMaterialSlot mesh, Matrix transform, Material material = null, MonocleArmature armature = null) {
 
@@ -133,6 +131,9 @@ namespace Monocle {
 
 
 		public int RenderOrder { get; set; }
+		public float GetDepth(Matrix matrix) {
+			return Draw.GetDepth(matrix, transform);
+		}
 
 		public void Render(GraphicsDevice device) {
 
@@ -143,7 +144,6 @@ namespace Monocle {
 			var drawcall = this;
 
 			var RenderOrder = this.RenderOrder;
-			var DepthStencilState = this.DepthStencilState;
 
 			var model = mesh;
 
@@ -160,11 +160,7 @@ namespace Monocle {
 
 			var tech = mat.Technique;
 
-			var stencil = DepthStencilState ?? mat.DepthStencilState ?? Draw.FallbackDepthState;
-			device.DepthStencilState = stencil;
-
 			var tex = mat.Texture ?? Draw.Pixel;
-
 
 			mat.SetParameters(drawcall.transform, tex);
 
@@ -231,7 +227,7 @@ namespace Monocle {
 
         public MonocleArmature Armature;
 
-        public Material Material {
+        public new Material Material {
 			get {
 				return Materials[0];
 			}
@@ -271,7 +267,7 @@ namespace Monocle {
 
 			return mat;
 		}
-		private Vector3 GlobalOffset(Vector3 pos) {
+		public Vector3 GlobalOffset(Vector3 pos) {
 
 
 			if (Parent != null) {
@@ -281,7 +277,7 @@ namespace Monocle {
 				pos += parentPos;
 			}
 			else if (Entity != null) {
-				pos += Entity.Position;
+				pos += Entity.RenderPosition;
 			}
 
 			return pos;

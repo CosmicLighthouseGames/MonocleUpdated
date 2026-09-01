@@ -460,16 +460,27 @@ namespace Monocle
         public static float Range(this Random random, float min, float max)
         {
             return min + random.NextFloat(max - min);
-        }
+		}
 
-        /// <summary>
-        /// Returns a random Vector2, and x- and y-values of which are between min (inclusive) and max (exclusive)
-        /// </summary>
-        /// <param name="random"></param>
-        /// <param name="min"></param>
-        /// <param name="max"></param>
-        /// <returns></returns>
-        public static Vector2 Range(this Random random, Vector2 min, Vector2 max)
+		/// <summary>
+		/// Returns a random float between min (inclusive) and max (exclusive)
+		/// </summary>
+		/// <param name="random"></param>
+		/// <param name="min"></param>
+		/// <param name="max"></param>
+		/// <returns></returns>
+		public static double Range(this Random random, double min, double max) {
+			return min + random.NextDouble() * (max - min);
+		}
+
+		/// <summary>
+		/// Returns a random Vector2, and x- and y-values of which are between min (inclusive) and max (exclusive)
+		/// </summary>
+		/// <param name="random"></param>
+		/// <param name="min"></param>
+		/// <param name="max"></param>
+		/// <returns></returns>
+		public static Vector2 Range(this Random random, Vector2 min, Vector2 max)
         {
             return min + new Vector2(random.NextFloat(max.X - min.X), random.NextFloat(max.Y - min.Y));
         }
@@ -1503,9 +1514,20 @@ namespace Monocle
             float a = _v.Angle();
 
             return Math.Abs(ClampLoop(a - _other, -MathHelper.Pi, MathHelper.Pi));
-        }
+		}
+		public static float SignedAngleBetween(this Vector2 _v, Vector2 _other) {
+			float a = _v.Angle();
+			float b = _other.Angle();
 
-        public static Vector2 Clamp(this Vector2 val, float minX, float minY, float maxX, float maxY)
+			return ClampLoop(a - b, -MathHelper.Pi, MathHelper.Pi);
+		}
+		public static float SignedAngleBetween(this Vector2 _v, float _other) {
+			float a = _v.Angle();
+
+			return ClampLoop(a - _other, -MathHelper.Pi, MathHelper.Pi);
+		}
+
+		public static Vector2 Clamp(this Vector2 val, float minX, float minY, float maxX, float maxY)
         {
             return new Vector2(MathHelper.Clamp(val.X, minX, maxX), MathHelper.Clamp(val.Y, minY, maxY));
         }
@@ -3028,7 +3050,7 @@ namespace Monocle
 			var param = effect.Parameters[parameter];
 			if (param != null)
 				param.SetValue(new Vector4(value.R / 255f, value.G / 255f, value.B / 255f, value.A / 255f));
-        }
+		}
 
         public static void Copy(this DepthStencilState from, DepthStencilState to) {
 			to.DepthBufferEnable = from.DepthBufferEnable;

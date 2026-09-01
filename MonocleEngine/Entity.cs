@@ -212,7 +212,6 @@ namespace Monocle {
 	}
     public interface IMonocleRenderer {
         public uint Tag { get; }
-        public int RenderOrder { get; }
 
         public void Render();
     }
@@ -228,7 +227,6 @@ namespace Monocle {
         public Scene Scene { get; private set; }
         public ComponentList Components { get; private set; }
 
-        public int RenderOrder { get; set; }
         /// <summary>
         /// A number to determine in which order entities are updated.  Bigger numbers happen later
         /// </summary>
@@ -378,6 +376,8 @@ namespace Monocle {
             get { return Position.Z; }
             set { Position.Z = value; }
         }
+
+        public virtual Vector3 RenderPosition => Position;
 
         #region Tag
 

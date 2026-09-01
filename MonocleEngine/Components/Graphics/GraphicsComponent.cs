@@ -10,54 +10,28 @@ namespace Monocle
         public Vector2 Origin;
         public Vector3 Scale = Vector3.One;
         public Quaternion Rotation = Quaternion.Identity;
-        public Color Color = Color.White;
+        public Color Color {
+            get => Material.Color;
+            set => Material.Color = value;
+        }
         public Matrix? OverrideMatrix;
-        public DepthStencilState DepthStencilState;
+        public Material Material;
 
-        public int? Stencil {
-            get {
-                if (DepthStencilState == null) return null;
-                return DepthStencilState.StencilWriteMask;
-            }
+        public void SetAlpha(float alpha) {
+            Material.Color.A = (byte)(alpha * 255);
 		}
-		public int? StencilMask {
-			get {
-				if (DepthStencilState == null)
-					return null;
-				return DepthStencilState.StencilMask;
-			}
+		public void SetAlpha(byte alpha) {
+			Material.Color.A = alpha;
+		}
+		public void SetAlpha(int alpha) {
+			Material.Color.A = (byte)alpha;
 		}
 
-        void CheckNull() {
-			if (DepthStencilState == null) {
-				DepthStencilState = new DepthStencilState();
-				DepthStencilState.ReadFrom(Draw.DefaultDepthState);
-			}
-
-		}
-
-		public void SetStencilWrite(int stencil, DepthStencilState copyFrom = null) {
-            CheckNull();
-
-            if (copyFrom != null) {
-
-				DepthStencilState.ReadFrom(copyFrom);
-			}
-
-            DepthStencilState.StencilEnable = true;
-			DepthStencilState.StencilWriteMask = int.MaxValue;
-			DepthStencilState.StencilMask = int.MaxValue;
-            DepthStencilState.ReferenceStencil = stencil;
-			DepthStencilState.StencilFunction = CompareFunction.Always;
-			DepthStencilState.CounterClockwiseStencilFunction = CompareFunction.Always;
-			DepthStencilState.StencilPass = StencilOperation.Replace;
-		}
 
 		public GraphicsComponent(bool active)
-            : base(active, true)
-        {
-
-        }
+            : base(active, true) {
+			Material = Material.DefaultMaterial(Color.White);
+		}
 
         public float X
         {

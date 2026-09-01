@@ -161,10 +161,8 @@ namespace Monocle {
 			}
 			else {
 				meshMatrix =
-					Matrix.CreateTranslation(-Position)
-					* Matrix.CreateFromQuaternion(Quaternion.Inverse(Rotation))
-					* Matrix.CreatePerspectiveFieldOfView(MathHelper.ToRadians(angle), (float)Viewport.Width / Viewport.Height, near, far)
-					* Matrix.CreateScale(1.0f / 1, 1.0f / 1, 1 / (far - near))
+					Matrix.CreateTranslation(-Position) *
+					Matrix.CreateFromQuaternion(Quaternion.Inverse(Rotation))
 					;
 			}
 
@@ -353,12 +351,7 @@ namespace Monocle {
 				}
 			}
 
-			list.Sort((a, b) => {
-				return a.RenderOrder - b.RenderOrder;
-			});
-
-			if (list.Count > 0)
-				Render(list);
+			Render(list);
 		}
 		public void RenderCameraWithout(uint mask) {
 
@@ -405,12 +398,7 @@ namespace Monocle {
 				}
 			}
 
-			list.Sort((a, b) => {
-				return a.RenderOrder - b.RenderOrder;
-			});
-
-			if (list.Count > 0)
-				Render(list);
+			Render(list);
 		}
 
 		public void Render(IEnumerable<IMonocleRenderer> render) {
@@ -448,12 +436,13 @@ namespace Monocle {
 			}
 
 			foreach (var obj in render) {
-				Draw.CurrentRenderOrder = obj.RenderOrder;
 				obj.Render();
 			}
 
 			if (DS_State != null)
 				Draw.FallbackDepthState = DS_State;
+
+			
 			
 			//graphics.RasterizerState = R_State;
 			graphics.BlendState = B_State;
@@ -462,6 +451,19 @@ namespace Monocle {
 
 
 			Draw.WorldProjection = Matrix3D;
+			if (!ortho && OverrideMatrix == null) {
+				var mat1 = Matrix.CreatePerspectiveFieldOfView(MathHelper.ToRadians(90), 16f / 9, 1, 10);
+				var mat2 = Matrix.CreatePerspectiveFieldOfView(MathHelper.ToRadians(45), 16f / 9, 1, 10);
+
+				float radians = MathHelper.ToRadians(90);
+
+				Draw.ViewMatrix = Matrix.CreatePerspectiveFieldOfView(MathHelper.ToRadians(90), (float)Viewport.Width / Viewport.Height, near, far) *
+					Matrix.CreateScale(1.0f, 1.0f, 1 / (far - near))
+					;
+			}
+			else {
+				Draw.ViewMatrix = Matrix.Identity;
+			}
 			Draw.RenderPass();
 
 			Draw.ClearGraphics();

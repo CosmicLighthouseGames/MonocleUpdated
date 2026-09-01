@@ -19,10 +19,11 @@ namespace Monocle {
 		public Action BeforeRender, AfterRender;
 
 		public int RenderOrder { get; set; }
+		public float GetDepth(Matrix matrix) {
+			return 0;
+		}
 
 		public void Render(GraphicsDevice device) {
-
-			return;
 
 			BeforeRender?.Invoke();
 
@@ -57,11 +58,11 @@ namespace Monocle {
 								if (data is MTexture)
 									effect.SetParameter(param.Name, data as MTexture);
 								else if (data is Color)
-									param.SetValue(data.ToVector4());
+									param.SetValue(((Color)data).ToVector4());
 								else if (param.ParameterType == EffectParameterType.Int32)
-									param.SetValue((int)pData[param.Name]);
+									param.SetValue(Convert.ToInt32(pData[param.Name]));
 								else
-									param.SetValue(pData[param.Name]);
+									param.SetValue((dynamic)pData[param.Name]);
 								return true;
 							}
 							return false;
@@ -71,6 +72,7 @@ namespace Monocle {
                 Draw.SpriteDrawCall.SetIndex();
 
                 foreach (var pass in tech.Passes) {
+
 					pass.Apply();
 
 					if (filter.renderTargets != null) {
@@ -146,6 +148,9 @@ namespace Monocle {
 	public class ScreenFilterRenderer : GraphicsComponent {
 
 		public List<ScreenFilter> Filters = new List<ScreenFilter>();
+
+		public int RenderOrder { get; set; }
+
 
 		public Action BeforeRender, AfterRender;
 

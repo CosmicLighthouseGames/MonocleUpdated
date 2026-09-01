@@ -12,8 +12,11 @@ namespace Monocle {
 
 		public Action OnRender;
 
-		public PrepRenderPass(int RenderOrder) : base(true) {
-			this.RenderOrder = RenderOrder;
+
+		public int RenderOrder { get; set; }
+
+		public PrepRenderPass(int renderOrder) : base(true) {
+			RenderOrder = renderOrder;
 		}
 
 		public override void Render() {
@@ -21,7 +24,7 @@ namespace Monocle {
 
 			Draw.CustomDrawCall(new PriorityDrawCall() {
 				OnRender = OnRender,
-				RenderOrder = RenderOrder,
+				RenderOrder = RenderOrder
 			});
 
 		}

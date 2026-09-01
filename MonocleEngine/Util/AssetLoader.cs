@@ -409,7 +409,7 @@ namespace Monocle {
 				while (pausedListening) {
 					Thread.Sleep(1);
 				}
-				while (true) {
+				while (File.Exists(e.FullPath)) {
 					try {
 						File.OpenRead(e.FullPath).Close();
 

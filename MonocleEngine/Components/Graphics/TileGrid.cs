@@ -128,7 +128,7 @@ namespace Monocle {
         }
 
         public Rectangle GetClippedRenderTiles() {
-            var pos = Entity.Position + Position;
+            var pos = Entity.RenderPosition + Position;
 
             int left, top, right, bottom;
             if (ClipCamera == null) {
@@ -157,7 +157,7 @@ namespace Monocle {
         }
 
         public override void Render() {
-            RenderAt(Entity.Position);
+            RenderAt(Entity.RenderPosition);
         }
 
         public void RenderAt(Vector3 position) {

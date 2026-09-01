@@ -10,23 +10,6 @@ namespace Monocle
         public bool Active;
         public bool Visible;
 
-        int? RenderOrderLocal;
-
-		public int RenderOrder {
-			get {
-				if (RenderOrderLocal != null)
-					return RenderOrderLocal.Value;
-				if (Entity != null)
-					return Entity.RenderOrder;
-				return 0;
-			}
-			set {
-				RenderOrderLocal = value;
-			}
-		}
-
-
-
 		private uint tag;
 
 		public Component(bool active, bool visible)

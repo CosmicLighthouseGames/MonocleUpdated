@@ -729,62 +729,56 @@ namespace Monocle {
 
         internal void Render()
         {
-            //return;
             float screenWidth = Engine.WindowWidth / Engine.PixelsPerUnit;
 			float screenHeight = Engine.WindowHeight / Engine.PixelsPerUnit;
             Draw.ClearGraphics(screenWidth, screenHeight);
 
             float fontHeight = Draw.DefaultFont.MeasureString("A").X + 1.25f;
 
-			StringBuilder sb;
+            StringBuilder sb;
 
-            //batch.Begin();
+            Draw.Rect(0.5f, 0.5f, 0, screenWidth - 1f, fontHeight, Color.Black * OPACITY);
 
-            //batch.Draw(pixel, new Rectangle(10, screenHeight - 50, screenWidth - 20, 40), Color.Black * OPACITY);
+            float depth = 0.01f;
 
-            Draw.Rect(0.5f, 0.5f, screenWidth - 1f, fontHeight, Color.Black * OPACITY);
+            if (highlightStart != highlightEnd) {
 
-			if (highlightStart != highlightEnd) {
+                int left = Math.Min(highlightEnd, highlightStart);
+                int right = Math.Max(highlightEnd, highlightStart);
 
-				int left = Math.Min(highlightEnd, highlightStart);
-				int right = Math.Max(highlightEnd, highlightStart);
-
-				string start = currentText.Substring(0, left);
-				string middle = currentText.Substring(left, right - left);
-				string end = currentText.Substring(right, currentText.Length - right);
+                string start = currentText.Substring(0, left);
+                string middle = currentText.Substring(left, right - left);
+                string end = currentText.Substring(right, currentText.Length - right);
 
                 float startLen = Draw.DefaultFont.MeasurePartialString(">" + currentText, left + 1).X;
-				float middleLen = Draw.DefaultFont.MeasurePartialString(">" + currentText, right + 1).X;
+                float middleLen = Draw.DefaultFont.MeasurePartialString(">" + currentText, right + 1).X;
 
-				Draw.Rect(1f + startLen, 0.5f, middleLen - startLen, fontHeight, Color.White);
+                Draw.Rect(1f + startLen, 0.5f, 0.01f, middleLen - startLen, fontHeight, Color.White);
 
-				Draw.DefaultFont.Draw(">" + start, new Vector2(1, .75f), Vector2.Zero, Vector2.One, Color.White);
-				Draw.DefaultFont.Draw(middle, new Vector2(1 + startLen, .75f), Vector2.Zero, Vector2.One, Color.Black);
-				Draw.DefaultFont.Draw(end, new Vector2(1 + middleLen, .75f), Vector2.Zero, Vector2.One, Color.White);
+                Draw.DefaultFont.Draw(">" + start, new Vector3(1, .75f, 0.1f), Vector2.Zero, Vector2.One, Color.White);
+                Draw.DefaultFont.Draw(middle, new Vector3(1 + startLen, .75f, 0.1f), Vector2.Zero, Vector2.One, Color.Black);
+                Draw.DefaultFont.Draw(end, new Vector3(1 + middleLen, .75f, 0.1f), Vector2.Zero, Vector2.One, Color.White);
 
-			}
+            }
             else {
-				Draw.DefaultFont.Draw(">" + currentText, new Vector2(1, .75f), Vector2.Zero, Vector2.One, Color.White);
-				if (underscore) {
+                Draw.DefaultFont.Draw(">" + currentText, new Vector3(1, .75f, 0.1f), Vector2.Zero, Vector2.One, Color.White);
+                if (underscore) {
                     float offset = Draw.DefaultFont.MeasurePartialString($">{currentText} ", highlightStart + 1).X;
-					Draw.DefaultFont.Draw("|", new Vector2(1 + offset, .75f), Vector2.Zero, Vector2.One, Color.White);
-				}
-			}
+                    Draw.DefaultFont.Draw("|", new Vector3(1 + offset, .75f, 0.1f), Vector2.Zero, Vector2.One, Color.White);
+                }
+            }
 
             if (drawCommands.Count > 0) {
                 float height = 1 + (fontHeight * drawCommands.Count);
-                Draw.Rect(0.5f, fontHeight + 1.2f, screenWidth - 1, fontHeight * drawCommands.Count, Color.Black * OPACITY);
+                Draw.Rect(0.5f, fontHeight + 1.2f, 0, screenWidth - 1, fontHeight * drawCommands.Count, Color.Black * OPACITY);
                 for (int i = 0; i < drawCommands.Count; i++)
-                    Draw.DefaultFont.Draw(drawCommands[i].Text, new Vector2(1, 3.5f + (fontHeight * i)), Vector2.Zero, Vector2.One, drawCommands[i].Color);
+                    Draw.DefaultFont.Draw(drawCommands[i].Text, new Vector3(1, 3.5f + (fontHeight * i), 0.1f), Vector2.Zero, Vector2.One, drawCommands[i].Color);
             }
 
-            Draw.FallbackDepthState = DepthStencilState.None;
-            Draw.GraphicsDevice.RasterizerState = RasterizerState.CullNone;
-//            Draw.GraphicsDevice.DepthStencilState = DepthStencilState.None;
-            Draw.RenderPass();
-            Draw.ClearGraphics();
+            //Draw.Rect(-1000, -1000, 2000, 2000, Color.White);
 
-            //batch.End();
+            Draw.FallbackDepthState = DepthStencilState.Default;
+            Draw.RenderPass();
         }
 
         #endregion

@@ -21,6 +21,7 @@ namespace Monocle
 
         public MTexture() { }
 
+        [DebuggerHidden]
         public MTexture(Texture2D texture)
         {
             this.texture = texture;

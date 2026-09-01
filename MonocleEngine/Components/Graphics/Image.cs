@@ -15,8 +15,6 @@ namespace Monocle
 
 		}
 
-		public Material material;
-
 		public Image(MTexture texture)
 			: base(false)
 		{
@@ -38,7 +36,7 @@ namespace Monocle
 		public override void Render() {
 			Vector3 pos = Position;
 			if (Entity != null)
-				pos += Entity.Position;
+				pos += Entity.RenderPosition;
 
 			RenderAt(pos);
 		}
@@ -64,7 +62,7 @@ namespace Monocle
 				}
 
 
-				Draw.Texture(Texture, matrix, Color, DepthStencilState, (FlipX ? SpriteEffects.FlipHorizontally : SpriteEffects.None) | (FlipY ? SpriteEffects.FlipVertically : SpriteEffects.None), material);
+				Draw.Texture(Texture, matrix, Color, (FlipX ? SpriteEffects.FlipHorizontally : SpriteEffects.None) | (FlipY ? SpriteEffects.FlipVertically : SpriteEffects.None), Material);
 			}
 		}
 		public void Render9Slice(Vector3 position, Point size, Rectangle center) {
@@ -74,16 +72,22 @@ namespace Monocle
 
 				float ppu = PixelsPerUnit??Engine.PixelsPerUnit;
 
-                if (size.X < center.Left + Texture.Width - center.Right || size.Y < center.Top + Texture.Height - center.Bottom)
-                {
-                    float min = Math.Min((float)size.X / (center.Left + Texture.Width - center.Right), (float)size.Y / (center.Top + Texture.Height - center.Bottom));
+                if (size.X < center.Left + Texture.Width - center.Right) {
 
-                    int top = (int)(center.Top * min);
-                    int left = (int)(center.Left * min);
+					int left = size.X / 2;
+					int right = size.X - left;
 
-                    center = new Rectangle(left, top, Texture.Width - (left + (int)((Texture.Width - center.Right) * min)), Texture.Height - (top + (int)((Texture.Height - center.Bottom) * min)));
+					center.X = left;
+					center.Width = Texture.Width - left - right;
+				}
+				if (size.Y < center.Top + Texture.Height - center.Bottom) {
 
-                }
+					int top = size.Y / 2;
+					int bottom = size.Y - top;
+
+					center.Y = top;
+					center.Height = Texture.Height - top - bottom;
+				}
 
                 Rectangle clip = new Rectangle(0, 0, 0, center.Y);
 				Vector3 pos = position;
@@ -97,7 +101,7 @@ namespace Monocle
 							pos.Y = position.Y + (Texture.Height - center.Bottom + 0) / ppu;
 							clip.Y = center.Y;
 							clip.Height = center.Height;
-							scale.Y = (size.Y - Texture.Height) / (float)center.Height;
+							scale.Y = Math.Max(size.Y - Texture.Height, 0) / (float)center.Height;
 							break;
 						case 2:
 							pos.Y = position.Y;
@@ -117,7 +121,7 @@ namespace Monocle
                                 pos.X = position.X + (Texture.Height - center.Right + 0) / ppu;
                                 clip.X = center.X;
 								clip.Width = center.Width;
-								scale.X = (size.X - Texture.Width) / (float)center.Width;
+								scale.X = Math.Max(size.X - Texture.Width, 0) / (float)center.Width;
 								break;
 							case 2:
 								pos.X = (position.X + offsets.X) - center.Right / ppu;
@@ -127,7 +131,7 @@ namespace Monocle
 								break;
 						}
 
-						Draw.Texture(Texture.GetSubtexture(clip), new Vector3(pos.X, pos.Y, pos.Z), Vector2.Zero, scale, Calc.EulerAngle(0, 0, 0), Color);
+						Draw.Texture(Texture.GetSubtexture(clip), new Vector3(pos.X, pos.Y, pos.Z), Vector2.Zero, scale, Calc.EulerAngle(0, 0, 0), Color, Material);
 						//break;
 
 					}

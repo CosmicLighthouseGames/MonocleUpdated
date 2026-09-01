@@ -185,6 +185,11 @@ namespace Monocle {
 
 			emptyWeightBuffer = new DynamicVertexBuffer(device, typeof(MonocleVertexWeight), 0x1000, BufferUsage.None);
 
+			MonocleVertexWeight[] array = new MonocleVertexWeight[0x1000];
+			Array.Fill(array, new MonocleVertexWeight() { Weight0 = 1 });
+
+			emptyWeightBuffer.SetData(array);
+
 			vertices = new List<(DynamicVertexBuffer, GenericHeap)>();
 			weights = new List<(DynamicVertexBuffer, GenericHeap)>();
 			indices = new List<(DynamicIndexBuffer, GenericHeap)>();

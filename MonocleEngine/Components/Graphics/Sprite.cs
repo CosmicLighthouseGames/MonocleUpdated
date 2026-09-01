@@ -554,21 +554,21 @@ namespace Monocle
 			public Frame[] Frames;
 			public Chooser<string> Goto;
 		}
-		private class Frame {
+		public class Frame {
 			public MTexture texture;
 			public float delay;
 		}
-		private enum AnimationDirection {
+		public enum AnimationDirection {
 			forward,
 		}
 
-		private class AnimationJson {
+		public class AnimationJson {
 			public string name;
 			public int from, to;
 			public AnimationDirection direction;
 			public string data;
 		}
-		private class FrameJson {
+		public class FrameJson {
 			public class FrameBounds {
 				public int x, y, w, h;
 				public static implicit operator Rectangle(FrameBounds fb) => new Rectangle(fb.x, fb.y, fb.w, fb.h);
@@ -576,10 +576,10 @@ namespace Monocle
 			public FrameBounds frame;
 			public int duration;
 		}
-		private class MetaJson {
+		public class MetaJson {
 			public AnimationJson[] frameTags;
 		}
-		private class JsonData {
+		public class JsonData {
 			public List<FrameJson> frames;
 			public MetaJson meta;
 

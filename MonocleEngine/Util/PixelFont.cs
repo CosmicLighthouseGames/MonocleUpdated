@@ -153,6 +153,9 @@ namespace Monocle
 			if (string.IsNullOrEmpty(text))
 				return Vector2.Zero;
 
+			if (length >= text.Length)
+				return Measure(text);
+
 			var size = new Vector2(0, LineHeight);
 			var currentLineWidth = 0f;
 
@@ -280,7 +283,6 @@ namespace Monocle
 					// draw stroke
 					if (stroke > 0)
 					{
-						Monocle.Draw.Depth--;
 						if (c.TextureOutline == null) {
 							if (edgeDepth > 0) {
 								Monocle.Draw.Texture(c.Texture, pos + back + right * -stroke, Vector2.Zero, scale, rotation, strokeColor, mat);
@@ -306,7 +308,6 @@ namespace Monocle
 						else {
 							Monocle.Draw.Texture(c.TextureOutline, pos + back - up - right, Vector2.Zero, scale, rotation, strokeColor, mat);
 						}
-						Monocle.Draw.Depth++;
 					}
 
 					// draw edge
