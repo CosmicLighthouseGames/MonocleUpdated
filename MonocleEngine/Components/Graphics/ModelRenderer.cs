@@ -43,7 +43,7 @@ namespace Monocle {
 
 		public void Render(GraphicsDevice device) {
 
-			if (indices.Length == 0)
+			if (indices == null || indices.Length == 0 || vertices.Length == 0)
 				return;
 
 			Material mat = null;
