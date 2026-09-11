@@ -152,12 +152,13 @@ namespace Monocle
             }
         }
 
-        public void Start()
+        public Tween Start(Action<Tween> onUpdate = null)
         {
-            Start(false);
-        }
+            Start(false, onUpdate);
+			return this;
+		}
 
-        public void Start(bool reverse)
+        public Tween Start(bool reverse, Action<Tween> onUpdate = null)
         {
             startedReversed = Reverse = reverse;
 
@@ -165,12 +166,14 @@ namespace Monocle
             Eased = Percent = Reverse ? 1 : 0;
 
             Active = true;
+            OnUpdate ??= onUpdate;
 
             if (OnStart != null)
                 OnStart(this);
-        }
+			return this;
+		}
 
-        public void Start(float duration, bool reverse = false)
+        public Tween Start(float duration, bool reverse = false, Action<Tween> onUpdate = null)
         {
 #if DEBUG
             if (duration <= 0)
@@ -178,7 +181,8 @@ namespace Monocle
 #endif
 
             Duration = duration;
-            Start(reverse);
+            Start(reverse, onUpdate);
+            return this;
         }
 
         public void Stop()

@@ -332,6 +332,9 @@ namespace Monocle {
 
 
 		public Material SetTechnique(string technique) {
+
+			if (technique == null)
+				return this;
 			
 			if (technique == "Default") {
 				BaseEffect = Draw.DefaultEffect;
@@ -346,6 +349,9 @@ namespace Monocle {
 				var lt = LoadedTechniques[technique];
 				BaseEffect = lt.effect;
 				Technique = lt.technique;
+			}
+			else{
+				return this;
 			}
 
 			var temp = new Dictionary<int, List<EffectPass>>();

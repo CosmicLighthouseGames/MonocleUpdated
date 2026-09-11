@@ -515,7 +515,7 @@ namespace Monocle {
 				* Matrix.CreateTranslation(position.X, position.Y, position.Z)
 				;
 
-			Texture(tex, matrix, Color.White);
+			Texture(tex, matrix, Color.White, SpriteEffects.None, mat);
 		}
 
 		public static void Texture(MTexture tex, Vector3 position, Vector2 origin, Vector2 scale, Quaternion rotation, Color color, Material mat = null, SpriteEffects flipping = SpriteEffects.None) {

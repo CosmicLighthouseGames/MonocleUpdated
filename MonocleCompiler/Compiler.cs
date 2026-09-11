@@ -80,6 +80,7 @@ namespace MonocleCompiler {
 
 		public bool IsDebug { get; private set; }
 		public string ProjectFolder => projectFolder;
+		public string OutputFolder => outputFolder;
 
 
 		string solutionPath, projectFolder, userContentFolder, engineContentFolder, compiledBinaryFolder, outputFolder;
@@ -498,7 +499,8 @@ namespace MonocleCompiler {
 				sub = sub.Replace('\\', '/');
 
 				if (Regex.Match(sub, regex).Success) {
-					onFile(userContentFolder, dumpPath, sub);
+					Directory.CreateDirectory(Path.Combine(dumpPath, Path.GetDirectoryName(sub)!));
+					onFile(Path.Combine(userContentFolder, sub), dumpPath, sub);
 				}
 			}
 		}

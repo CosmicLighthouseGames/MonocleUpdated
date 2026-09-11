@@ -165,6 +165,8 @@ namespace Monocle {
 
 		[YamlIgnore]
 		public string LiteralPath { get; internal set; }
+		[YamlIgnore]
+		public bool Vanilla { get; internal set; }
 
 		public bool IsAssetPack;
 		public int Priority;
@@ -204,6 +206,7 @@ namespace Monocle {
 			LevelPart,
 		}
 		public enum ContentLocationType {
+			Vanilla,
 			Folder,
 			ZipFile,
 		}
@@ -250,7 +253,7 @@ namespace Monocle {
 
 			ItemMetaData = new Dictionary<string, string>();
 		}
-		internal LoadedAsset(PackMetadata meta, string exactPath, string contentPath, DateTime lastEdit) {
+		internal LoadedAsset(PackMetadata meta, string exactPath, string contentPath, bool vanilla, DateTime lastEdit) {
 			PackMetaData = meta;
 
 			LastEdit = lastEdit.Ticks;
@@ -258,7 +261,7 @@ namespace Monocle {
 			Extention = System.IO.Path.GetExtension(contentPath);
 			LiteralPath = exactPath;
 			Path = contentPath;
-			AssetType = ContentLocationType.Folder;
+			AssetType = vanilla ? ContentLocationType.Vanilla : ContentLocationType.Folder;
 
 			ItemMetaData = new Dictionary<string, string>();
 			
@@ -431,20 +434,9 @@ namespace Monocle {
 			metaSerializer = new SerializerBuilder().Build();
 		}
 
-		//private readonly static IDeserializer yamlParse;
-		//private readonly static ISerializer yamlSaver;
-
 		public static event Action<LoadedAsset> OnAssetAdded, OnAssetUpdated, OnAssetDeleted;
 
 		static List<FolderWatcher> Folders = new List<FolderWatcher>();
-
-		//public static T ParseYaml<T>(string yamlData) {
-		//	return yamlParse.Deserialize<T>(yamlData);
-		//}
-		//public static string SerializeYaml(object yamlObject) {
-		//	return yamlSaver.Serialize(yamlObject);
-		//}
-
 
 		private static Dictionary<string, List<LoadedAsset>> Content = new Dictionary<string, List<LoadedAsset>>();
 		private static Dictionary<string, ZipArchive> zipFiles = new Dictionary<string, ZipArchive>();
@@ -459,6 +451,17 @@ namespace Monocle {
 
 			if (Content.ContainsKey(path) && Content[path].Count > 0) {
 				return Content[path][0];
+			}
+
+			return null;
+		}
+		public static LoadedAsset GetContent(string path, LoadedAsset.ContentLocationType type) {
+			path = path.Replace('/', '\\');
+
+			if (Content.ContainsKey(path) && Content[path].Count > 0) {
+				foreach (var item in Content[path])
+					if (item.AssetType == type)
+						return item;
 			}
 
 			return null;
@@ -550,7 +553,7 @@ namespace Monocle {
 			path = path.Replace('/', '\\');
 			name = name.Replace('/', '\\');
 
-			var asset = new LoadedAsset(metadata, path, name, File.GetLastWriteTime(path));
+			var asset = new LoadedAsset(metadata, path, name, metadata.Vanilla, File.GetLastWriteTime(path));
 
 			if (!Content.ContainsKey(name)) {
 				Content[name] = new List<LoadedAsset>();
@@ -560,7 +563,7 @@ namespace Monocle {
 			return asset;
 		}
 
-		public static PackMetadata AddFolder(string path) {
+		public static PackMetadata AddFolder(string path, bool vanilla) {
 
 			if (!Directory.Exists(path))
 				return null;
@@ -569,6 +572,7 @@ namespace Monocle {
 				return metaDatas[path];
 
 			PackMetadata metadata = new PackMetadata();
+			metadata.Vanilla = vanilla;
 
 			foreach (var dir in Directory.EnumerateFiles(path, "*.metadata.yaml")) {
 
@@ -600,12 +604,16 @@ namespace Monocle {
 			return metadata;
 
 		}
-		public static PackMetadata AddZipFile(string path) {
+		public static PackMetadata AddZipFile(string path, PackMetadata parent = null) {
 
 			if (metaDatas.ContainsKey(path))
 				return metaDatas[path];
 
-			var meta = new PackMetadata();
+			PackMetadata meta = new PackMetadata();
+
+			if (parent != null) {
+				parent.Copy(meta);
+			}
 
 			var file = ZipFile.Open(path, ZipArchiveMode.Read);
 
@@ -669,7 +677,7 @@ namespace Monocle {
 
 			//Content.Clear();
 
-			AddFolder(Path.Combine(Directory.GetCurrentDirectory(), "Content"));
+			AddFolder(Path.Combine(Directory.GetCurrentDirectory(), "Content"), true);
 		}
 
 		private static void OnChanged(string path, string fullPath, PackMetadata metadata) {
@@ -720,7 +728,6 @@ namespace Monocle {
 
 				OnAssetAdded?.Invoke(AddOpenContent(fullPath, path, metadata));
 			}
-
 		}
 
 		internal static void Unload() {

@@ -374,7 +374,7 @@ namespace Monocle
 
 				if (controllerHandle != default && handle != default) {
 					var value = SteamInput.GetDigitalActionData(controllerHandle, handle);
-					currentState = value.bState > 0;
+					currentState = value.bState > 0 && !SteamOverlayActive;
 				}
 			}
 

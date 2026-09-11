@@ -455,6 +455,7 @@ namespace Monocle {
 		internal static List<VirtualInput> VirtualInputs;
 
 #if STEAM
+		static Callback<GameOverlayActivated_t> OnOverlay;
 		public static string ActionSet { get; private set; }
 		static string DesiredActionSet;
 		public static event Action OnSteamControllerDisconnect;
@@ -466,12 +467,16 @@ namespace Monocle {
 		public static bool Active = true;
 		public static bool Disabled = false;
 
+
+#if STEAM
+		internal static bool SteamOverlayActive = false;
 		static Dictionary<string, InputActionSetHandle_t> ActionSets;
 		static List<string> ToActivate;
 
 		static InputHandle_t[] SteamControllers;
 
 		public static int SteamControllerCount { get; private set; }
+#endif
 
 
 		internal static void Initialize() {
@@ -481,11 +486,12 @@ namespace Monocle {
 			if (!SteamInput.Init(true)) {
 				throw new Exception("How did you do that?");
 			}
-#endif
+			OnOverlay = new Callback<GameOverlayActivated_t>(OverlayChanged);
 
 			SteamControllers = new InputHandle_t[Constants.STEAM_INPUT_MAX_COUNT];
 			ActionSets = new Dictionary<string, InputActionSetHandle_t>();
 			ToActivate = new List<string>();
+#endif
 
 			//Init devices
 			Keyboard = new KeyboardData();
@@ -501,6 +507,12 @@ namespace Monocle {
 				gamepad.StopRumble();
 		}
 
+#if STEAM
+		static void OverlayChanged(GameOverlayActivated_t active) {
+			SteamOverlayActive = active.m_bActive > 0;
+		}
+#endif
+
 		internal static void Update(bool updateVirtual) {
 			lock (InputLock) {
 #if STEAM
@@ -512,11 +524,6 @@ namespace Monocle {
 
 				SteamControllerCount = SteamInput.GetConnectedControllers(SteamControllers);
 				connectedSteamControllers = 0;
-
-
-				if (previousSteamControllers > connectedSteamControllers) {
-
-				}
 
 				previousSteamControllers = connectedSteamControllers;
 
@@ -538,7 +545,11 @@ namespace Monocle {
 				}
 #endif
 
-				if (Engine.Instance.IsActive && Active) {
+				if (Engine.Instance.IsActive && Active
+#if STEAM
+					&& !SteamOverlayActive
+#endif
+					) {
 					if (Engine.Commands.Open) {
 						Keyboard.UpdateNull();
 						Mouse.UpdateNull();

@@ -430,21 +430,35 @@ namespace Monocle
             }
 
             return random.Choose<(int, T)>(choices).Item2;
-            //return choices[random.Next(choices.Count)];
-        }
+			//return choices[random.Next(choices.Count)];
+		}
+		public static T Choose<T>(this Random random, List<(float, T)> choices) {
+			float max = 0;
+			foreach (var val in choices) {
+				max += val.Item1;
+			}
+			float choice = random.NextFloat(max);
+			foreach (var val in choices) {
+				if (choice < val.Item1)
+					return val.Item2;
+				choice -= val.Item1;
+			}
 
-        #endregion
+			return random.Choose<(float, T)>(choices).Item2;
+		}
 
-        #region Range
+		#endregion
 
-        /// <summary>
-        /// Returns a random integer between min (inclusive) and max (exclusive)
-        /// </summary>
-        /// <param name="random"></param>
-        /// <param name="min"></param>
-        /// <param name="max"></param>
-        /// <returns></returns>
-        [DebuggerHidden]
+		#region Range
+
+		/// <summary>
+		/// Returns a random integer between min (inclusive) and max (exclusive)
+		/// </summary>
+		/// <param name="random"></param>
+		/// <param name="min"></param>
+		/// <param name="max"></param>
+		/// <returns></returns>
+		[DebuggerHidden]
         public static int Range(this Random random, int min, int max)
         {
             return min + random.Next(max - min);
@@ -2965,7 +2979,7 @@ namespace Monocle
             if (value == null)
                 return;
             string clipName = $"{parameter}_Clip";
-            string sizeName = $"{parameter}_Size";
+            string sizeName = $"{parameter}_TexelSize";
 
 			foreach (var param in effect.Parameters) {
                 if (param.Name == parameter) {
@@ -2987,11 +3001,9 @@ namespace Monocle
 				}
 				else if (param.Name == sizeName) {
 
-					bool x = (flip & SpriteEffects.FlipHorizontally) != SpriteEffects.None;
-					bool y = (flip & SpriteEffects.FlipVertically) != SpriteEffects.None;
-					param.SetValue(new Vector2(
-						(float)value.ClipRect.Width,
-						(float)value.ClipRect.Height));
+					param.SetValue(new Vector4(
+						1f / value.ClipRect.Width, 1f / value.ClipRect.Height,
+						value.ClipRect.Width, value.ClipRect.Height));
 				}
             }
 		}

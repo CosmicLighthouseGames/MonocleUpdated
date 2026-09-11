@@ -13,7 +13,7 @@ namespace Monocle {
 		public override void Render(Scene scene) {
 
 			var graphics = Draw.GraphicsDevice;
-			graphics.Clear(Color.Red);
+			graphics.Clear(Color.Black);
 
 
 			List<Camera> textureCameras = new List<Camera>(),
