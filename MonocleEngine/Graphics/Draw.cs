@@ -73,6 +73,8 @@ namespace Monocle {
 
 		public static bool InvertDepthBuffer = false;
 
+		public static string DefaultEffectName = "Monocle/default_material";
+
 		static Effect effect;
 		public static Effect DefaultEffect {
 			get => effect;
@@ -414,7 +416,7 @@ namespace Monocle {
 			stencilRead.StencilPass = StencilOperation.Keep;
 			stencilRead.DepthBufferEnable = false;
 
-			Draw.SetDefaultEffect("Monocle/default_material");
+			Draw.SetDefaultEffect(DefaultEffectName);
 		}
 
 		public static void UseDebugPixelTexture() {
