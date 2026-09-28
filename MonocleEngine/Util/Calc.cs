@@ -574,14 +574,17 @@ namespace Monocle
 
         public static Vector2 ShakeVector(this Random random)
         {
-            return AngleToVector(random.NextAngle(), 1);
-        }
+            return AngleToVector(random.NextAngle(), random.NextFloat(1));
+		}
+		public static Vector2 ShakeVector(this Random random, float strength) {
+			return AngleToVector(random.NextAngle(), random.NextFloat(strength));
+		}
 
-        #endregion
+		#endregion
 
-        #region Lists
+		#region Lists
 
-        public static bool[] GetTilePoints(this bool[,] _array, int _x, int _y) {
+		public static bool[] GetTilePoints(this bool[,] _array, int _x, int _y) {
             bool[] retVal = new bool[4];
 
             if (_x > 0)
@@ -854,9 +857,15 @@ namespace Monocle
             return new Color(255 - color.R, 255 - color.G, 255 - color.B, color.A);
         }
 
-        public static Color HexToColor(string hex)
-        {
-            if (hex.Length >= 6)
+        public static Color HexToColor(string hex) {
+			if (hex.Length >= 8) {
+				float r = (HexToByte(hex[0]) * 16 + HexToByte(hex[1])) / 255.0f;
+				float g = (HexToByte(hex[2]) * 16 + HexToByte(hex[3])) / 255.0f;
+				float b = (HexToByte(hex[4]) * 16 + HexToByte(hex[5])) / 255.0f;
+				float a = (HexToByte(hex[6]) * 16 + HexToByte(hex[7])) / 255.0f;
+				return new Color(r, g, b, a);
+			}
+			if (hex.Length >= 6)
             {
                 float r = (HexToByte(hex[0]) * 16 + HexToByte(hex[1])) / 255.0f;
                 float g = (HexToByte(hex[2]) * 16 + HexToByte(hex[3])) / 255.0f;

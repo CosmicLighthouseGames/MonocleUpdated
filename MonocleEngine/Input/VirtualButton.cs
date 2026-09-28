@@ -268,6 +268,11 @@ namespace Monocle
 		public void ConsumeBuffer()
 		{
 			bufferCounter = 0;
+			foreach (var input in Nodes) {
+				if (input is VButton) {
+					(input as VButton).button.ConsumeBuffer();
+				}
+			}
 		}
 
 		/// <summary>
@@ -277,6 +282,11 @@ namespace Monocle
 		{
 			bufferCounter = 0;
 			consumed = true;
+			foreach (var input in Nodes) {
+				if (input is VButton) {
+					(input as VButton).button.ConsumePress();
+				}
+			}
 		}
 
 		public static implicit operator bool(VirtualButton button)

@@ -3,9 +3,11 @@ using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
 using Steamworks;
+using System.Windows;
 using System.Linq;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace Monocle {
 
@@ -18,7 +20,94 @@ namespace Monocle {
 		[DllImport("user32.dll", CharSet = CharSet.Auto, ExactSpelling = true, CallingConvention = CallingConvention.Winapi)]
 		static extern short GetKeyState(int keyCode);
 
+		[DllImport("user32.dll")]
+		internal static extern bool OpenClipboard(IntPtr hWndNewOwner);
+
+		[DllImport("user32.dll")]
+		internal static extern bool CloseClipboard();
+
+		[DllImport("user32.dll")]
+		internal static extern bool SetClipboardData(uint uFormat, IntPtr data);
+
+		[DllImport("user32.dll")]
+		internal static extern IntPtr GetClipboardData(uint uFormat);
+
+		[DllImport("Kernel32.dll", SetLastError = true)]
+		private static extern IntPtr GlobalLock(IntPtr hMem);
+
+		[DllImport("Kernel32.dll", SetLastError = true)]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		private static extern bool GlobalUnlock(IntPtr hMem);
+
+		[DllImport("Kernel32.dll", SetLastError = true)]
+		private static extern int GlobalSize(IntPtr hMem);
+
+
 		static bool Capslock => (((ushort)GetKeyState(0x14)) & 0xffff) != 0;
+
+		static void SetClipboard(string value) {
+			if (value == null)
+				throw new ArgumentNullException("Attempt to set clipboard with null");
+
+			Process clipboardExecutable = new Process();
+			clipboardExecutable.StartInfo = new ProcessStartInfo // Creates the process
+			{
+				RedirectStandardInput = true,
+				FileName = @"clip",
+				CreateNoWindow = true,
+			};
+			clipboardExecutable.Start();
+
+			clipboardExecutable.StandardInput.Write(value); // CLIP uses STDIN as input.
+															// When we are done writing all the string, close it so clip doesn't wait and get stuck
+			clipboardExecutable.StandardInput.Close();
+
+			return;
+		}
+
+		private const uint CF_UNICODETEXT = 13U;
+
+		private static string GetClipboard() {
+
+			try {
+				if (!OpenClipboard(IntPtr.Zero))
+					return null;
+
+				IntPtr handle = GetClipboardData(CF_UNICODETEXT);
+				if (handle == IntPtr.Zero)
+					return null;
+
+				IntPtr pointer = IntPtr.Zero;
+
+				try {
+					pointer = GlobalLock(handle);
+					if (pointer == IntPtr.Zero)
+						return null;
+
+					int size = GlobalSize(handle);
+					byte[] buff = new byte[size];
+
+					Marshal.Copy(pointer, buff, 0, size);
+
+					return Encoding.Unicode.GetString(buff).TrimEnd('\0');
+				}
+				finally {
+					if (pointer != IntPtr.Zero)
+						GlobalUnlock(handle);
+				}
+			}
+			finally {
+				CloseClipboard();
+			}
+
+			//OpenClipboard(IntPtr.Zero);
+			//         var ptr = GetClipboardData(13);
+
+			//CloseClipboard();
+
+			//return "";
+		}
+
 
 		public enum TextType {
 			Integer,
@@ -34,17 +123,26 @@ namespace Monocle {
 		public int CursorLeft => Math.Min(Cursor, CursorTrail);
 		public int CursorRight => Math.Max(Cursor, CursorTrail);
 
-		public float RepeatStart = 0.75f, RepeatInterval = 0.3f;
+		public float RepeatStart = 0.35f, RepeatInterval = 0.10f;
 
 		public event Action OnHitEnter;
+		public event Action OnHitEscape;
 		public event Action<string> OnChanged;
 		public event Action<Keys> OnArrows;
 
 		public bool TakingInput = true;
+		public bool ShiftEnterTypes = false;
 
 		float lastPress = 0;
 
-		public string Text => text;
+		public string Text { get {
+				return text;
+			}
+			set {
+				text = value;
+				SetCursor(MathHelper.Clamp(Cursor, 0, text.Length));
+			}
+		}
 
 		bool IsText => (Type == TextType.SingleLine || Type == TextType.MultiLine);
 
@@ -383,7 +481,7 @@ namespace Monocle {
 					}
 					break;
 				case Keys.Enter:
-					if (shifting || Type != TextType.MultiLine)
+					if ((shifting != ShiftEnterTypes) || Type != TextType.MultiLine)
 						OnHitEnter?.Invoke();
 					else
 						AddToText('\n');
@@ -400,7 +498,7 @@ namespace Monocle {
 
 					break;
 				case Keys.Escape:
-
+					OnHitEscape?.Invoke();
 					break;
 				case Keys.LeftShift:
 				case Keys.RightShift:
@@ -411,15 +509,23 @@ namespace Monocle {
 				case Keys.CapsLock:
 					break;
 				default:
-					if (!IsText)
-						break;
 					if (control) {
-						if (key == Keys.A) {
-							CursorTrail = 0;
-							Cursor = text.Length;
+						switch (key) {
+							case Keys.A:
+								CursorTrail = 0;
+								Cursor = text.Length;
+								break;
+							case Keys.C:
+								SetClipboard(text.Substring(CursorLeft, CursorRight - CursorLeft));
+								break;
+							case Keys.V:
+								AddToText(GetClipboard());
+								break;
 						}
 					}
 					else {
+						if (!IsText)
+							break;
 						bool shift = shifting != Capslock;
 						if (key.ToString().Length == 1) {
 							if (shift) {

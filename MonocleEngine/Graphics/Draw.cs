@@ -279,8 +279,24 @@ namespace Monocle {
 		public static int PreviousDrawCalls;
 		static int CurrentDrawCalls;
 
-		private static DrawCallList[] drawStack = new DrawCallList[10];
-		private static Matrix[] matrixStack = new Matrix[10];
+		class DrawStack {
+			public DrawStack() {
+				Draws = new DrawCallList();
+				BlendState = BlendState.AlphaBlend;
+				DepthStencilState = DefaultDepthState;
+				RasterizerState = RasterizerState.CullClockwise;
+				ViewMatrix = Matrix.Identity;
+				WorldProjection = Matrix.Identity;
+			}
+			public DrawCallList Draws;
+			public BlendState BlendState;
+			public DepthStencilState DepthStencilState;
+			public RasterizerState RasterizerState;
+			public Matrix ViewMatrix;
+			public Matrix WorldProjection;
+		}
+
+		private static DrawStack[] drawStack = new DrawStack[10];
 		private static int stackIndex;
 
 		public static event Func<Effect,EffectParameter, bool> OnParameterSet;
@@ -390,11 +406,10 @@ namespace Monocle {
 			UseDebugPixelTexture();
 
 			for (int i = 0; i < drawStack.Length; i++) {
-				drawStack[i] = new DrawCallList();
-				matrixStack[i] = Matrix.Identity;
+				drawStack[i] = new DrawStack();
 			}
 
-			drawCall = drawStack[0];
+			drawCall = drawStack[0].Draws;
 			WorldProjection = Matrix.Identity;
 
 			stencilWrite = new DepthStencilState();
@@ -455,12 +470,23 @@ namespace Monocle {
 		}
 		public static void PushDrawStack() {
 
-			matrixStack[stackIndex] = WorldProjection;
+			drawStack[stackIndex] = new DrawStack() {
+				Draws = drawCall,
+				WorldProjection = WorldProjection,
+				ViewMatrix = ViewMatrix,
+				BlendState = GraphicsDevice.BlendState,
+				DepthStencilState = GraphicsDevice.DepthStencilState,
+				RasterizerState = GraphicsDevice.RasterizerState,
+			};
 
 			stackIndex += 1;
 
-			drawCall = drawStack[stackIndex];
+			drawCall = new DrawCallList();
 			WorldProjection = Matrix.Identity;
+			ViewMatrix = Matrix.Identity;
+			GraphicsDevice.BlendState = BlendState.AlphaBlend;
+			GraphicsDevice.DepthStencilState = DefaultDepthState;
+			GraphicsDevice.RasterizerState = RasterizerState.CullClockwise;
 
 		}
 		public static void PopDrawStack() {
@@ -469,9 +495,13 @@ namespace Monocle {
 
 			stackIndex -= 1;
 
-			WorldProjection = matrixStack[stackIndex];
+			drawCall = drawStack[stackIndex].Draws;
+			WorldProjection = drawStack[stackIndex].WorldProjection;
+			ViewMatrix = drawStack[stackIndex].ViewMatrix;
+			GraphicsDevice.BlendState = drawStack[stackIndex].BlendState;
+			GraphicsDevice.DepthStencilState = drawStack[stackIndex].DepthStencilState;
+			GraphicsDevice.RasterizerState = drawStack[stackIndex].RasterizerState;
 
-			drawCall = drawStack[stackIndex / 2];
 		}
 
 

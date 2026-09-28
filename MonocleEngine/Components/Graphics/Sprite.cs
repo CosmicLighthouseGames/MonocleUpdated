@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Linq.Expressions;
 
 #pragma warning disable CS0649
 
@@ -61,13 +62,33 @@ namespace Monocle
 
 			foreach (var ft in meta.meta.frameTags) {
 				Animation anim = new Animation();
-				anim.AnimationTag = ft.data;
+
+				if (ft.data != null) {
+					string[] split = ft.data.Split(new char[]{'\n' }, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+					foreach (var item in split) {
+						string[] split2 = item.Split(':');
+						switch (split2[0]) {
+							case "tag":
+								anim.AnimationTag = split2[1];
+								break;
+							case "goto":
+
+								anim.Goto = new Chooser<string>(ft.name);
+								
+								break;
+							default:
+								break;
+						}
+					}
+				}
+
 				List<Frame> frames = new List<Frame>();
 				for (int i = ft.from; i <= ft.to; ++i) {
 					frames.Add(new Frame() { texture= textures[i] , delay = meta.frames[i].duration / 1000.0f });
 
 				}
 				anim.Frames = frames.ToArray();
+				if (anim.Goto == null)
 				anim.Goto = new Chooser<string>(ft.name);
 
 				animations.Add(ft.name, anim);
