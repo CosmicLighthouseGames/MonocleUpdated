@@ -276,6 +276,9 @@ namespace Monocle
 				return GetAtlasSubtextureFromAtlasAt(key, index);
 		}
 
+		public IEnumerable<string> GetKeys() {
+			return textures.Keys;
+		}
 		public void Dispose()
 		{
 			foreach (var texture in this)
