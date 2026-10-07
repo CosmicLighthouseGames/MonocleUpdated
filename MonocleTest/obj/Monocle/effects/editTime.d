@@ -1,1 +1,0 @@
-Monocle\model_basic.fx¹IŸª&ÜMonocle\sprite_basic.fxw¢3¬<ÜMonocle\sprite_transform.fxéE=“<Ü
