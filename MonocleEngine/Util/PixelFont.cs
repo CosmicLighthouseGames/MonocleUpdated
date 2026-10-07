@@ -382,10 +382,10 @@ namespace Monocle
 				var file = page.Attr("file");
 				var atlasPath = Path.GetFileNameWithoutExtension(file);
 
-				if (atlas != null && atlas.Has(atlasPath))
+				if (atlas != null)
 				{
-					if (atlas.Has(Path.Combine(path, atlasPath))) {
-						Textures.Add(atlas[Path.Combine(path, atlasPath)]);
+					if (atlas.Has(Path.Combine(path, atlasPath).Replace('\\', '/'))) {
+						Textures.Add(atlas[Path.Combine(path, atlasPath).Replace('\\', '/')]);
 					}
 					else {
 						Textures.Add(atlas[atlasPath]);

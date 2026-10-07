@@ -263,6 +263,7 @@ namespace Monocle {
 
 		protected override void Update(GameTime gameTime) {
 
+			Stopwatch sw = Stopwatch.StartNew();
 #if DEBUG
 			float tempSpeed = DebugSpeed;
 			if (SuperSpeedKey != null && MInput.Keyboard.Check(SuperSpeedKey.Value)) {
@@ -367,9 +368,13 @@ namespace Monocle {
 #endif
 
 			base.Update(gameTime);
+
+			sw.Stop();
+			lastFrameUpdate = MathHelper.Lerp(lastFrameUpdate, (float)sw.Elapsed.TotalMilliseconds, 0.01f);
 		}
 
 		float lastFrameRender = 0;
+		float lastFrameUpdate = 0;
 		protected override void Draw(GameTime gameTime) {
 
 			if (false) {
@@ -417,7 +422,7 @@ namespace Monocle {
 
 					Color color = Color.LightGreen;
 
-					if (FPS < 59) {
+					if (FPS < 60) {
 						color = Color.Red;
 					}
 
@@ -436,7 +441,13 @@ namespace Monocle {
 					Monocle.Draw.DefaultFont.Draw(name, new Vector3(w - size.X - 0.1f, y - 0.05f, 0), color);
 
 
-					name = "(" + (1000 / lastFrameRender).ToString("F1") + " FPS)";
+					name = "Update (" + (1000 / lastFrameUpdate).ToString("F1") + " FPS)";
+					size = Monocle.Draw.DefaultFont.MeasureString(name);
+					y -= (size.Y + 0.1f);
+					Monocle.Draw.Rect(w - size.X - 0.4f, y, size.X + 0.4f, size.Y + 0.1f, Color.Black);
+					Monocle.Draw.DefaultFont.Draw(name, new Vector3(w - size.X - 0.1f, y, 0), color);
+
+					name = "Render (" + (1000 / lastFrameRender).ToString("F1") + " FPS)";
 					size = Monocle.Draw.DefaultFont.MeasureString(name);
 					y -= (size.Y + 0.1f);
 					Monocle.Draw.Rect(w - size.X - 0.4f, y, size.X + 0.4f, size.Y + 0.1f, Color.Black);

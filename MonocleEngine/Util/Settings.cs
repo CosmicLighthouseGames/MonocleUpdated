@@ -46,6 +46,10 @@ namespace Monocle {
 
 							return bool.Parse((string)oldValue);
 						}
+						else if (typing == typeof(float)) {
+
+							return float.Parse((string)oldValue);
+						}
 						else if (typing.IsEnum) {
 							return Enum.Parse(typing, (string)oldValue);
 						}

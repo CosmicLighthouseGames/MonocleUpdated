@@ -395,6 +395,14 @@ namespace Monocle {
 					else {
 					}
 					break;
+				case Keys.OemSemicolon:
+					if (shifting) {
+						AddToText(':');
+					}
+					else {
+						AddToText(';');
+					}
+					break;
 				case Keys.NumPad0:
 				case Keys.NumPad1:
 				case Keys.NumPad2:
